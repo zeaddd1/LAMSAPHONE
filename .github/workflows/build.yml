@@ -1,0 +1,98 @@
+# يبني صور Docker على GitHub (وليس على السيرفر الصغير) ويرفعها إلى GHCR
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", "storefront/**", ".github/workflows/build.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      storefront: ${{ steps.filter.outputs.storefront }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/build.yml'
+            storefront:
+              - 'storefront/**'
+              - '.github/workflows/build.yml'
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: names
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/lamsaphone-backend" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: |
+            ${{ steps.names.outputs.image }}:latest
+            ${{ steps.names.outputs.image }}:${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+  storefront:
+    needs: changes
+    if: needs.changes.outputs.storefront == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: names
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/lamsaphone-storefront" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: storefront
+          push: true
+          tags: |
+            ${{ steps.names.outputs.image }}:latest
+            ${{ steps.names.outputs.image }}:${{ github.sha }}
+          # ليست أسراراً: تُقرأ من GitHub Variables (Settings → Secrets and variables → Actions → Variables)
+          build-args: |
+            NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${{ vars.PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_WHATSAPP_NUMBER=${{ vars.WHATSAPP_NUMBER }}
+            S3_FILE_URL=${{ vars.S3_FILE_URL }}
+          cache-from: type=gha,scope=storefront
+          cache-to: type=gha,mode=max,scope=storefront
+
+  deploy:
+    # اختياري: يطلب من Coolify إعادة النشر إن ضُبط السر COOLIFY_WEBHOOK (ويتخطى بهدوء إن لم يُضبط)
+    needs: [backend, storefront]
+    if: always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify
+        env:
+          HOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "COOLIFY_WEBHOOK not set, skipping"; exit 0; fi
+          curl -fsS -X GET "$HOOK" ${TOKEN:+-H "Authorization: Bearer $TOKEN"}

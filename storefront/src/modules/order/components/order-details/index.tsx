@@ -17,7 +17,7 @@ const OrderDetails = ({ order, showStatus }: OrderDetailsProps) => {
   return (
     <div>
       <Text>
-        We have sent the order confirmation details to{" "}
+        أرسلنا تفاصيل تأكيد الطلب إلى{" "}
         <span
           className="text-ui-fg-medium-plus font-semibold"
           data-testid="order-email"

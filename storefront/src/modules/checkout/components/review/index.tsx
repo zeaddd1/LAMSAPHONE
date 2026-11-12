@@ -39,10 +39,8 @@ const Review = ({ cart }: { cart: any }) => {
           <div className="flex items-start gap-x-1 w-full mb-6">
             <div className="w-full">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                By clicking the Place Order button, you confirm that you have
-                read, understand and accept our Terms of Use, Terms of Sale and
-                Returns Policy and acknowledge that you have read Medusa
-                Store&apos;s Privacy Policy.
+                بالضغط على زر تأكيد الطلب، فأنت تؤكد أنك قرأت سياسة الاسترجاع
+                وشروط البيع في لمسة فون ووافقت عليها.
               </Text>
             </div>
           </div>

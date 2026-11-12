@@ -61,10 +61,10 @@ export default function TransferRequestForm() {
             <CheckCircleMiniSolid className="w-4 h-4 text-emerald-500" />
             <div className="flex flex-col gap-y-1">
               <Text className="text-medim-pl text-neutral-950">
-                Transfer for order {state.order?.id} requested
+                تم طلب نقل الطلب {state.order?.id}
               </Text>
               <Text className="text-base-regular text-neutral-600">
-                Transfer request email sent to {state.order?.email}
+                أُرسل بريد طلب النقل إلى {state.order?.email}
               </Text>
             </div>
           </div>

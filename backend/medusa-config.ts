@@ -42,6 +42,10 @@ const modules: Record<string, unknown>[] = [
           : {
               resolve: "@medusajs/medusa/file-local",
               id: "local",
+              // Without this, uploaded file URLs point to http://localhost:9000/static
+              options: process.env.MEDUSA_BACKEND_URL
+                ? { backend_url: `${process.env.MEDUSA_BACKEND_URL}/static` }
+                : {},
             },
       ],
     },

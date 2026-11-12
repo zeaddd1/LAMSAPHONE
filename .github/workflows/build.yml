@@ -77,8 +77,8 @@ jobs:
             ${{ steps.names.outputs.image }}:${{ github.sha }}
           # ليست أسراراً: تُقرأ من GitHub Variables (Settings → Secrets and variables → Actions → Variables)
           build-args: |
-            NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${{ vars.PUBLISHABLE_KEY }}
-            NEXT_PUBLIC_WHATSAPP_NUMBER=${{ vars.WHATSAPP_NUMBER }}
+            NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${{ vars.PUBLISHABLE_KEY || 'pk_52f3af4bdf74cf96dbc73b55038335c74c3d2f9c9ba52c4b7a11511a89c5d4f2' }}
+            NEXT_PUBLIC_WHATSAPP_NUMBER=${{ vars.WHATSAPP_NUMBER || '967770777736' }}
             S3_FILE_URL=${{ vars.S3_FILE_URL }}
           cache-from: type=gha,scope=storefront
           cache-to: type=gha,mode=max,scope=storefront

@@ -1,5 +1,6 @@
 "use client"
 import { t } from "@lib/i18n/ar"
+import { trackMeta } from "@lib/meta-pixel"
 
 import { addToCart } from "@lib/data/cart"
 import { useIntersection } from "@lib/hooks/use-in-view"
@@ -42,8 +43,12 @@ export default function ProductActions({
   const countryCode = useParams().countryCode as string
 
   // If there is only 1 variant, preselect the options
+  // وإذا جاء العميل من رابط فيه v_id (مثل منشورات فيسبوك وإنستغرام وكتالوج واتساب) نختار ذلك المتغيّر
   useEffect(() => {
-    if (product.variants?.length === 1) {
+    const fromLink = product.variants?.find((v) => v.id === searchParams.get("v_id"))
+    if (fromLink) {
+      setOptions(optionsAsKeymap(fromLink.options) ?? {})
+    } else if (product.variants?.length === 1) {
       const variantOptions = optionsAsKeymap(product.variants[0].options)
       setOptions(variantOptions ?? {})
     }
@@ -67,6 +72,24 @@ export default function ProductActions({
       [optionId]: value,
     }))
   }
+
+  // Meta Pixel: مشاهدة منتج (أرقام المتغيّرات تطابق الكتالوج)
+  useEffect(() => {
+    // ننتظر اختيار المتغيّر القادم من الرابط أو الوحيد حتى لا يُرسل الحدث مرتين
+    const vId = searchParams.get("v_id")
+    const pending = product.variants?.length === 1 || product.variants?.some((v) => v.id === vId)
+    if (!selectedVariant && pending) return
+    const ids = selectedVariant ? [selectedVariant.id] : (product.variants || []).map((v) => v.id)
+    const price = selectedVariant?.calculated_price
+    trackMeta("ViewContent", {
+      content_ids: ids,
+      content_type: "product",
+      content_name: product.title,
+      ...(price?.calculated_amount != null
+        ? { value: price.calculated_amount, currency: (price.currency_code || "usd").toUpperCase() }
+        : {}),
+    })
+  }, [selectedVariant?.id, product.id])
 
   //check if the selected options produce a valid variant
   const isValidVariant = useMemo(() => {
@@ -131,6 +154,16 @@ export default function ProductActions({
       variantId: selectedVariant.id,
       quantity: 1,
       countryCode,
+    })
+
+    const price = selectedVariant.calculated_price
+    trackMeta("AddToCart", {
+      content_ids: [selectedVariant.id],
+      content_type: "product",
+      content_name: product.title,
+      ...(price?.calculated_amount != null
+        ? { value: price.calculated_amount, currency: (price.currency_code || "usd").toUpperCase() }
+        : {}),
     })
 
     setIsAdding(false)

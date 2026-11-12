@@ -7,8 +7,12 @@ const fs = require("fs")
 const path = require("path")
 
 const root = path.join(__dirname, "..", "node_modules", "@medusajs", "dashboard")
+// Bundled files may hold Arabic as \uXXXX escapes, so match both forms
+const esc = (s) => s.split("").map((ch) => "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0")).join("")
 const replacements = [
   ["مدوسا", "لمسة فون"],
+  [esc("مدوسا"), esc("لمسة فون")],
+  [esc("مدوسا").toUpperCase().replace(/\\U/g, "\\u"), esc("لمسة فون")],
   ["Welcome to Medusa", "Welcome to Lamsa Phone"],
 ]
 

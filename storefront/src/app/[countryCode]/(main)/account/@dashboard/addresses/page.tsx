@@ -9,7 +9,7 @@ import { retrieveCustomer } from "@lib/data/customer"
 
 export const metadata: Metadata = {
   title: t("Addresses"),
-  description: "View your addresses",
+  description: "عناوينك",
 }
 
 export default async function Addresses(props: {
@@ -29,8 +29,7 @@ export default async function Addresses(props: {
       <div className="mb-8 flex flex-col gap-y-4">
         <h1 className="text-2xl-semi">{t("Shipping Addresses")}</h1>
         <p className="text-base-regular">
-          View and update your shipping addresses, you can add as many as you
-          like. Saving your addresses will make them available during checkout.
+          اعرض عناوين التوصيل وعدّلها، وأضف ما تشاء منها لتظهر لك عند إتمام الطلب.
         </p>
       </div>
       <AddressBook customer={customer} region={region} />

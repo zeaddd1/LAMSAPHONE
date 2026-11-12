@@ -89,6 +89,15 @@ function Invoke-Coolify([string]$Method, [string]$Path, $Body = $null) {
     $code = $null
     if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
     Write-Host "فشل $Method $Path (HTTP $code): $($_.Exception.Message)" -ForegroundColor Red
+    # نص رد Coolify يوضح السبب الحقيقي (لا يحتوي التوكن)
+    $detail = $_.ErrorDetails.Message
+    if (-not $detail) {
+      try {
+        $stream = $_.Exception.Response.GetResponseStream(); $stream.Position = 0
+        $detail = (New-Object System.IO.StreamReader($stream)).ReadToEnd()
+      } catch {}
+    }
+    if ($detail) { Write-Host "رد Coolify: $detail" -ForegroundColor Yellow } else { Write-Host "رد Coolify: (فارغ)" -ForegroundColor Yellow }
     if ($_.Exception.Message -match "trust relationship|SSL|TLS") {
       Write-Host "الشهادة غير موثوقة: استخدم رابط Coolify بدومين عليه شهادة صالحة (مثل https://coolify.yemenbay.com) وليس https://IP:8000." -ForegroundColor Yellow
     }
@@ -201,9 +210,11 @@ switch ($Command) {
     $parts = $image.Split(":"); $img = $parts[0]; $tag = "latest"; if ($parts.Count -gt 1) { $tag = $parts[1] }
     $project = Invoke-Coolify GET "/projects/$ProjectUuid"
     $env = @($project.environments)[0]
-    $servers = @(Invoke-Coolify GET "/servers")
+    # السيرفر: من COOLIFY_SERVER_UUID إن وُجد (لا يحتاج صلاحية قراءة السيرفرات)، وإلا نسأل Coolify
+    $serverUuid = Get-Cfg "COOLIFY_SERVER_UUID"
+    if (-not $serverUuid) { $serverUuid = @(Invoke-Coolify GET "/servers")[0].uuid }
     $body = @{
-      project_uuid = $ProjectUuid; environment_name = $env.name; server_uuid = $servers[0].uuid
+      project_uuid = $ProjectUuid; environment_name = $env.name; server_uuid = $serverUuid
       name = $name; docker_registry_image_name = $img; docker_registry_image_tag = $tag
       ports_exposes = "$port"; domains = $domain; instant_deploy = $false
     }

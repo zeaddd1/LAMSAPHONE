@@ -82,7 +82,7 @@ const SideMenu = ({ regions, locales, currentLocale }: SideMenuProps) => {
                               onClick={close}
                               data-testid={`${name.toLowerCase()}-link`}
                             >
-                              {name}
+                              {t(name)}
                             </LocalizedClientLink>
                           </li>
                         )
@@ -127,8 +127,7 @@ const SideMenu = ({ regions, locales, currentLocale }: SideMenuProps) => {
                         />
                       </div>
                       <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} Medusa Store. All rights
-                        reserved.
+                        © {new Date().getFullYear()} لمسة فون. جميع الحقوق محفوظة.
                       </Text>
                     </div>
                   </div>

@@ -10,6 +10,9 @@ type Props = {
   searchParams: Promise<{ v_id?: string }>
 }
 
+// المنتجات والأقسام المضافة بعد البناء تُعرض فوراً بدل خطأ 500 (الصفحة تقرأ الكوكيز)
+export const dynamic = "force-dynamic"
+
 export async function generateStaticParams() {
   try {
     const countryCodes = await listRegions().then((regions) =>

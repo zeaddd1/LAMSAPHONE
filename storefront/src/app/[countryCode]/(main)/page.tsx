@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   description: "جوالات جديدة ومستعملة ومجددة وإكسسوارات أصلية، مع الدفع عند الاستلام.",
 }
 
-// إعادة توليد الصفحة كل 5 دقائق (ISR) لتخفيف الطلبات على الباك إند
-export const revalidate = 300
+// الصفحة تقرأ الكوكيز فتُعرض ديناميكياً، وبيانات المنتجات مخزّنة 60 ثانية
+export const dynamic = "force-dynamic"
 
 export default async function Home(props: { params: Promise<{ countryCode: string }> }) {
   const { countryCode } = await props.params

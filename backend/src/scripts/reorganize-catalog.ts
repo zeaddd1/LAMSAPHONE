@@ -33,8 +33,13 @@ const RULES: [RegExp, string][] = [
 ]
 
 export default async function reorganizeCatalog({ container }: ExecArgs) {
+  await runReorganize(container, JSON.parse(process.env.CATALOG_PRICES || "{}"))
+}
+
+// يُستدعى أيضاً من مسار الإدارة /admin/custom/reorganize-catalog
+export async function runReorganize(container: ExecArgs["container"], prices: Record<string, number>) {
   const productSvc = container.resolve(Modules.PRODUCT)
-  const prices: Record<string, number> = JSON.parse(process.env.CATALOG_PRICES || "{}")
+  const log: string[] = []
 
   // 1) الأقسام الرئيسية والفرعية
   const existing = await productSvc.listProductCategories({}, { take: 200 })
@@ -93,7 +98,8 @@ export default async function reorganizeCatalog({ container }: ExecArgs) {
         },
       })
     }
-    console.log(`${p.handle} -> ${rule ? rule[1] : "جوالات"}${amount !== undefined ? ` | USD ${amount}` : ""}`)
+    log.push(`${p.handle} -> ${rule ? rule[1] : "جوالات"}${amount !== undefined ? ` | USD ${amount}` : ""}`)
   }
-  console.log("تم تنظيم الأقسام والمنتجات.")
+  log.push("تم تنظيم الأقسام والمنتجات.")
+  return log
 }

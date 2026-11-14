@@ -11,15 +11,24 @@ const forwarded = new WeakSet<Event>()
 
 const imageFiles = (list: FileList | null | undefined) => Array.from(list || [])
 
+// الإشعار اختياري: أي خلل فيه لا يوقف الضغط أو الرفع
 const notify = async <T>(count: number, work: Promise<T>) => {
-  const id = toast.loading(`جارٍ ضغط ${count > 1 ? `${count} صور` : "الصورة"} مع الحفاظ على الجودة...`)
+  const t = toast as any
+  let id: unknown
   try {
-    const result = await work
-    toast.dismiss(id)
-    return result
-  } catch (e) {
-    toast.dismiss(id)
-    throw e
+    const text = `جارٍ ضغط ${count > 1 ? `${count} صور` : "الصورة"} مع الحفاظ على الجودة...`
+    id = typeof t.loading === "function" ? t.loading(text) : t.info?.(text)
+  } catch {
+    // تجاهل
+  }
+  try {
+    return await work
+  } finally {
+    try {
+      if (id !== undefined) t.dismiss?.(id)
+    } catch {
+      // تجاهل
+    }
   }
 }
 
@@ -38,7 +47,7 @@ const onChange = (event: Event) => {
   if (!big.length) return
 
   event.stopImmediatePropagation()
-  void notify(big.length, compressFiles(files)).then((out) => {
+  void notify(big.length, compressFiles(files).catch(() => files)).then((out) => {
     input.files = toFileList(out).files
     const next = new Event("change", { bubbles: true })
     forwarded.add(next)
@@ -55,7 +64,7 @@ const onDrop = (event: Event) => {
   const target = event.target as EventTarget
   event.preventDefault()
   event.stopImmediatePropagation()
-  void notify(big.length, compressFiles(files)).then((out) => {
+  void notify(big.length, compressFiles(files).catch(() => files)).then((out) => {
     const next = new DragEvent("drop", {
       bubbles: true,
       cancelable: true,

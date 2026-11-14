@@ -16,7 +16,10 @@ const nextConfig = {
   // أخطاء أنواع موروثة من الـ starter مع إصدار types الأحدث؛ نفحص ملفاتنا بـ tsc يدوياً
   typescript: { ignoreBuildErrors: true },
   images: {
-    formats: ["image/avif", "image/webp"],
+    // WebP فقط: ترميز AVIF على السيرفر بطيء ويستهلك رام كثيرة، والصور مضغوطة WebP من اللوحة أصلاً
+    formats: ["image/webp"],
+    // أسماء الصور المرفوعة فريدة، فنخزّن النسخ المحسّنة 30 يوماً بدل إعادة معالجتها
+    minimumCacheTTL: 2592000,
     remotePatterns: [
       { protocol: "http", hostname: "localhost" },
       { protocol: "https", hostname: "cp.lamsaphone.yemenbay.com" },

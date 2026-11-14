@@ -34,7 +34,7 @@ export default async function Nav() {
               className="flex items-center hover:opacity-90"
               data-testid="nav-store-link"
             >
-              <Image src="/logo.png" alt="لمسة فون - Lamsa Phone" width={1379} height={1069} priority quality={100} className="h-11 w-auto" />
+              <Image src="/logo.png" alt="لمسة فون - Lamsa Phone" width={57} height={44} priority quality={90} className="h-11 w-auto" />
             </LocalizedClientLink>
           </div>
 

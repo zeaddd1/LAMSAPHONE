@@ -43,6 +43,9 @@ async function buildStaticParams() {
 }
 
 // إن تعذّر الوصول للباك إند وقت البناء (أول بناء على GitHub) نكمل بدون صفحات مسبقة، وتُولَّد عند أول زيارة
+// المنتجات والأقسام المضافة بعد البناء تُعرض فوراً بدل خطأ 500 (الصفحة تقرأ الكوكيز)
+export const dynamic = "force-dynamic"
+
 export async function generateStaticParams() {
   try {
     return (await buildStaticParams()) ?? []

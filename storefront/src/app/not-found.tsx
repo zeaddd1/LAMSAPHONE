@@ -6,7 +6,7 @@ import Link from "next/link"
 
 export const metadata: Metadata = {
   title: "404",
-  description: "الصفحة غير موجودة",
+  description: "Something went wrong",
 }
 
 export default function NotFound() {

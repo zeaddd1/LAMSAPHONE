@@ -1,6 +1,5 @@
 "use client"
 import { t } from "@lib/i18n/ar"
-import { countryName } from "@lib/i18n/countries"
 
 import React, { useEffect, useMemo, useActionState } from "react"
 
@@ -26,7 +25,7 @@ const ProfileBillingAddress: React.FC<MyInformationProps> = ({
         ?.map((region) => {
           return region.countries?.map((country) => ({
             value: country.iso_2,
-            label: countryName(country.iso_2, country.display_name),
+            label: country.display_name,
           }))
         })
         .flat() || []
@@ -65,7 +64,7 @@ const ProfileBillingAddress: React.FC<MyInformationProps> = ({
 
   const currentInfo = useMemo(() => {
     if (!billingAddress) {
-      return "لا يوجد عنوان فاتورة"
+      return "No billing address"
     }
 
     const country =

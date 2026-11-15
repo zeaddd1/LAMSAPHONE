@@ -13,7 +13,7 @@ import { retrieveCustomer } from "@lib/data/customer"
 
 export const metadata: Metadata = {
   title: t("Profile"),
-  description: "بيانات حسابك في لمسة فون",
+  description: "View and edit your Medusa Store profile.",
 }
 
 export default async function Profile() {
@@ -29,7 +29,9 @@ export default async function Profile() {
       <div className="mb-8 flex flex-col gap-y-4">
         <h1 className="text-2xl-semi">{t("Profile")}</h1>
         <p className="text-base-regular">
-          اعرض بياناتك وعدّلها: الاسم والبريد ورقم الجوال وعنوان الفاتورة.
+          View and update your profile information, including your name, email,
+          and phone number. You can also update your billing address, or change
+          your password.
         </p>
       </div>
       <div className="flex flex-col gap-y-8 w-full">

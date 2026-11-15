@@ -43,9 +43,6 @@ async function buildStaticParams() {
 }
 
 // إن تعذّر الوصول للباك إند وقت البناء (أول بناء على GitHub) نكمل بدون صفحات مسبقة، وتُولَّد عند أول زيارة
-// المنتجات والأقسام المضافة بعد البناء تُعرض فوراً بدل خطأ 500 (الصفحة تقرأ الكوكيز)
-export const dynamic = "force-dynamic"
-
 export async function generateStaticParams() {
   try {
     return (await buildStaticParams()) ?? []
@@ -59,12 +56,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   try {
     const productCategory = await getCategoryByHandle(params.category)
 
-    const title = productCategory.name
+    const title = productCategory.name + " | Medusa Store"
 
-    const description = productCategory.description ?? `${title} من لمسة فون`
+    const description = productCategory.description ?? `${title} category.`
 
     return {
-      title: `${title} | لمسة فون`,
+      title: `${title} | Medusa Store`,
       description,
       alternates: {
         canonical: `${params.category.join("/")}`,

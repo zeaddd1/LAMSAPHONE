@@ -16,7 +16,7 @@ const ProfilePassword: React.FC<MyInformationProps> = ({ customer }) => {
 
   // TODO: Add support for password updates
   const updatePassword = async () => {
-    toast.info("تغيير كلمة المرور غير متاح حالياً، تواصل معنا")
+    toast.info("Password update is not implemented")
   }
 
   const clearState = () => {

@@ -4,8 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
-# Store name instead of "Medusa" in the admin texts
-RUN node build-tools/brand-admin.js && npm run build
+RUN npm run build
 
 # ---- صورة التشغيل: فقط مخرجات البناء + حزم الإنتاج ----
 FROM node:22-alpine

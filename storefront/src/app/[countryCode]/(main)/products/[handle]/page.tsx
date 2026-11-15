@@ -10,9 +10,6 @@ type Props = {
   searchParams: Promise<{ v_id?: string }>
 }
 
-// المنتجات والأقسام المضافة بعد البناء تُعرض فوراً بدل خطأ 500 (الصفحة تقرأ الكوكيز)
-export const dynamic = "force-dynamic"
-
 export async function generateStaticParams() {
   try {
     const countryCodes = await listRegions().then((regions) =>
@@ -91,10 +88,10 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   return {
-    title: `${product.title} | لمسة فون`,
+    title: `${product.title} | Medusa Store`,
     description: `${product.title}`,
     openGraph: {
-      title: `${product.title} | لمسة فون`,
+      title: `${product.title} | Medusa Store`,
       description: `${product.title}`,
       images: product.thumbnail ? [product.thumbnail] : [],
     },
@@ -117,11 +114,11 @@ export default async function ProductPage(props: Props) {
     queryParams: { handle: params.handle },
   }).then(({ response }) => response.products[0])
 
+  const images = getImagesForVariant(pricedProduct, selectedVariantId)
+
   if (!pricedProduct) {
     notFound()
   }
-
-  const images = getImagesForVariant(pricedProduct, selectedVariantId)
 
   return (
     <ProductTemplate

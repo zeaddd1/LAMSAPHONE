@@ -1,6 +1,5 @@
 "use client"
 import { t } from "@lib/i18n/ar"
-import { countryName } from "@lib/i18n/countries"
 
 import {
   Listbox,
@@ -45,7 +44,7 @@ const CountrySelect = ({ toggleState, regions }: CountrySelectProps) => {
         return r.countries?.map((c) => ({
           country: c.iso_2,
           region: r.id,
-          label: countryName(c.iso_2, c.display_name),
+          label: c.display_name,
         }))
       })
       .flat()

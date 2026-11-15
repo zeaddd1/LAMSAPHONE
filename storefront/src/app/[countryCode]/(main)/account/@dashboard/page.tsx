@@ -8,7 +8,7 @@ import { listOrders } from "@lib/data/orders"
 
 export const metadata: Metadata = {
   title: t("Account"),
-  description: "ملخص حسابك",
+  description: "Overview of your account activity.",
 }
 
 export default async function OverviewTemplate() {

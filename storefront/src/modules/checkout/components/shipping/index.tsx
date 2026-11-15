@@ -162,7 +162,7 @@ const Shipping: React.FC<ShippingProps> = ({
             }
           )}
         >
-          التوصيل
+          Delivery
           {!isOpen && (cart.shipping_methods?.length ?? 0) > 0 && (
             <CheckCircleSolid />
           )}

@@ -9,7 +9,7 @@ import TransferRequestForm from "@modules/account/components/transfer-request-fo
 
 export const metadata: Metadata = {
   title: t("Orders"),
-  description: "طلباتك السابقة",
+  description: "Overview of your previous orders.",
 }
 
 export default async function Orders() {
@@ -24,7 +24,8 @@ export default async function Orders() {
       <div className="mb-8 flex flex-col gap-y-4">
         <h1 className="text-2xl-semi">{t("Orders")}</h1>
         <p className="text-base-regular">
-          اعرض طلباتك السابقة وحالتها.
+          View your previous orders and their status. You can also create
+          returns or exchanges for your orders if needed.
         </p>
       </div>
       <div>

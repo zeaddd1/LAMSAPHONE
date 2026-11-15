@@ -14,17 +14,21 @@ export default async function TransferPage({
       <TransferImage />
       <div className="flex flex-col gap-y-6">
         <Heading level="h1" className="text-xl text-zinc-900">
-          طلب نقل الطلب رقم {id}
+          Transfer request for order {id}
         </Heading>
         <Text className="text-zinc-600">
-          وصلك طلب لنقل ملكية طلبك ({id}) إلى حساب آخر. للموافقة اضغط الزر بالأسفل.
+          You&#39;ve received a request to transfer ownership of your order ({id}).
+          If you agree to this request, you can approve the transfer by clicking
+          the button below.
         </Text>
         <div className="w-full h-px bg-zinc-200" />
         <Text className="text-zinc-600">
-          إذا وافقت، ينتقل الطلب وكل ما يتعلق به إلى الحساب الجديد.
+          If you accept, the new owner will take over all responsibilities and
+          permissions associated with this order.
         </Text>
         <Text className="text-zinc-600">
-          إذا لم تكن تعرف هذا الطلب أو تريد الاحتفاظ به، فلا تفعل شيئاً.
+          If you do not recognize this request or wish to retain ownership, no
+          further action is required.
         </Text>
         <div className="w-full h-px bg-zinc-200" />
         <TransferActions id={id} token={token} />

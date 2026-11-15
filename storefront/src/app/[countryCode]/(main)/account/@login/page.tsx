@@ -5,7 +5,7 @@ import LoginTemplate from "@modules/account/templates/login-template"
 
 export const metadata: Metadata = {
   title: t("Sign in"),
-  description: "سجّل الدخول إلى حسابك في لمسة فون",
+  description: "Sign in to your Medusa Store account.",
 }
 
 export default function Login() {

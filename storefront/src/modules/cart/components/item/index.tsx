@@ -64,7 +64,8 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
 
       <Table.Cell className="text-start">
         <Text
-          className="txt-medium-plus text-ui-fg-base"
+          className="txt-medium-plus text-ui-fg-base text-right"
+          dir="auto"
           data-testid="product-title"
         >
           {item.product_title}

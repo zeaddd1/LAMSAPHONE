@@ -101,8 +101,7 @@ const ShippingInfoTab = () => {
           <div>
             <span className="font-semibold">{t("Simple exchanges")}</span>
             <p className="max-w-sm">
-              Is the fit not quite right? No worries - we&apos;ll exchange your
-              product for a new one.
+              المنتج ما ناسبك؟ لا تشيل هم، نبدّله لك بمنتج جديد.
             </p>
           </div>
         </div>
@@ -111,9 +110,7 @@ const ShippingInfoTab = () => {
           <div>
             <span className="font-semibold">{t("Easy returns")}</span>
             <p className="max-w-sm">
-              Just return your product and we&apos;ll refund your money. No
-              questions asked – we&apos;ll do our best to make sure your return
-              is hassle-free.
+              رجّع المنتج ونرجّع لك فلوسك بدون أسئلة، ونحرص إن الإرجاع يكون سهل.
             </p>
           </div>
         </div>

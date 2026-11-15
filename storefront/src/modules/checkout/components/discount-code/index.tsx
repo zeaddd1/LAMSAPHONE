@@ -137,7 +137,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                           )}
                         )
                         {/* {promotion.is_automatic && (
-                          <Tooltip content="This promotion is automatically applied">
+                          <Tooltip content="هذا الخصم يُطبَّق تلقائياً">
                             <InformationCircleSolid className="inline text-zinc-400" />
                           </Tooltip>
                         )} */}

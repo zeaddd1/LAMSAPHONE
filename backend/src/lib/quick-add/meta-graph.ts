@@ -1,0 +1,125 @@
+// عميل Graph API لميتا (فيسبوك، إنستغرام، الكتالوج). بلا استيراد من Medusa حتى يُختبر وحده.
+// الرمز يُرسل في جسم الطلب وليس في الرابط.
+
+export type GraphConfig = { token: string; version: string; fetchImpl?: typeof fetch; sleep?: (ms: number) => Promise<void> }
+
+export class GraphError extends Error {
+  code?: number
+  constructor(message: string, code?: number) {
+    super(message)
+    this.code = code
+  }
+}
+
+const BASE = "https://graph.facebook.com"
+
+async function call(cfg: GraphConfig, method: "GET" | "POST", path: string, params: Record<string, unknown> = {}, token = cfg.token) {
+  const f = cfg.fetchImpl || fetch
+  const body = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null) continue
+    body.set(k, typeof v === "string" ? v : JSON.stringify(v))
+  }
+  body.set("access_token", token)
+  const url = `${BASE}/${cfg.version}/${path.replace(/^\//, "")}`
+  // GET لا يقبل جسماً، فنرسل الرمز في ترويسة Authorization
+  const res =
+    method === "GET"
+      ? await f(`${url}?${new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])).toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      : await f(url, { method: "POST", body, headers: { "Content-Type": "application/x-www-form-urlencoded" } })
+  const json: any = await res.json().catch(() => ({}))
+  if (!res.ok || json?.error) {
+    const e = json?.error || {}
+    throw new GraphError(e.error_user_msg || e.message || `Meta HTTP ${res.status}`, e.code)
+  }
+  return json
+}
+
+export type PageInfo = { id: string; name: string; page_token: string; ig?: { id: string; username?: string } }
+
+// يجلب رمز الصفحة وحساب إنستغرام المربوط بها من رمز مستخدم النظام
+export async function getPage(cfg: GraphConfig, pageId: string): Promise<PageInfo> {
+  const j = await call(cfg, "GET", pageId, { fields: "id,name,access_token,instagram_business_account{id,username}" })
+  return {
+    id: j.id,
+    name: j.name,
+    page_token: j.access_token || cfg.token,
+    ig: j.instagram_business_account ? { id: j.instagram_business_account.id, username: j.instagram_business_account.username } : undefined,
+  }
+}
+
+export async function getCatalog(cfg: GraphConfig, catalogId: string): Promise<{ id: string; name: string; product_count?: number }> {
+  return call(cfg, "GET", catalogId, { fields: "id,name,product_count" })
+}
+
+// منشور فيسبوك بعدة صور: نرفع الصور غير منشورة ثم منشور واحد يضمها
+export async function postToFacebook(cfg: GraphConfig, page: PageInfo, imageUrls: string[], message: string): Promise<{ id: string; url: string }> {
+  const media: { media_fbid: string }[] = []
+  for (const url of imageUrls.slice(0, 10)) {
+    const p = await call(cfg, "POST", `${page.id}/photos`, { url, published: "false" }, page.page_token)
+    media.push({ media_fbid: p.id })
+  }
+  const post = await call(cfg, "POST", `${page.id}/feed`, { message, attached_media: media }, page.page_token)
+  return { id: post.id, url: `https://www.facebook.com/${post.id}` }
+}
+
+async function waitReady(cfg: GraphConfig, id: string, token: string) {
+  const sleep = cfg.sleep || ((ms: number) => new Promise((r) => setTimeout(r, ms)))
+  for (let i = 0; i < 20; i++) {
+    const s = await call(cfg, "GET", id, { fields: "status_code" }, token)
+    if (s.status_code === "FINISHED") return
+    if (s.status_code === "ERROR" || s.status_code === "EXPIRED") throw new GraphError("رفض إنستغرام الصورة (تأكد أنها JPEG ورابطها عام)")
+    await sleep(1500)
+  }
+  throw new GraphError("انتهت مهلة تجهيز منشور إنستغرام")
+}
+
+// منشور إنستغرام: صورة واحدة أو ألبوم (2 إلى 10 صور). إنستغرام يقبل JPEG فقط.
+export async function postToInstagram(cfg: GraphConfig, igUserId: string, token: string, imageUrls: string[], caption: string): Promise<{ id: string; url?: string }> {
+  const urls = imageUrls.slice(0, 10)
+  if (!urls.length) throw new GraphError("لا توجد صور للنشر")
+  let creationId: string
+  if (urls.length === 1) {
+    creationId = (await call(cfg, "POST", `${igUserId}/media`, { image_url: urls[0], caption }, token)).id
+  } else {
+    const children: string[] = []
+    for (const image_url of urls) {
+      const c = await call(cfg, "POST", `${igUserId}/media`, { image_url, is_carousel_item: "true" }, token)
+      children.push(c.id)
+    }
+    for (const c of children) await waitReady(cfg, c, token)
+    creationId = (await call(cfg, "POST", `${igUserId}/media`, { media_type: "CAROUSEL", children: children.join(","), caption }, token)).id
+  }
+  await waitReady(cfg, creationId, token)
+  const pub = await call(cfg, "POST", `${igUserId}/media_publish`, { creation_id: creationId }, token)
+  const info = await call(cfg, "GET", pub.id, { fields: "permalink" }, token).catch(() => ({}))
+  return { id: pub.id, url: (info as any).permalink }
+}
+
+// تعليق على منشور (فيسبوك: رقم المنشور، إنستغرام: رقم الوسائط). نستخدمه لنشر الهاشتاقات كأول تعليق.
+export async function addComment(cfg: GraphConfig, objectId: string, token: string, message: string): Promise<{ id: string }> {
+  return call(cfg, "POST", `${objectId}/comments`, { message }, token)
+}
+
+// تحويل عنصر الكتالوج (بصيغة g:xxx من ملف الكتالوج) إلى صيغة items_batch (نفس أسماء حقول الملف، والسعر "700.00 USD")
+export function feedItemToBatch(item: Record<string, string>) {
+  const data: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(item)) {
+    const key = k.replace(/^g:/, "")
+    data[key] = key === "additional_image_link" ? v.split(",") : v
+  }
+  return { method: "UPDATE", data }
+}
+
+// إضافة/تحديث المنتج في كتالوج ميتا فوراً (يظهر في متجر فيسبوك وإنستغرام وكتالوج واتساب المربوط)
+export async function pushToCatalog(cfg: GraphConfig, catalogId: string, items: Record<string, string>[]): Promise<{ handles: string[] }> {
+  if (!items.length) throw new GraphError("المنتج غير صالح للكتالوج (سعر أو صورة أو قناة بيع ناقصة)")
+  const r = await call(cfg, "POST", `${catalogId}/items_batch`, {
+    item_type: "PRODUCT_ITEM",
+    allow_upsert: "true",
+    requests: items.map(feedItemToBatch),
+  })
+  return { handles: r.handles || [] }
+}

@@ -99,3 +99,14 @@ describe("order follow-up", () => {
     expect(reply("متى توصلون؟", ctx).faq_id).toBe("faq0")
   })
 })
+
+describe("condition only when asked", () => {
+  it("answers the condition question from the FAQ", () => {
+    const r = reply("الجهاز جديد ولا مستعمل؟", ctx)
+    expect(r.intent).toBe("faq")
+    expect(r.text).toContain("شبه جديدة")
+  })
+  it("product answers never mention condition", () => {
+    expect(reply("بكم سامسونج اس 25 الترا", ctx).text.includes("مستعمل")).toBe(false)
+  })
+})

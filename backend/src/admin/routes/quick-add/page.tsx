@@ -23,6 +23,16 @@ type Done = { id: string; handle: string; title: string; link?: string; results?
 
 const STORE = "https://lamsaphone.yemenbay.com/ye/products/"
 
+// قوائم ثابتة حقيقية بدل الكتابة الحرة
+const CONDITIONS: [string, string][] = [
+  ["new", "جديد"],
+  ["used", "مستخدم شبه جديد"],
+]
+const STORAGES = ["64GB", "128GB", "256GB", "512GB", "1TB"]
+const COLORS = ["أسود", "أبيض", "رمادي", "فضي", "أزرق", "أخضر", "بنفسجي", "ذهبي", "وردي", "كريمي", "تيتانيوم"]
+// سامسونج الأمريكي غالباً مستخدم شبه جديد، والصيني والماركات الأخرى جديدة: نقترح الحالة من القسم ويمكن تغييرها
+const suggestCondition = (categoryLabel: string) => (/سامسونج|samsung/i.test(categoryLabel) ? "used" : "new")
+
 const QuickAddPage = () => {
   const [tab, setTab] = useState("add")
   const [ctx, setCtx] = useState<Ctx | null>(null)
@@ -89,6 +99,9 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   const [description, setDescription] = useState("")
   const [qty, setQty] = useState("")
   const [condition, setCondition] = useState("new")
+  const [conditionTouched, setConditionTouched] = useState(false)
+  const [storage, setStorage] = useState("")
+  const [color, setColor] = useState("")
   // ميتا (للمنشور فقط)
   const [toFb, setToFb] = useState(metaReady && Boolean(ctx.meta.page_id))
   const [toIg, setToIg] = useState(metaReady && Boolean(ctx.meta.page_id))
@@ -103,6 +116,12 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
 
   const cat = cats.find((c) => c.id === categoryId)
   const priceNum = Number(price)
+  // اقتراح الحالة من القسم ما لم يخترها المدير بنفسه
+  useEffect(() => {
+    if (cat && !conditionTouched) setCondition(suggestCondition(cat.label))
+  }, [categoryId])
+  // الاسم النهائي: الاسم + السعة (إن لم تكن مكتوبة فيه)
+  const fullTitle = storage && !title.toLowerCase().includes(storage.toLowerCase()) ? `${title.trim()} ${storage}` : title.trim()
   const missing = [!title.trim() && "الاسم", !categoryId && "القسم", !images.length && "صورة واحدة على الأقل", !(priceNum > 0) && "السعر"].filter(Boolean) as string[]
 
   // معاينة نص المنشور واقتراح الهاشتاقات (بعد توقف الكتابة قليلاً)
@@ -111,13 +130,13 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       sdk.client
         .fetch<{ caption: string; comment: string; suggested: string[] }>("/admin/quick-add/preview", {
           method: "POST",
-          body: { title, price: priceNum > 0 ? priceNum : undefined, text: postText, hashtags, category_names: cat?.names || [], handle: done?.handle },
+          body: { title: fullTitle, price: priceNum > 0 ? priceNum : undefined, text: postText, hashtags, category_names: cat?.names || [], handle: done?.handle },
         })
         .then(setPreview)
         .catch(() => {})
     }, 400)
     return () => clearTimeout(t)
-  }, [title, priceNum, postText, hashtags, categoryId, done?.handle])
+  }, [fullTitle, priceNum, postText, hashtags, categoryId, done?.handle])
 
   const addFiles = async (list: FileList | null) => {
     if (!list?.length) return
@@ -154,6 +173,9 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     setQty("")
     setPostText("")
     setHashtags("")
+    setStorage("")
+    setColor("")
+    setConditionTouched(false)
     setDone(null)
   }
 
@@ -176,7 +198,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       setBusy("إنشاء المنتج…")
       const track = qty.trim() !== "" && Number(qty) >= 0
       const { product } = await sdk.admin.product.create({
-        title: title.trim(),
+        title: fullTitle,
         description: description.trim() || undefined,
         status: "published",
         thumbnail: urls[0],
@@ -184,7 +206,8 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
         categories: [{ id: categoryId }],
         sales_channels: ctx.default_sales_channel_id ? [{ id: ctx.default_sales_channel_id }] : undefined,
         shipping_profile_id: ctx.shipping_profile_id || undefined,
-        metadata: { condition, meta_images: metaUrls, added_by: "quick-add" },
+        // الحالة للكتالوج فقط (ميتا تشترطها صحيحة)، ولا تظهر في المنشور ولا في اسم المنتج
+        metadata: { condition, ...(storage ? { storage } : {}), ...(color ? { color } : {}), meta_images: metaUrls, added_by: "quick-add" },
         options: [{ title: "الخيار", values: ["افتراضي"] }],
         variants: [
           {
@@ -252,6 +275,27 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       <div className="flex flex-col gap-5">
         {/* 1. الأساسيات */}
         <section className="grid gap-4 md:grid-cols-2">
+          {/* الحالة: تبويبان واضحان. تُحفظ للكتالوج (شرط ميتا)، ولا تُكتب في المنشور ولا في اسم المنتج */}
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <Label>حالة الجهاز *</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {CONDITIONS.map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => {
+                    setCondition(v)
+                    setConditionTouched(true)
+                  }}
+                  className={`rounded-lg border-2 px-3 py-2 text-sm font-medium transition ${
+                    condition === v ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "border-ui-border-base hover:bg-ui-bg-subtle-hover"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex flex-col gap-1 md:col-span-2">
             <Label htmlFor="qa-title">اسم المنتج *</Label>
             <Input id="qa-title" dir="auto" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: Samsung Galaxy S25 Ultra 256GB" />
@@ -274,6 +318,21 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
           <div className="flex flex-col gap-1">
             <Label htmlFor="qa-price">السعر بالدولار *</Label>
             <Input id="qa-price" type="number" min="0" step="0.01" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="700" />
+          </div>
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <Label>السعة (تُضاف لاسم المنتج)</Label>
+            <div className="flex flex-wrap gap-2">
+              {STORAGES.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStorage(storage === s ? "" : s)}
+                  className={`rounded-full border px-3 py-1 text-xs ${storage === s ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -346,15 +405,15 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
               <Input type="number" min="0" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="فارغ = متوفر دائماً" />
             </div>
             <div className="flex flex-col gap-1">
-              <Label>الحالة</Label>
-              <Select value={condition} onValueChange={setCondition}>
+              <Label>اللون</Label>
+              <Select value={color} onValueChange={setColor}>
                 <Select.Trigger>
-                  <Select.Value />
+                  <Select.Value placeholder="بدون" />
                 </Select.Trigger>
                 <Select.Content>
-                  <Select.Item value="new">جديد</Select.Item>
-                  <Select.Item value="used">مستعمل</Select.Item>
-                  <Select.Item value="refurbished">مجدّد</Select.Item>
+                  {COLORS.map((c) => (
+                    <Select.Item key={c} value={c}>{c}</Select.Item>
+                  ))}
                 </Select.Content>
               </Select>
             </div>

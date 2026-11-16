@@ -98,7 +98,7 @@ export default function MetaConnectTab({ onSaved }: { onSaved: () => void }) {
     !x ? null : x.ok ? <Badge size="2xsmall" color="green">{okText || "يعمل"}</Badge> : <Text size="small" className="text-ui-fg-error">{x.error}</Text>
 
   return (
-    <div className="grid gap-6 p-6 lg:grid-cols-2">
+    <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <Label>رمز الوصول (System User Token)</Label>

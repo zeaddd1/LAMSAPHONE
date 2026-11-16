@@ -98,6 +98,16 @@ export async function postToInstagram(cfg: GraphConfig, igUserId: string, token:
   return { id: pub.id, url: (info as any).permalink }
 }
 
+// حذف عناصر من الكتالوج (عند حذف منتج من المتجر)
+export async function removeFromCatalog(cfg: GraphConfig, catalogId: string, retailerIds: string[]): Promise<{ handles: string[] }> {
+  if (!retailerIds.length) return { handles: [] }
+  const r = await call(cfg, "POST", `${catalogId}/items_batch`, {
+    item_type: "PRODUCT_ITEM",
+    requests: retailerIds.map((id) => ({ method: "DELETE", data: { id } })),
+  })
+  return { handles: r.handles || [] }
+}
+
 // تعليق على منشور (فيسبوك: رقم المنشور، إنستغرام: رقم الوسائط). نستخدمه لنشر الهاشتاقات كأول تعليق.
 export async function addComment(cfg: GraphConfig, objectId: string, token: string, message: string): Promise<{ id: string }> {
   return call(cfg, "POST", `${objectId}/comments`, { message }, token)

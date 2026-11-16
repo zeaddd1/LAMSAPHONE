@@ -10,6 +10,14 @@ export const PreviewBody = z.object({
 })
 export type PreviewBody = z.infer<typeof PreviewBody>
 
+export const CatalogBody = z.object({
+  // فارغ = كل المنتجات المنشورة
+  product_ids: z.array(z.string()).max(500).optional(),
+  // حذف عناصر هذه المنتجات من الكتالوج بدل تحديثها
+  remove: z.boolean().default(false),
+})
+export type CatalogBody = z.infer<typeof CatalogBody>
+
 export const PublishBody = z.object({
   product_id: z.string().min(1),
   facebook: z.boolean().default(false),

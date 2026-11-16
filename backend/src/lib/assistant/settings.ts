@@ -1,6 +1,7 @@
 import { Modules } from "@medusajs/framework/utils"
 import { z } from "@medusajs/framework/zod"
 import { randomBytes } from "crypto"
+import { createBackup } from "../meta-backup"
 
 // إعدادات الرد الآلي (تُحفظ في store.metadata.assistant). رمز الوصول ورقم الصفحة من إعدادات "ربط ميتا".
 export const AssistantSettingsInput = z.object({
@@ -55,6 +56,7 @@ export async function getAssistantSettings(scope: Scope): Promise<AssistantSetti
 }
 
 export async function saveAssistantSettings(scope: Scope, input: AssistantSettingsInput): Promise<AssistantSettings> {
+  await createBackup(scope, "تلقائي: قبل تعديل الرد الآلي").catch(() => null)
   const { storeService, store } = await getStore(scope)
   if (!store) throw new Error("no store")
   const prev = ((store.metadata as any)?.[KEY] || {}) as Partial<AssistantSettings>

@@ -60,7 +60,7 @@ export default function BotSettings() {
   const copy = (v: string) => navigator.clipboard.writeText(v).then(() => toast.success("نُسخ"))
 
   return (
-    <div className="grid gap-6 p-6 lg:grid-cols-2">
+    <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <Label>رابط Webhook (Callback URL)</Label>

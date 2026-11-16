@@ -6,6 +6,7 @@ import { sdk } from "../../lib/sdk"
 import { ProcessedImage, kb, processImage } from "../../lib/quick-add-image"
 import type { FitMode } from "../../lib/quick-add-geometry"
 import type { MetaPublic } from "../../components/quick-add-meta-connect"
+import QuickAddProducts from "../../components/quick-add-products"
 
 // صفحة "إضافة سريعة": منتج كامل في المتجر + نشره على ميتا من مكان واحد.
 // تستخدم واجهات Medusa الرسمية فقط (upload / products / inventory) ولا تعدّل كود Medusa.
@@ -35,6 +36,7 @@ const suggestCondition = (categoryLabel: string) => (/سامسونج|samsung/i.t
 
 const QuickAddPage = () => {
   const [ctx, setCtx] = useState<Ctx | null>(null)
+  const [view, setView] = useState<"add" | "list">(() => (typeof window !== "undefined" && window.location.hash === "#list" ? "list" : "add"))
   const loadCtx = () => sdk.client.fetch<Ctx>("/admin/quick-add/context").then(setCtx).catch((e) => toast.error(String(e?.message || e)))
   useEffect(() => {
     loadCtx()
@@ -42,7 +44,7 @@ const QuickAddPage = () => {
 
   return (
     <Container className="p-0" dir="rtl">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-6 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-4 sm:px-6">
         <div>
           <Heading level="h1">إضافة سريعة</Heading>
           <Text size="small" className="text-ui-fg-subtle">
@@ -56,7 +58,26 @@ const QuickAddPage = () => {
           </a>
         )}
       </div>
-      {ctx ? <AddForm ctx={ctx} goMeta={() => (window.location.href = "/app/meta-connect")} /> : <Text className="p-6">جارٍ التحميل…</Text>}
+      {/* تبويبان: إضافة منتج جديد، أو إدارة كل المنتجات (تعديل، ترتيب، حذف، نشر على ميتا) */}
+      <div className="flex gap-2 border-b px-4 py-2 sm:px-6">
+        {([["add", "إضافة منتج"], ["list", "المنتجات (تعديل ونشر)"]] as const).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setView(k)}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${view === k ? "bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {!ctx ? (
+        <Text className="p-6">جارٍ التحميل…</Text>
+      ) : view === "add" ? (
+        <AddForm ctx={ctx} goMeta={() => (window.location.href = "/app/meta-connect")} />
+      ) : (
+        <QuickAddProducts meta={ctx.meta} currency={ctx.currency_code} />
+      )}
     </Container>
   )
 }
@@ -284,7 +305,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   const addTag = (t: string) => setHashtags((h) => (h.includes(t) ? h : `${h} ${t}`.trim()))
 
   return (
-    <div className="grid gap-6 p-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1fr_360px]">
       <div className="flex flex-col gap-5">
         {/* 1. الأساسيات */}
         <section className="grid gap-4 md:grid-cols-2">

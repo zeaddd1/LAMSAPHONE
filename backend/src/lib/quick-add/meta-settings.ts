@@ -1,5 +1,6 @@
 import { Modules } from "@medusajs/framework/utils"
 import { z } from "@medusajs/framework/zod"
+import { createBackup } from "../meta-backup"
 
 // إعدادات ربط ميتا لصفحة الإضافة السريعة.
 // تُحفظ في metadata المتجر (store.metadata.quick_add_meta): لا جدول ولا ترحيل، فلا تتأثر بتحديثات Medusa.
@@ -50,6 +51,7 @@ export async function getMetaSettings(scope: Scope): Promise<MetaSettings> {
 }
 
 export async function saveMetaSettings(scope: Scope, input: MetaSettingsInput): Promise<MetaSettings> {
+  await createBackup(scope, "تلقائي: قبل تعديل ربط ميتا").catch(() => null)
   const { storeService, store } = await getStore(scope)
   if (!store) throw new Error("no store")
   const prev = ((store.metadata as any)?.[KEY] || {}) as Partial<MetaSettings>

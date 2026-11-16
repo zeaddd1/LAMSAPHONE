@@ -3,6 +3,7 @@ import { ChatBubbleLeftRight } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Text, Textarea, toast } from "@medusajs/ui"
 import { useEffect, useRef, useState } from "react"
 import { sdk } from "../../lib/sdk"
+import { AlertSummary, askNotifyPermission, beep, handleSummary } from "../../lib/assistant-alerts"
 
 // صفحة "المحادثات": رسائل ماسنجر وإنستغرام وواتساب في مكان واحد.
 // الرد الآلي يجيب أولاً، والموظف يتدخل وقت الحاجة، ويؤكد الطلبات بضغطة.
@@ -56,13 +57,25 @@ function Inbox() {
   const [text, setText] = useState("")
   const [busy, setBusy] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
+  const prevSummary = useRef<AlertSummary | null>(null)
+  const [faqs, setFaqs] = useState<{ id: string; question: string; answer: string }[]>([])
+  useEffect(() => {
+    askNotifyPermission()
+    sdk.client.fetch<{ faqs: any[] }>("/admin/assistant/faqs").then((r) => setFaqs(r.faqs.filter((f) => f.is_active))).catch(() => {})
+  }, [])
 
   const loadList = () =>
     sdk.client
       .fetch<{ conversations: Conv[]; counts: { human: number; orders: number } }>("/admin/assistant/conversations", { query: { filter } })
       .then((r) => {
-        setList(r.conversations)
+        // الأهم أولاً: من يحتاج موظفاً، ثم الطلبات المنتظرة، ثم الأحدث
+        const weight = (c: Conv) => (c.needs_human ? 0 : c.order_status === "pending" ? 1 : 2)
+        setList([...r.conversations].sort((a, b) => weight(a) - weight(b)))
         setCounts(r.counts)
+        // تنبيه صوتي وإشعار عند زيادة العدد
+        const next: AlertSummary = { ...r.counts, latest: r.conversations.find((c) => c.needs_human) ? { id: "", name: r.conversations.find((c) => c.needs_human)!.name, text: r.conversations.find((c) => c.needs_human)!.last_text } : null }
+        handleSummary(prevSummary.current, next)
+        prevSummary.current = next
       })
       .catch(() => {})
   const loadConv = (id: string) =>
@@ -132,7 +145,17 @@ function Inbox() {
 
   return (
     <div className="grid min-h-[70vh] gap-0 lg:grid-cols-[340px_1fr]">
-      <aside className="border-b lg:border-b-0 lg:border-e">
+      {(counts.human > 0 || counts.orders > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-ui-tag-red-border bg-ui-tag-red-bg px-4 py-2 text-sm font-medium text-ui-tag-red-text lg:col-span-2">
+          <span>
+            🔔 {counts.human > 0 && `${counts.human} محادثة تحتاج موظفاً`}
+            {counts.human > 0 && counts.orders > 0 && " · "}
+            {counts.orders > 0 && `${counts.orders} طلب ينتظر التأكيد`}
+          </span>
+          <button type="button" className="underline" onClick={() => { setFilter(counts.human > 0 ? "human" : "orders"); beep(false) }}>عرضها الآن</button>
+        </div>
+      )}
+      <aside className={`border-b lg:block lg:border-b-0 lg:border-e ${selId ? "hidden" : ""}`}>
         <div className="flex flex-wrap gap-1 p-3">
           {filters.map(([k, label, n]) => (
             <Button key={k} size="small" variant={filter === k ? "primary" : "transparent"} onClick={() => setFilter(k)}>
@@ -148,7 +171,7 @@ function Inbox() {
               key={c.id}
               type="button"
               onClick={() => setSelId(c.id)}
-              className={`flex w-full flex-col gap-1 border-b px-4 py-3 text-start hover:bg-ui-bg-subtle-hover ${selId === c.id ? "bg-ui-bg-subtle" : ""}`}
+              className={`flex w-full flex-col gap-1 border-b px-4 py-3 text-start hover:bg-ui-bg-subtle-hover ${selId === c.id ? "bg-ui-bg-subtle" : ""} ${c.needs_human ? "border-s-4 border-s-ui-tag-red-icon bg-ui-tag-red-bg" : c.order_status === "pending" ? "border-s-4 border-s-ui-tag-orange-icon" : ""}`}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate font-medium">{c.name || c.external_id}</span>
@@ -167,13 +190,14 @@ function Inbox() {
         </div>
       </aside>
 
-      <section className="flex min-h-[60vh] flex-col">
+      <section className={`min-h-[60vh] flex-col lg:flex ${selId ? "flex" : "hidden"}`}>
         {!conv ? (
           <Text className="m-auto text-ui-fg-subtle">اختر محادثة من القائمة</Text>
         ) : (
           <>
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
               <div>
+                <button type="button" className="mb-1 text-sm text-ui-fg-interactive underline lg:hidden" onClick={() => { setSelId(null); setConv(null) }}>→ رجوع للقائمة</button>
                 <Text weight="plus">{conv.name || conv.external_id}</Text>
                 <Text size="xsmall" className="text-ui-fg-subtle">
                   {CH[conv.channel]?.label} · {conv.mode === "bot" ? "الرد الآلي يعمل" : "الموظف يرد (الآلي متوقف)"}
@@ -228,6 +252,15 @@ function Inbox() {
             </div>
 
             <div className="flex flex-col gap-2 border-t p-3">
+              {faqs.length > 0 && (
+                <div className="flex gap-1 overflow-x-auto pb-1">
+                  {faqs.slice(0, 12).map((f) => (
+                    <button key={f.id} type="button" title={f.answer} onClick={() => setText(f.answer)} className="shrink-0 rounded-full border px-2 py-0.5 text-[11px] hover:bg-ui-bg-subtle-hover">
+                      {f.question}
+                    </button>
+                  ))}
+                </div>
+              )}
               <Textarea dir="auto" rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب ردك… (يوقف الرد الآلي لهذه المحادثة)" />
               <div className="flex flex-wrap gap-2">
                 <Button isLoading={busy} disabled={!text.trim()} onClick={() => send(true)}>إرسال مع تصحيح اللغة</Button>

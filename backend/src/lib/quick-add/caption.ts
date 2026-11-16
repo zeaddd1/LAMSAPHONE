@@ -76,7 +76,7 @@ export function buildCaption(input: CaptionInput, maxLen = 2200): string {
     lines.push(`💬 اطلب عبر واتساب: https://wa.me/${input.whatsapp.replace(/[^\d]/g, "")}`)
   }
   lines.push(`🛒 تسوّق من متجرنا: ${input.link}`)
-  lines.push("🚚 توصيل سريع والدفع عند الاستلام")
+  lines.push("📍 صنعاء | 🚚 توصيل سريع والدفع عند الاستلام")
 
   // إنستغرام: 30 هاشتاق كحد أقصى و2200 حرف للنص كاملاً
   const tags = normalizeHashtags(input.hashtags, 30)
@@ -98,9 +98,9 @@ export function buildCaption(input: CaptionInput, maxLen = 2200): string {
   return caption
 }
 
-// اقتراحات هاشتاقات شائعة في سوق الجوالات باليمن والسعودية حسب القسم، تُكمَّل بكلمات من اسم المنتج.
+// اقتراحات هاشتاقات لسوق الجوالات: صنعاء أولاً ثم اليمن، حسب القسم، تُكمَّل بكلمات من اسم المنتج.
 // ميتا لا تقدّم قائمة "ترند" رسمية، فهذه نقطة بداية يعدّلها المدير.
-const BASE_TAGS = ["لمسة_فون", "جوالات", "اليمن", "صنعاء", "السعودية", "عروض", "الدفع_عند_الاستلام"]
+const BASE_TAGS = ["لمسة_فون", "صنعاء", "جوالات_صنعاء", "اليمن", "جوالات_اليمن", "جوالات", "عروض", "الدفع_عند_الاستلام"]
 const CATEGORY_TAGS: Record<string, string[]> = {
   "جوالات": ["جوالات_جديدة", "هواتف_ذكية", "smartphone", "جوال"],
   "سامسونج": ["سامسونج", "Samsung", "جالكسي", "Galaxy"],

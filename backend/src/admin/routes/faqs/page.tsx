@@ -84,7 +84,7 @@ const FaqsPage = () => {
         <Button onClick={() => setEdit({ ...empty, rank: faqs.length })}>إضافة سؤال</Button>
       </div>
 
-      <div className="grid gap-6 p-6 lg:grid-cols-[1fr_380px]">
+      <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1fr_380px]">
         <section className="flex flex-col gap-3">
           {edit && (
             <div className="flex flex-col gap-3 rounded-lg border p-4">

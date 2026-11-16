@@ -4,6 +4,7 @@ import { Container, Heading, Tabs, Text } from "@medusajs/ui"
 import { useState } from "react"
 import MetaConnectTab from "../../components/quick-add-meta-connect"
 import BotSettings from "../../components/assistant-bot-settings"
+import MetaBackups from "../../components/meta-backups"
 
 // صفحة "ربط ميتا" المستقلة: ربط الصفحة وإنستغرام والكتالوج، وإعدادات الرد الآلي وواتساب.
 // منفصلة عن إضافة المنتجات حتى لا يتغير الربط بالخطأ، وكل حفظ يطلب تأكيداً.
@@ -18,10 +19,11 @@ const MetaConnectPage = () => {
         </Text>
       </div>
       <Tabs value={tab} onValueChange={setTab}>
-        <div className="px-6 pt-3">
+        <div className="overflow-x-auto px-4 pt-3 sm:px-6">
           <Tabs.List>
             <Tabs.Trigger value="meta">الصفحة والكتالوج</Tabs.Trigger>
             <Tabs.Trigger value="bot">الرد الآلي وواتساب</Tabs.Trigger>
+            <Tabs.Trigger value="backup">النسخ الاحتياطية</Tabs.Trigger>
           </Tabs.List>
         </div>
         <Tabs.Content value="meta">
@@ -29,6 +31,9 @@ const MetaConnectPage = () => {
         </Tabs.Content>
         <Tabs.Content value="bot">
           <BotSettings />
+        </Tabs.Content>
+        <Tabs.Content value="backup">
+          <MetaBackups />
         </Tabs.Content>
       </Tabs>
     </Container>

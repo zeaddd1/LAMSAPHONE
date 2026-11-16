@@ -1,6 +1,6 @@
 import { defineMiddlewares, validateAndTransformBody } from "@medusajs/framework/http"
 import { PostAdminExchangeRates } from "./admin/exchange-rates/validators"
-import { PreviewBody, PublishBody } from "./admin/quick-add/validators"
+import { CatalogBody, PreviewBody, PublishBody } from "./admin/quick-add/validators"
 import { ConversationPatch, CorrectBody, FaqBody, ReplyBody, TestBody } from "./admin/assistant/validators"
 import { MetaSettingsInput } from "../lib/quick-add/meta-settings"
 import { AssistantSettingsInput } from "../lib/assistant/settings"
@@ -15,6 +15,7 @@ export default defineMiddlewares({
     // صفحة الإضافة السريعة + ربط ميتا
     { matcher: "/admin/quick-add/preview", method: "POST", middlewares: [validateAndTransformBody(PreviewBody)] },
     { matcher: "/admin/quick-add/publish", method: "POST", middlewares: [validateAndTransformBody(PublishBody)] },
+    { matcher: "/admin/quick-add/catalog", method: "POST", middlewares: [validateAndTransformBody(CatalogBody)] },
     { matcher: "/admin/quick-add/meta-settings", method: "POST", middlewares: [validateAndTransformBody(MetaSettingsInput)] },
     // الرد الآلي والمحادثات (نحتاج نص الطلب الخام للتحقق من توقيع ميتا)
     { matcher: "/webhooks/meta", method: ["POST"], bodyParser: { preserveRawBody: true } },

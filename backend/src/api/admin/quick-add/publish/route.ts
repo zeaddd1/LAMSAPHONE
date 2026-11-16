@@ -1,5 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { buildCaption, hashtagComment, productUrl } from "../../../../lib/quick-add/caption"
 import { backendUrl, buildMetaFeed, clearMetaFeedCache, storeUrl } from "../../../../lib/meta-feed-builder"
 import { addComment, getPage, postToFacebook, postToInstagram, pushToCatalog } from "../../../../lib/quick-add/meta-graph"
@@ -77,6 +77,21 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
       return { url: `https://business.facebook.com/commerce/catalogs/${s.catalog_id}/products` }
     }))
   delete results.page
+
+  // نسجّل آخر نشر ناجح لكل وجهة في المنتج، لتظهر حالته في قائمة المنتجات
+  try {
+    const prev = (p.metadata?.meta_published || {}) as Record<string, any>
+    const next = { ...prev }
+    for (const k of ["facebook", "instagram", "catalog"]) {
+      const r = results[k]
+      if (r?.ok) next[k] = { at: new Date().toISOString(), url: r.url || null }
+    }
+    if (JSON.stringify(next) !== JSON.stringify(prev)) {
+      await req.scope.resolve(Modules.PRODUCT).updateProducts(p.id, { metadata: { ...(p.metadata || {}), meta_published: next } })
+    }
+  } catch {
+    /* لا نفشل النشر بسبب التسجيل */
+  }
   res.json({ link, caption, results })
 }
 

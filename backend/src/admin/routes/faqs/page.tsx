@@ -71,7 +71,7 @@ const FaqsPage = () => {
   }
   const runTest = async () => {
     if (!q.trim()) return
-    setTest(await sdk.client.fetch<TestResult>("/admin/assistant/test", { method: "POST", body: { text: q } }))
+    setTest(await sdk.client.fetch<TestResult>("/admin/assistant/try-reply", { method: "POST", body: { text: q } }))
   }
 
   return (

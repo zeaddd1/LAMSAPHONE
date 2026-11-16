@@ -23,7 +23,7 @@ export default defineMiddlewares({
     { matcher: "/admin/assistant/faqs/:id", method: "POST", middlewares: [validateAndTransformBody(FaqBody)] },
     { matcher: "/admin/assistant/conversations/:id", method: "POST", middlewares: [validateAndTransformBody(ConversationPatch)] },
     { matcher: "/admin/assistant/conversations/:id/reply", method: "POST", middlewares: [validateAndTransformBody(ReplyBody)] },
-    { matcher: "/admin/assistant/test", method: "POST", middlewares: [validateAndTransformBody(TestBody)] },
+    { matcher: "/admin/assistant/try-reply", method: "POST", middlewares: [validateAndTransformBody(TestBody)] },
     { matcher: "/admin/assistant/correct", method: "POST", middlewares: [validateAndTransformBody(CorrectBody)] },
     { matcher: "/admin/assistant/settings", method: "POST", middlewares: [validateAndTransformBody(AssistantSettingsInput)] },
   ],

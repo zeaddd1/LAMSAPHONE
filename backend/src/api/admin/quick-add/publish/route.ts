@@ -31,7 +31,7 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   const prices = (p.variants || []).flatMap((v: any) => v.prices || []).filter((x: any) => x.currency_code === "usd")
   const price = prices.length ? Math.min(...prices.map((x: any) => Number(x.amount))) : undefined
   // الهاشتاقات لا تدخل نص المنشور ولا المنتج: تُنشر كأول تعليق
-  const caption = buildCaption({ title: p.title, price, text: b.text, link })
+  const caption = buildCaption({ title: p.title, price, text: b.text, link, whatsapp: process.env.WHATSAPP_NUMBER || "967770777736" })
   const comment = hashtagComment(b.hashtags)
 
   // ميتا تحتاج JPEG برابط عام: نسخ الإضافة السريعة، وإلا صور المنتج نفسها

@@ -53,6 +53,14 @@ export type CaptionInput = {
   text?: string // وصف المنشور الذي يكتبه المدير (اختياري)
   hashtags?: string | string[]
   link: string
+  whatsapp?: string // رقم واتساب بصيغة دولية بدون +
+}
+
+// رابط واتساب برسالة طلب جاهزة
+export function whatsappOrderUrl(number: string, title: string, link: string): string {
+  const n = number.replace(/[^\d]/g, "")
+  return `https://wa.me/${n}?text=${encodeURIComponent(`مرحباً لمسة فون، أريد طلب: ${title}
+${link}`)}`
 }
 
 // نص المنشور: الاسم، السعر، الوصف، ثم "تسوق من متجرنا" مع الرابط، ثم الهاشتاقات
@@ -63,7 +71,11 @@ export function buildCaption(input: CaptionInput, maxLen = 2200): string {
   if (price) lines.push(`💰 السعر: ${price}`)
   const text = (input.text || "").trim()
   if (text) lines.push("", text)
-  lines.push("", `🛒 تسوّق من متجرنا: ${input.link}`)
+  lines.push("")
+  if (input.whatsapp && input.whatsapp.replace(/[^\d]/g, "").length >= 8) {
+    lines.push(`💬 اطلب عبر واتساب: https://wa.me/${input.whatsapp.replace(/[^\d]/g, "")}`)
+  }
+  lines.push(`🛒 تسوّق من متجرنا: ${input.link}`)
   lines.push("🚚 توصيل مجاني والدفع عند الاستلام")
 
   // إنستغرام: 30 هاشتاق كحد أقصى و2200 حرف للنص كاملاً

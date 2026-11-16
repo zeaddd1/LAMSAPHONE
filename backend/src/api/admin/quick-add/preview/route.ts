@@ -10,7 +10,7 @@ export async function POST(req: MedusaRequest<PreviewBody>, res: MedusaResponse)
   res.json({
     suggested: suggestHashtags(b.title, b.category_names || []),
     // نص المنشور بلا هاشتاقات، والهاشتاقات في أول تعليق
-    caption: buildCaption({ title: b.title || "اسم المنتج", price: b.price, text: b.text, link }),
+    caption: buildCaption({ title: b.title || "اسم المنتج", price: b.price, text: b.text, link, whatsapp: process.env.WHATSAPP_NUMBER || "967770777736" }),
     comment: hashtagComment(b.hashtags),
   })
 }

@@ -128,3 +128,11 @@ describe("hashtags stay out of the post", () => {
     expect(calls[0].body.access_token).toBe("PT")
   })
 })
+
+describe("whatsapp in posts", () => {
+  it("adds a WhatsApp order line before the store link", () => {
+    const c = buildCaption({ title: "T", link: "https://x/l", whatsapp: "+967 770 777 736" })
+    expect(c).toContain("💬 اطلب عبر واتساب: https://wa.me/967770777736")
+    expect(c.indexOf("wa.me")).toBeLessThanOrEqual(c.indexOf("https://x/l"))
+  })
+})

@@ -12,6 +12,7 @@ import { useParams, usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
+import WhatsAppOrder from "../whatsapp-order"
 import { useRouter } from "next/navigation"
 
 type ProductActionsProps = {
@@ -163,6 +164,9 @@ export default function ProductActions({
 
         <ProductPrice product={product} variant={selectedVariant} />
 
+        {/* الطلب عبر واتساب أولاً، أو الإضافة للسلة والشراء من المتجر */}
+        <WhatsAppOrder product={product} variant={selectedVariant} disabled={!selectedVariant || !isValidVariant || !inStock} />
+
         <Button
           onClick={handleAddToCart}
           disabled={
@@ -172,7 +176,7 @@ export default function ProductActions({
             isAdding ||
             !isValidVariant
           }
-          variant="primary"
+          variant="secondary"
           className="w-full h-10"
           isLoading={isAdding}
           data-testid="add-product-button"

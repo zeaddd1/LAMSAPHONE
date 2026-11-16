@@ -1,11 +1,11 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Plus } from "@medusajs/icons"
-import { Badge, Button, Container, Heading, Input, Label, Select, Switch, Tabs, Text, Textarea, toast } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Label, Select, Switch, Text, Textarea, toast } from "@medusajs/ui"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { sdk } from "../../lib/sdk"
 import { ProcessedImage, kb, processImage } from "../../lib/quick-add-image"
 import type { FitMode } from "../../lib/quick-add-geometry"
-import MetaConnectTab, { MetaPublic } from "../../components/quick-add-meta-connect"
+import type { MetaPublic } from "../../components/quick-add-meta-connect"
 
 // صفحة "إضافة سريعة": منتج كامل في المتجر + نشره على ميتا من مكان واحد.
 // تستخدم واجهات Medusa الرسمية فقط (upload / products / inventory) ولا تعدّل كود Medusa.
@@ -34,7 +34,6 @@ const COLORS = ["أسود", "أبيض", "رمادي", "فضي", "أزرق", "أ�
 const suggestCondition = (categoryLabel: string) => (/سامسونج|samsung/i.test(categoryLabel) ? "used" : "new")
 
 const QuickAddPage = () => {
-  const [tab, setTab] = useState("add")
   const [ctx, setCtx] = useState<Ctx | null>(null)
   const loadCtx = () => sdk.client.fetch<Ctx>("/admin/quick-add/context").then(setCtx).catch((e) => toast.error(String(e?.message || e)))
   useEffect(() => {
@@ -43,26 +42,21 @@ const QuickAddPage = () => {
 
   return (
     <Container className="p-0" dir="rtl">
-      <div className="px-6 py-4 border-b">
-        <Heading level="h1">إضافة سريعة</Heading>
-        <Text size="small" className="text-ui-fg-subtle">
-          أضف منتجاً للمتجر وانشره على فيسبوك وإنستغرام وكتالوج ميتا وواتساب في خطوة واحدة.
-        </Text>
-      </div>
-      <Tabs value={tab} onValueChange={setTab}>
-        <div className="px-6 pt-3">
-          <Tabs.List>
-            <Tabs.Trigger value="add">إضافة منتج</Tabs.Trigger>
-            <Tabs.Trigger value="meta">
-              ربط ميتا {ctx && (ctx.meta.has_token ? <Badge size="2xsmall" color="green" className="ms-1">مربوط</Badge> : <Badge size="2xsmall" color="orange" className="ms-1">غير مربوط</Badge>)}
-            </Tabs.Trigger>
-          </Tabs.List>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-6 py-4">
+        <div>
+          <Heading level="h1">إضافة سريعة</Heading>
+          <Text size="small" className="text-ui-fg-subtle">
+            أضف منتجاً للمتجر وانشره على فيسبوك وإنستغرام وكتالوج ميتا وواتساب في خطوة واحدة.
+          </Text>
         </div>
-        <Tabs.Content value="add">{ctx ? <AddForm ctx={ctx} goMeta={() => setTab("meta")} /> : <Text className="p-6">جارٍ التحميل…</Text>}</Tabs.Content>
-        <Tabs.Content value="meta">
-          <MetaConnectTab onSaved={loadCtx} />
-        </Tabs.Content>
-      </Tabs>
+        {/* ربط ميتا صار صفحة مستقلة حتى لا يتغير الربط بالخطأ أثناء إضافة المنتجات */}
+        {ctx && (
+          <a href="/app/meta-connect" className="text-sm text-ui-fg-interactive underline">
+            ربط ميتا {ctx.meta.has_token ? <Badge size="2xsmall" color="green" className="ms-1">مربوط</Badge> : <Badge size="2xsmall" color="orange" className="ms-1">غير مربوط</Badge>}
+          </a>
+        )}
+      </div>
+      {ctx ? <AddForm ctx={ctx} goMeta={() => (window.location.href = "/app/meta-connect")} /> : <Text className="p-6">جارٍ التحميل…</Text>}
     </Container>
   )
 }

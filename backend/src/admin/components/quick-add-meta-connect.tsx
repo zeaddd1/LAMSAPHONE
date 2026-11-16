@@ -1,4 +1,4 @@
-import { Badge, Button, Input, Label, Text, toast } from "@medusajs/ui"
+import { Badge, Button, Input, Label, Text, toast, usePrompt } from "@medusajs/ui"
 import { useEffect, useState } from "react"
 import { sdk } from "../lib/sdk"
 
@@ -33,6 +33,7 @@ export default function MetaConnectTab({ onSaved }: { onSaved: () => void }) {
   const [saving, setSaving] = useState(false)
   const [check, setCheck] = useState<Check | null>(null)
   const [checking, setChecking] = useState(false)
+  const prompt = usePrompt()
 
   const apply = (x: MetaPublic) => {
     setS(x)
@@ -56,6 +57,25 @@ export default function MetaConnectTab({ onSaved }: { onSaved: () => void }) {
   }
 
   const save = async (clear = false) => {
+    // تحذير قبل أي تعديل على الربط: خطأ هنا يوقف النشر والكتالوج والرد الآلي
+    const changes = [
+      token.trim() && "رمز الوصول (سيُستبدل الرمز الحالي)",
+      clear && "حذف رمز الوصول (سيتوقف النشر والرد الآلي)",
+      s && pageId.trim() !== s.page_id && `رقم الصفحة: ${s.page_id || "—"} ← ${pageId.trim() || "—"}`,
+      s && catalogId.trim() !== s.catalog_id && `رقم الكتالوج: ${s.catalog_id || "—"} ← ${catalogId.trim() || "—"}`,
+      s && igId.trim() !== s.ig_user_id && `رقم إنستغرام: ${s.ig_user_id || "—"} ← ${igId.trim() || "—"}`,
+    ].filter(Boolean) as string[]
+    if (!changes.length) {
+      toast.info("لا توجد تغييرات للحفظ")
+      return
+    }
+    const ok = await prompt({
+      title: "تأكيد تعديل ربط ميتا",
+      description: `ستتغير الإعدادات التالية:\n• ${changes.join("\n• ")}\n\nأي خطأ هنا يوقف النشر على فيسبوك وإنستغرام والكتالوج والرد الآلي. هل أنت متأكد؟`,
+      confirmText: "نعم، احفظ",
+      cancelText: "إلغاء",
+    })
+    if (!ok) return
     setSaving(true)
     try {
       const r = await sdk.client.fetch<{ settings: MetaPublic }>("/admin/quick-add/meta-settings", {

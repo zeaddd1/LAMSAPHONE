@@ -52,6 +52,8 @@ const modules: Record<string, unknown>[] = [
   },
   // موديول أسعار الصرف الخاص بنا (القسم 6-ب)
   { resolve: "./src/modules/exchange-rate" },
+  // الرد الآلي وإدارة محادثات ميتا
+  { resolve: "./src/modules/assistant" },
 ]
 
 if (redisUrl) {

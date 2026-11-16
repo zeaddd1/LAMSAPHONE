@@ -115,6 +115,8 @@ export default async function Footer() {
                 <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/about">من نحن</LocalizedClientLink></li>
                 <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/contact">تواصل معنا</LocalizedClientLink></li>
                 <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/returns">سياسة الاسترجاع</LocalizedClientLink></li>
+                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/faq">الأسئلة الشائعة</LocalizedClientLink></li>
+                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/privacy">سياسة الخصوصية</LocalizedClientLink></li>
                 <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/track-order">تتبع الطلب</LocalizedClientLink></li>
               </ul>
             </div>

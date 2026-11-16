@@ -155,6 +155,25 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       }
     }
   }
+  const [imageUrl, setImageUrl] = useState("")
+  const addFromUrl = async () => {
+    const u = imageUrl.trim()
+    if (!u) return
+    setProcessing((n) => n + 1)
+    try {
+      const r = await fetch(`/admin/quick-add/image-proxy?url=${encodeURIComponent(u)}`, { credentials: "include" })
+      if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.message || "تعذّر تحميل الصورة")
+      const blob = await r.blob()
+      const name = (u.split("/").pop() || "image").split("?")[0].slice(0, 40) || "image"
+      const img = await processImage(new File([blob], name, { type: blob.type }), { mode, autoTrim, background: "auto" })
+      setImages((xs) => [...xs, img].slice(0, 10))
+      setImageUrl("")
+    } catch (e: any) {
+      toast.error(e?.message || "تعذّر تحميل الصورة")
+    } finally {
+      setProcessing((n) => n - 1)
+    }
+  }
   const move = (i: number, d: number) =>
     setImages((xs) => {
       const j = i + d
@@ -370,6 +389,13 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
               تُحوَّل تلقائياً إلى WebP بمقاس 1200×1400 (مناسب لصفحة المنتج وبطاقات المتجر) مع الحفاظ على الجودة
             </Text>
             <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
+          </div>
+          {/* أو من رابط صورة على الإنترنت (يُجلب عبر السيرفر ثم يُحوَّل مثل أي صورة) */}
+          <div className="flex gap-2">
+            <Input dir="ltr" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="أو الصق رابط صورة https://…" />
+            <Button variant="secondary" disabled={!imageUrl.trim() || processing > 0} onClick={addFromUrl}>
+              إضافة من الرابط
+            </Button>
           </div>
           {processing > 0 && <Text size="small">جارٍ تجهيز {processing} صورة…</Text>}
           {images.length > 0 && (

@@ -55,6 +55,8 @@ export type CaptionInput = {
   link: string
   whatsapp?: string // رقم واتساب بصيغة دولية بدون +
   waLink?: string // رابط واتساب قصير باسم المتجر (يفتح محادثة برسالة جاهزة عن المنتج)
+  // إنستغرام لا يجعل الروابط قابلة للضغط داخل المنشور: نكتب «الرابط في البايو» بدلها
+  network?: "facebook" | "instagram"
 }
 
 // رمز قصير للمنتج من آخر 6 أحرف في رقمه: يُستخدم في الروابط القصيرة /p/xxxxxx و /wa/xxxxxx
@@ -85,11 +87,17 @@ export function buildCaption(input: CaptionInput, maxLen = 2200): string {
   const text = (input.text || "").trim()
   if (text) lines.push("", text)
   lines.push("")
-  lines.push(`🛒 تسوّق من متجرنا 👈 ${input.link}`)
-  if (input.waLink) {
+  if (input.network === "instagram") {
+    // لا روابط في إنستغرام لأنها لا تُضغط داخل المنشور
+    lines.push("🛒 للطلب: اضغط الرابط في البايو 👆 أو راسلنا على الخاص")
+  } else if (input.waLink) {
+    lines.push(`🛒 تسوّق من متجرنا 👈 ${input.link}`)
     lines.push(`💬 اطلب عبر واتساب 👈 ${input.waLink}`)
-  } else if (input.whatsapp && input.whatsapp.replace(/[^\d]/g, "").length >= 8) {
-    lines.push(`💬 اطلب عبر واتساب 👈 wa.me/${input.whatsapp.replace(/[^\d]/g, "")}`)
+  } else {
+    lines.push(`🛒 تسوّق من متجرنا 👈 ${input.link}`)
+    if (input.whatsapp && input.whatsapp.replace(/[^\d]/g, "").length >= 8) {
+      lines.push(`💬 اطلب عبر واتساب 👈 wa.me/${input.whatsapp.replace(/[^\d]/g, "")}`)
+    }
   }
   lines.push("📍 صنعاء | 🚚 توصيل سريع والدفع عند الاستلام")
 

@@ -141,3 +141,16 @@ describe("short branded links", () => {
     expect(c.includes("https://")).toBe(false)
   })
 })
+
+describe("instagram captions", () => {
+  it("never puts unclickable links in Instagram posts", () => {
+    const c = buildCaption({ title: "T", link: "lamsaphone.yemenbay.com/p/abc123", waLink: "lamsaphone.yemenbay.com/wa/abc123", network: "instagram" })
+    expect(c).toContain("الرابط في البايو")
+    expect(c.includes("lamsaphone.yemenbay.com")).toBe(false)
+  })
+  it("Facebook posts keep both short links", () => {
+    const c = buildCaption({ title: "T", link: "lamsaphone.yemenbay.com/p/abc123", waLink: "lamsaphone.yemenbay.com/wa/abc123", network: "facebook" })
+    expect(c).toContain("/p/abc123")
+    expect(c).toContain("/wa/abc123")
+  })
+})

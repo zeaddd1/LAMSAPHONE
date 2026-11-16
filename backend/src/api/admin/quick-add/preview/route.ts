@@ -11,6 +11,7 @@ export async function POST(req: MedusaRequest<PreviewBody>, res: MedusaResponse)
   res.json({
     suggested: suggestHashtags(b.title, b.category_names || []),
     // نص المنشور بلا هاشتاقات، والهاشتاقات في أول تعليق
+    ig_caption: buildCaption({ title: b.title || "اسم المنتج", price: b.price, text: b.text, link: `${host}/p/…`, waLink: `${host}/wa/…`, network: "instagram" }),
     caption: buildCaption({ title: b.title || "اسم المنتج", price: b.price, text: b.text, link: `${host}/p/…`, waLink: `${host}/wa/…` }),
     comment: hashtagComment(b.hashtags),
   })

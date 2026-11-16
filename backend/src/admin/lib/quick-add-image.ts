@@ -1,11 +1,58 @@
 import { FitMode, MAX_BYTES, QUALITY_STEPS, TARGET_BYTES, TARGET_H, TARGET_W, fitBox, trimBox } from "./quick-add-geometry"
+import { STORE_LOGO } from "./store-logo"
 
 // أداة الصور: تقبل أي مقاس وأي صيغة يفهمها المتصفح، وتُخرج:
 // - webp بمقاس 1200×1400 للمتجر (خفيف وسريع)
 // - jpeg بنفس المقاس لميتا (إنستغرام لا يقبل webp)
 // كل المعالجة في المتصفح، فلا تحمّل على الخادم ولا تتجاوز حد الرفع 1MB.
 
-export type ProcessOptions = { mode: FitMode; autoTrim: boolean; background: "auto" | "white" }
+export type ProcessOptions = { mode: FitMode; autoTrim: boolean; background: "auto" | "white"; brand?: boolean }
+
+// ---------- هوية المتجر: إطار خفيف + شعار صغير شبه شفاف أسفل يمين الصورة ----------
+let logoPromise: Promise<HTMLImageElement | null> | null = null
+export function loadLogo(): Promise<HTMLImageElement | null> {
+  if (!logoPromise) {
+    logoPromise = new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = () => resolve(null)
+      img.src = STORE_LOGO
+    })
+  }
+  return logoPromise
+}
+
+// يرسم الإطار والشعار فوق الصورة أو إطار الفيديو. نسبي للمقاس حتى يناسب أي دقة.
+export function drawBranding(ctx: CanvasRenderingContext2D, w: number, h: number, logo: HTMLImageElement | null) {
+  const unit = Math.min(w, h)
+  // إطار رفيع بلون الشعار وبشفافية خفيفة، بزوايا دائرية من الداخل
+  const inset = Math.round(unit * 0.022)
+  const radius = Math.round(unit * 0.035)
+  ctx.save()
+  ctx.lineWidth = Math.max(2, Math.round(unit * 0.006))
+  ctx.strokeStyle = "rgba(255, 102, 0, 0.35)"
+  ctx.beginPath()
+  const x = inset, y = inset, rw = w - inset * 2, rh = h - inset * 2
+  ctx.moveTo(x + radius, y)
+  ctx.arcTo(x + rw, y, x + rw, y + rh, radius)
+  ctx.arcTo(x + rw, y + rh, x, y + rh, radius)
+  ctx.arcTo(x, y + rh, x, y, radius)
+  ctx.arcTo(x, y, x + rw, y, radius)
+  ctx.closePath()
+  ctx.stroke()
+  ctx.restore()
+  if (!logo) return
+  // الشعار: عرضه 15% من الصورة، أسفل اليمين داخل الإطار، بشفافية 75%
+  const lw = Math.round(w * 0.15)
+  const lh = Math.round((logo.naturalHeight / logo.naturalWidth) * lw)
+  const pad = inset + Math.round(unit * 0.025)
+  ctx.save()
+  ctx.globalAlpha = 0.75
+  ctx.shadowColor = "rgba(255, 255, 255, 0.9)"
+  ctx.shadowBlur = Math.round(unit * 0.01)
+  ctx.drawImage(logo, w - pad - lw, h - pad - lh, lw, lh)
+  ctx.restore()
+}
 
 export type ProcessedImage = {
   name: string
@@ -95,6 +142,7 @@ export async function processImage(file: File, opts: ProcessOptions): Promise<Pr
     ctx.fillRect(0, 0, TARGET_W, TARGET_H)
     const box = fitBox(crop.w, crop.h, TARGET_W, TARGET_H, opts.mode)
     ctx.drawImage(src.img, crop.x, crop.y, crop.w, crop.h, box.x, box.y, box.w, box.h)
+    if (opts.brand) drawBranding(ctx, TARGET_W, TARGET_H, await loadLogo())
 
     // 3) التحويل: webp للمتجر (أو jpeg إن كان المتصفح لا يدعم webp) و jpeg لميتا
     const name = baseName(file.name)

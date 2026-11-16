@@ -4,6 +4,8 @@ import { Badge, Button, Container, Heading, Input, Label, Select, Switch, Text, 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { sdk } from "../../lib/sdk"
 import { ProcessedImage, kb, processImage } from "../../lib/quick-add-image"
+import { ProcessedVideo, VIDEO_MAX_SECONDS, processVideo } from "../../lib/quick-add-video"
+import PostPreview from "../../components/quick-add-post-preview"
 import type { FitMode } from "../../lib/quick-add-geometry"
 import type { MetaPublic } from "../../components/quick-add-meta-connect"
 import QuickAddProducts from "../../components/quick-add-products"
@@ -110,6 +112,11 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   const [processing, setProcessing] = useState(0)
   const [mode, setMode] = useState<FitMode>("contain")
   const [autoTrim, setAutoTrim] = useState(true)
+  // هوية المتجر على الصور والفيديو (إطار خفيف + الشعار)
+  const [brand, setBrand] = useState(true)
+  const [video, setVideo] = useState<ProcessedVideo | null>(null)
+  const [videoProgress, setVideoProgress] = useState<number | null>(null)
+  const [useVideo, setUseVideo] = useState(true)
   // حقول إضافية
   const [description, setDescription] = useState("")
   const [qty, setQty] = useState("")
@@ -123,7 +130,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   const [toCatalog, setToCatalog] = useState(metaReady && Boolean(ctx.meta.catalog_id))
   const [postText, setPostText] = useState("")
   const [hashtags, setHashtags] = useState("")
-  const [preview, setPreview] = useState<{ caption: string; comment: string; suggested: string[] } | null>(null)
+  const [preview, setPreview] = useState<{ caption: string; ig_caption?: string; comment: string; suggested: string[] } | null>(null)
 
   const [busy, setBusy] = useState<string>("")
   const [done, setDone] = useState<Done | null>(null)
@@ -137,13 +144,13 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   }, [categoryId])
   // الاسم النهائي: الاسم + السعة (إن لم تكن مكتوبة فيه)
   const fullTitle = storage && !title.toLowerCase().includes(storage.toLowerCase()) ? `${title.trim()} ${storage}` : title.trim()
-  const missing = [!title.trim() && "الاسم", !categoryId && "القسم", !images.length && "صورة واحدة على الأقل", !(priceNum > 0) && "السعر"].filter(Boolean) as string[]
+  const missing = [!title.trim() && "الاسم", !categoryId && "القسم", !images.length && !video && "صورة أو فيديو", !(priceNum > 0) && "السعر"].filter(Boolean) as string[]
 
   // معاينة نص المنشور واقتراح الهاشتاقات (بعد توقف الكتابة قليلاً)
   useEffect(() => {
     const t = setTimeout(() => {
       sdk.client
-        .fetch<{ caption: string; comment: string; suggested: string[] }>("/admin/quick-add/preview", {
+        .fetch<{ caption: string; ig_caption?: string; comment: string; suggested: string[] }>("/admin/quick-add/preview", {
           method: "POST",
           body: { title: fullTitle, price: priceNum > 0 ? priceNum : undefined, text: postText, hashtags, category_names: cat?.names || [], handle: done?.handle },
         })
@@ -153,15 +160,31 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     return () => clearTimeout(t)
   }, [fullTitle, priceNum, postText, hashtags, categoryId, done?.handle])
 
+  const addVideo = async (f: File) => {
+    setVideoProgress(0)
+    try {
+      const v = await processVideo(f, { brand }, (x) => setVideoProgress(x))
+      if (video) URL.revokeObjectURL(video.preview)
+      setVideo(v)
+      if (v.type !== "mp4") toast.warning("المتصفح حفظ الفيديو بصيغة WebM: يظهر في المتجر، لكن إنستغرام وفيسبوك سيأخذان الصور بدلاً منه")
+    } catch (e: any) {
+      toast.error(e?.message || "تعذّر تجهيز الفيديو")
+    } finally {
+      setVideoProgress(null)
+    }
+  }
+
   const addFiles = async (list: FileList | null) => {
     if (!list?.length) return
+    const vids = Array.from(list).filter((f) => f.type.startsWith("video/") || /\.(mp4|mov|webm|m4v|3gp|mkv)$/i.test(f.name))
+    if (vids.length) addVideo(vids[0])
     const files = Array.from(list).filter((f) => f.type.startsWith("image/") || /\.(heic|heif|avif|webp|jpe?g|png|gif|bmp)$/i.test(f.name))
     const room = 10 - images.length
     if (files.length > room) toast.warning(`الحد 10 صور، أُخذت أول ${room}`)
     setProcessing((n) => n + Math.min(files.length, room))
     for (const f of files.slice(0, room)) {
       try {
-        const img = await processImage(f, { mode, autoTrim, background: "auto" })
+        const img = await processImage(f, { mode, autoTrim, background: "auto", brand })
         setImages((xs) => [...xs, img])
       } catch {
         toast.error(`تعذّر قراءة الصورة ${f.name} (جرّب JPG أو PNG)`)
@@ -180,7 +203,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.message || "تعذّر تحميل الصورة")
       const blob = await r.blob()
       const name = (u.split("/").pop() || "image").split("?")[0].slice(0, 40) || "image"
-      const img = await processImage(new File([blob], name, { type: blob.type }), { mode, autoTrim, background: "auto" })
+      const img = await processImage(new File([blob], name, { type: blob.type }), { mode, autoTrim, background: "auto", brand })
       setImages((xs) => [...xs, img].slice(0, 10))
       setImageUrl("")
     } catch (e: any) {
@@ -203,6 +226,8 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     setTitle("")
     setPrice("")
     setImages([])
+    if (video) URL.revokeObjectURL(video.preview)
+    setVideo(null)
     setDescription("")
     setQty("")
     setPostText("")
@@ -225,9 +250,19 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     }
     try {
       setBusy("رفع الصور…")
-      const urls = await upload(images.map((i) => i.webp))
+      // الفيديو: الملف + غلافه. الغلاف يصبح صورة المنتج إن لم توجد صور
+      let videoMeta: { url: string; poster: string; type: string; seconds: number }[] = []
+      let posterUrl = ""
+      if (video) {
+        setBusy("رفع الفيديو…")
+        const [vu, pu] = await upload([video.file, video.poster])
+        videoMeta = [{ url: vu, poster: pu, type: video.type, seconds: video.seconds }]
+        posterUrl = pu
+        setBusy("رفع الصور…")
+      }
+      const urls = images.length ? await upload(images.map((i) => i.webp)) : [posterUrl]
       // نسخ JPEG لميتا (إنستغرام لا يقبل webp)، لا تظهر في المتجر
-      const metaUrls = await upload(images.map((i) => i.jpeg)).catch(() => [] as string[])
+      const metaUrls = images.length ? await upload(images.map((i) => i.jpeg)).catch(() => [] as string[]) : [posterUrl]
 
       setBusy("إنشاء المنتج…")
       const track = qty.trim() !== "" && Number(qty) >= 0
@@ -241,7 +276,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
         sales_channels: ctx.default_sales_channel_id ? [{ id: ctx.default_sales_channel_id }] : undefined,
         shipping_profile_id: ctx.shipping_profile_id || undefined,
         // الحالة للكتالوج فقط (ميتا تشترطها صحيحة)، ولا تظهر في المنشور ولا في اسم المنتج
-        metadata: { condition, ...(storage ? { storage } : {}), ...(color ? { color } : {}), meta_images: metaUrls, added_by: "quick-add" },
+        metadata: { condition, ...(storage ? { storage } : {}), ...(color ? { color } : {}), meta_images: metaUrls, ...(videoMeta.length ? { videos: videoMeta } : {}), added_by: "quick-add" },
         options: [{ title: "الخيار", values: ["افتراضي"] }],
         variants: [
           {
@@ -288,7 +323,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     try {
       const r = await sdk.client.fetch<{ link: string; results: Record<string, PublishResult> }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { product_id: d.id, facebook: again("facebook", toFb), instagram: again("instagram", toIg), catalog: again("catalog", toCatalog), text: postText, hashtags },
+        body: { product_id: d.id, facebook: again("facebook", toFb), instagram: again("instagram", toIg), catalog: again("catalog", toCatalog), text: postText, hashtags, use_video: useVideo },
       })
       const merged = { ...(prev && !prev.all ? prev : {}) }
       for (const [k, v] of Object.entries(r.results)) if (!v.skipped) merged[k] = v
@@ -373,8 +408,12 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
         {/* 2. الصور */}
         <section className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label>الصور * (حتى 10، أي مقاس)</Label>
-            <div className="flex items-center gap-4">
+            <Label>الصور والفيديو * (حتى 10 صور + فيديو واحد، أي مقاس)</Label>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch id="qa-brand" checked={brand} onCheckedChange={setBrand} />
+                <Label htmlFor="qa-brand" size="small">إطار وشعار المتجر</Label>
+              </div>
               <div className="flex items-center gap-2">
                 <Switch id="qa-trim" checked={autoTrim} onCheckedChange={setAutoTrim} />
                 <Label htmlFor="qa-trim" size="small">توسيط المنتج تلقائياً</Label>
@@ -399,11 +438,11 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
               addFiles(e.dataTransfer.files)
             }}
           >
-            <Text>اسحب الصور هنا أو اضغط للاختيار</Text>
+            <Text>اسحب الصور أو الفيديو هنا، أو اضغط للاختيار</Text>
             <Text size="small" className="text-ui-fg-subtle">
-              تُحوَّل تلقائياً إلى WebP بمقاس 1200×1400 (مناسب لصفحة المنتج وبطاقات المتجر) مع الحفاظ على الجودة
+              الصور تُحوَّل إلى WebP بمقاس 1200×1400، والفيديو يُضغط إلى أقل من 1MB (حتى {VIDEO_MAX_SECONDS} ثانية) مع الحفاظ على وضوحه
             </Text>
-            <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
+            <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
           </div>
           {/* أو من رابط صورة على الإنترنت (يُجلب عبر السيرفر ثم يُحوَّل مثل أي صورة) */}
           <div className="flex gap-2">
@@ -413,6 +452,24 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
             </Button>
           </div>
           {processing > 0 && <Text size="small">جارٍ تجهيز {processing} صورة…</Text>}
+          {videoProgress !== null && (
+            <div className="flex flex-col gap-1">
+              <Text size="small">جارٍ ضغط الفيديو… {Math.round(videoProgress * 100)}% (يأخذ نفس مدة الفيديو تقريباً)</Text>
+              <div className="h-1.5 w-full overflow-hidden rounded bg-ui-bg-subtle">
+                <div className="h-full bg-ui-fg-interactive transition-all" style={{ width: `${Math.round(videoProgress * 100)}%` }} />
+              </div>
+            </div>
+          )}
+          {video && (
+            <div className="flex items-center gap-3 rounded-md border p-2">
+              <video src={video.preview} className="aspect-[6/7] w-24 rounded object-cover" muted playsInline loop autoPlay />
+              <div className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
+                <Text size="small" weight="plus">فيديو المنتج · {video.seconds} ثانية · {video.type.toUpperCase()}</Text>
+                <span>{kb(video.originalBytes)} ← {kb(video.file.size)}</span>
+                <button type="button" className="self-start text-ui-fg-error underline" onClick={() => { URL.revokeObjectURL(video.preview); setVideo(null) }}>حذف الفيديو</button>
+              </div>
+            </div>
+          )}
           {images.length > 0 && (
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
               {images.map((img, i) => (
@@ -501,17 +558,21 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
             </div>
           ) : null}
         </div>
-        {preview?.caption && (
-          <div className="flex flex-col gap-1">
-            <Label size="small">معاينة المنشور</Label>
-            <pre dir="auto" className="max-h-56 overflow-auto whitespace-pre-wrap rounded-md bg-ui-bg-subtle p-2 font-sans text-xs">{preview.caption}</pre>
-            {preview.comment && (
-              <>
-                <Label size="small">أول تعليق (الهاشتاقات)</Label>
-                <pre dir="auto" className="whitespace-pre-wrap rounded-md bg-ui-bg-subtle p-2 font-sans text-xs">{preview.comment}</pre>
-              </>
-            )}
+        {video?.type === "mp4" && (
+          <div className="flex items-center justify-between">
+            <Label size="small">انشر الفيديو بدل الصور (ريلز)</Label>
+            <Switch checked={useVideo} onCheckedChange={setUseVideo} />
           </div>
+        )}
+        {preview?.caption && (
+          <PostPreview
+            caption={preview.caption}
+            igCaption={preview.ig_caption || preview.caption}
+            comment={preview.comment}
+            image={images[0]?.preview || undefined}
+            video={video && useVideo && video.type === "mp4" ? video.preview : undefined}
+            count={images.length}
+          />
         )}
       </aside>
 

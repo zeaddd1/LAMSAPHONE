@@ -2,7 +2,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { buildCaption, hashtagComment, productUrl, shortLinks } from "../../../../lib/quick-add/caption"
 import { backendUrl, buildMetaFeed, clearMetaFeedCache, storeUrl } from "../../../../lib/meta-feed-builder"
-import { addComment, getPage, postToFacebook, postToInstagram, pushToCatalog } from "../../../../lib/quick-add/meta-graph"
+import { addComment, getPage, postReelToInstagram, postToFacebook, postToInstagram, postVideoToFacebook, pushToCatalog } from "../../../../lib/quick-add/meta-graph"
 import { getMetaSettings } from "../../../../lib/quick-add/meta-settings"
 import type { PublishBody } from "../validators"
 
@@ -32,7 +32,8 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   const price = prices.length ? Math.min(...prices.map((x: any) => Number(x.amount))) : undefined
   // الهاشتاقات لا تدخل نص المنشور ولا المنتج: تُنشر كأول تعليق
   const short = shortLinks(p.id, storeUrl())
-  const caption = buildCaption({ title: p.title, price, text: b.text, link: short.shop, waLink: short.wa })
+  const caption = buildCaption({ title: p.title, price, text: b.text, link: short.shop, waLink: short.wa, network: "facebook" })
+  const igCaption = buildCaption({ title: p.title, price, text: b.text, link: short.shop, waLink: short.wa, network: "instagram" })
   const comment = hashtagComment(b.hashtags)
 
   // ميتا تحتاج JPEG برابط عام: نسخ الإضافة السريعة، وإلا صور المنتج نفسها
@@ -42,6 +43,11 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
     .map(abs)
     .filter((u: string, i: number, a: string[]) => a.indexOf(u) === i)
   const local = images.some((u) => /localhost|127\.0\.0\.1/.test(u))
+  // فيديو المنتج (MP4 فقط تقبله ميتا)
+  const vids: any[] = Array.isArray(p.metadata?.videos) ? p.metadata.videos : []
+  const vid = b.use_video ? vids.find((v) => v?.type === "mp4" && v?.url) : undefined
+  const videoUrl = vid ? abs(vid.url) : ""
+  const coverUrl = vid?.poster ? abs(vid.poster) : undefined
 
   const results: Record<string, Result> = {}
   const need = (on: boolean, ok: boolean, why: string): Result | null => (!on ? { ok: false, skipped: true } : !ok ? { ok: false, error: why } : null)
@@ -64,11 +70,11 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
     }
   }
 
-  results.facebook = need(b.facebook, Boolean(page), results.page?.error || "رقم صفحة فيسبوك غير مضبوط") || (await run(() => postToFacebook(cfg, page!, images, caption), (id) => addComment(cfg, id, page!.page_token, comment), comment))
+  results.facebook = need(b.facebook, Boolean(page), results.page?.error || "رقم صفحة فيسبوك غير مضبوط") || (await run(() => (videoUrl ? postVideoToFacebook(cfg, page!, videoUrl, caption) : postToFacebook(cfg, page!, images, caption)), (id) => addComment(cfg, id, page!.page_token, comment), comment))
   const igId = s.ig_user_id || page?.ig?.id
   results.instagram =
     need(b.instagram, Boolean(page && igId), "لا يوجد حساب إنستغرام أعمال مربوط بالصفحة") ||
-    (await run(() => postToInstagram(cfg, igId!, page!.page_token, images, caption), (id) => addComment(cfg, id, page!.page_token, comment), comment))
+    (await run(() => (videoUrl ? postReelToInstagram(cfg, igId!, page!.page_token, videoUrl, igCaption, coverUrl) : postToInstagram(cfg, igId!, page!.page_token, images, igCaption)), (id) => addComment(cfg, id, page!.page_token, comment), comment))
   results.catalog =
     need(b.catalog, Boolean(s.catalog_id), "رقم الكتالوج غير مضبوط") ||
     (await run(async () => {

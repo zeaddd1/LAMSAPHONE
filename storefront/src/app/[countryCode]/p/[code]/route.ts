@@ -1,4 +1,5 @@
 import { findByShortCode } from "@lib/data/short-links"
+import { publicOrigin } from "@lib/util/public-origin"
 import { NextRequest, NextResponse } from "next/server"
 
 // رابط قصير للمنتج في منشورات ميتا: lamsaphone.yemenbay.com/p/xxxxxx ← صفحة المنتج
@@ -6,5 +7,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ coun
   const { countryCode, code } = await params
   const p = await findByShortCode(code)
   const path = p ? `/${countryCode}/products/${encodeURIComponent(p.handle)}` : `/${countryCode}/store`
-  return NextResponse.redirect(new URL(path, req.nextUrl.origin), 307)
+  return NextResponse.redirect(new URL(path, publicOrigin(req)), 307)
 }

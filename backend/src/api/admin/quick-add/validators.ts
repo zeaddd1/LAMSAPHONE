@@ -26,5 +26,7 @@ export const PublishBody = z.object({
   // للمنشور فقط: لا يُحفظ في المنتج
   text: z.string().max(2000).optional(),
   hashtags: z.string().max(3000).optional(),
+  // إن كان للمنتج فيديو MP4: يُنشر كريلز على إنستغرام وفيديو على فيسبوك بدل الصور
+  use_video: z.boolean().default(true),
 })
 export type PublishBody = z.infer<typeof PublishBody>

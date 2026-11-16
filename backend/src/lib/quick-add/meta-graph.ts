@@ -113,6 +113,28 @@ export async function addComment(cfg: GraphConfig, objectId: string, token: stri
   return call(cfg, "POST", `${objectId}/comments`, { message }, token)
 }
 
+// فيديو على صفحة فيسبوك من رابط عام (MP4)
+export async function postVideoToFacebook(cfg: GraphConfig, page: PageInfo, videoUrl: string, description: string): Promise<{ id: string; url: string }> {
+  const r = await call(cfg, "POST", `${page.id}/videos`, { file_url: videoUrl, description }, page.page_token)
+  return { id: r.id, url: `https://www.facebook.com/${page.id}/videos/${r.id}` }
+}
+
+// ريلز على إنستغرام من رابط فيديو عام (MP4). تجهيز الفيديو عند ميتا يأخذ وقتاً أطول من الصور.
+export async function postReelToInstagram(cfg: GraphConfig, igUserId: string, token: string, videoUrl: string, caption: string, coverUrl?: string): Promise<{ id: string; url?: string }> {
+  const c = await call(cfg, "POST", `${igUserId}/media`, { media_type: "REELS", video_url: videoUrl, caption, share_to_feed: "true", ...(coverUrl ? { cover_url: coverUrl } : {}) }, token)
+  const sleep = cfg.sleep || ((ms: number) => new Promise((r) => setTimeout(r, ms)))
+  for (let i = 0; ; i++) {
+    const st = await call(cfg, "GET", c.id, { fields: "status_code" }, token)
+    if (st.status_code === "FINISHED") break
+    if (st.status_code === "ERROR" || st.status_code === "EXPIRED") throw new GraphError("رفض إنستغرام الفيديو (يجب أن يكون MP4 برابط عام)")
+    if (i >= 40) throw new GraphError("انتهت مهلة تجهيز الريلز عند إنستغرام")
+    await sleep(3000)
+  }
+  const pub = await call(cfg, "POST", `${igUserId}/media_publish`, { creation_id: c.id }, token)
+  const info = await call(cfg, "GET", pub.id, { fields: "permalink" }, token).catch(() => ({}))
+  return { id: pub.id, url: (info as any).permalink }
+}
+
 // تحويل عنصر الكتالوج (بصيغة g:xxx من ملف الكتالوج) إلى صيغة items_batch (نفس أسماء حقول الملف، والسعر "700.00 USD")
 export function feedItemToBatch(item: Record<string, string>) {
   const data: Record<string, unknown> = {}

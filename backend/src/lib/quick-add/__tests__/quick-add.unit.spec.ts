@@ -1,4 +1,4 @@
-import { buildCaption, hashtagComment, normalizeHashtags, productUrl, suggestHashtags } from "../caption"
+import { buildCaption, hashtagComment, normalizeHashtags, productUrl, shortCode, shortLinks, suggestHashtags } from "../caption"
 import { addComment, feedItemToBatch, postToFacebook, postToInstagram, pushToCatalog } from "../meta-graph"
 import { fitBox, trimBox } from "../../../admin/lib/quick-add-geometry"
 
@@ -11,7 +11,7 @@ describe("caption", () => {
   })
   it("always contains the shop link and hashtags last", () => {
     const c = buildCaption({ title: "S25 Ultra", price: 700, text: "عرض", hashtags: "سامسونج", link: "https://x/ye/products/s25" })
-    expect(c).toContain("🛒 تسوّق من متجرنا: https://x/ye/products/s25")
+    expect(c).toContain("🛒 تسوّق من متجرنا 👈 https://x/ye/products/s25")
     expect(c).toContain("700$")
     expect(c.trim().endsWith("#سامسونج")).toBe(true)
   })
@@ -129,10 +129,15 @@ describe("hashtags stay out of the post", () => {
   })
 })
 
-describe("whatsapp in posts", () => {
-  it("adds a WhatsApp order line before the store link", () => {
-    const c = buildCaption({ title: "T", link: "https://x/l", whatsapp: "+967 770 777 736" })
-    expect(c).toContain("💬 اطلب عبر واتساب: https://wa.me/967770777736")
-    expect(c.indexOf("wa.me")).toBeLessThanOrEqual(c.indexOf("https://x/l"))
+describe("short branded links", () => {
+  it("builds store and WhatsApp short links from the product id", () => {
+    expect(shortCode("prod_01M7HDZ8QET6TF67BD7DFQPWCZ")).toBe("fqpwcz")
+    expect(shortLinks("prod_01M7HDZ8QET6TF67BD7DFQPWCZ")).toEqual({ shop: "lamsaphone.yemenbay.com/p/fqpwcz", wa: "lamsaphone.yemenbay.com/wa/fqpwcz" })
+  })
+  it("posts show the short links, not long URLs", () => {
+    const c = buildCaption({ title: "T", link: "lamsaphone.yemenbay.com/p/abc123", waLink: "lamsaphone.yemenbay.com/wa/abc123" })
+    expect(c).toContain("🛒 تسوّق من متجرنا 👈 lamsaphone.yemenbay.com/p/abc123")
+    expect(c).toContain("💬 اطلب عبر واتساب 👈 lamsaphone.yemenbay.com/wa/abc123")
+    expect(c.includes("https://")).toBe(false)
   })
 })

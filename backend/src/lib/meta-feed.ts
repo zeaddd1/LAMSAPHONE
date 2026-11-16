@@ -114,7 +114,12 @@ export function productToItems(
   }
 ): FeedItem[] {
   const brand = detectBrand(product)
-  const description = (stripHtml(product.description) || stripHtml(product.subtitle) || product.title).slice(0, 9999)
+  // وصف الكتالوج: وصف المنتج إن وُجد، وإلا وصف تسويقي قصير بدل تكرار الاسم
+  const description = (
+    stripHtml(product.description) ||
+    stripHtml(product.subtitle) ||
+    `${product.title} من لمسة فون: أصلي ومفحوص، توصيل سريع في صنعاء والدفع عند الاستلام.`
+  ).slice(0, 9999)
   // صفحة الإضافة السريعة تحفظ نسخ JPEG في metadata.meta_images لأن ميتا لا تقبل webp دائماً
   const metaImages = Array.isArray(product.metadata?.meta_images)
     ? (product.metadata!.meta_images as unknown[]).filter((u): u is string => typeof u === "string")
@@ -165,6 +170,14 @@ export function productToItems(
     }
     if (v.sku) item["g:mpn"] = v.sku
     if (category) item["g:product_type"] = category
+    // تصنيف ميتا/جوجل القياسي: يحسّن ظهور المنتج في البحث والمتجر
+    const allCats = (product.categories || []).map((c) => c?.name || "").join(" ")
+    item["g:google_product_category"] = /جوال|سامسونج|آيفون|ايفون|شاومي|هواوي|أونر/.test(allCats) && !/إكسسوار|شواحن|كفرات|سماعات|حماية|باور/.test(allCats)
+      ? "Electronics > Communications > Telephony > Mobile Phones"
+      : /لوحي/.test(allCats)
+      ? "Electronics > Computers > Tablet Computers"
+      : "Electronics > Communications > Telephony > Mobile Phone Accessories"
+    if (category) item["g:custom_label_0"] = category
     const color = optionValue(v, COLOR_TITLES)
     if (color) item["g:color"] = color
     const size = optionValue(v, SIZE_TITLES)

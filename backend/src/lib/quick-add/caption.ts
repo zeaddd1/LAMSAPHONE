@@ -54,6 +54,19 @@ export type CaptionInput = {
   hashtags?: string | string[]
   link: string
   whatsapp?: string // رقم واتساب بصيغة دولية بدون +
+  waLink?: string // رابط واتساب قصير باسم المتجر (يفتح محادثة برسالة جاهزة عن المنتج)
+}
+
+// رمز قصير للمنتج من آخر 6 أحرف في رقمه: يُستخدم في الروابط القصيرة /p/xxxxxx و /wa/xxxxxx
+export function shortCode(productId: string): string {
+  return productId.slice(-6).toLowerCase()
+}
+
+// روابط قصيرة أنيقة باسم المتجر بدل الروابط الطويلة (بلا https:// حتى يبقى المنشور نظيفاً)
+export function shortLinks(productId: string, storeUrl = STORE_URL_DEFAULT): { shop: string; wa: string } {
+  const host = storeUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")
+  const code = shortCode(productId)
+  return { shop: `${host}/p/${code}`, wa: `${host}/wa/${code}` }
 }
 
 // رابط واتساب برسالة طلب جاهزة
@@ -72,10 +85,12 @@ export function buildCaption(input: CaptionInput, maxLen = 2200): string {
   const text = (input.text || "").trim()
   if (text) lines.push("", text)
   lines.push("")
-  if (input.whatsapp && input.whatsapp.replace(/[^\d]/g, "").length >= 8) {
-    lines.push(`💬 اطلب عبر واتساب: https://wa.me/${input.whatsapp.replace(/[^\d]/g, "")}`)
+  lines.push(`🛒 تسوّق من متجرنا 👈 ${input.link}`)
+  if (input.waLink) {
+    lines.push(`💬 اطلب عبر واتساب 👈 ${input.waLink}`)
+  } else if (input.whatsapp && input.whatsapp.replace(/[^\d]/g, "").length >= 8) {
+    lines.push(`💬 اطلب عبر واتساب 👈 wa.me/${input.whatsapp.replace(/[^\d]/g, "")}`)
   }
-  lines.push(`🛒 تسوّق من متجرنا: ${input.link}`)
   lines.push("📍 صنعاء | 🚚 توصيل سريع والدفع عند الاستلام")
 
   // إنستغرام: 30 هاشتاق كحد أقصى و2200 حرف للنص كاملاً

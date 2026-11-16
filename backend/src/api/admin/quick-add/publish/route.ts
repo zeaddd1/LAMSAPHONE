@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { buildCaption, hashtagComment, productUrl } from "../../../../lib/quick-add/caption"
+import { buildCaption, hashtagComment, productUrl, shortLinks } from "../../../../lib/quick-add/caption"
 import { backendUrl, buildMetaFeed, clearMetaFeedCache, storeUrl } from "../../../../lib/meta-feed-builder"
 import { addComment, getPage, postToFacebook, postToInstagram, pushToCatalog } from "../../../../lib/quick-add/meta-graph"
 import { getMetaSettings } from "../../../../lib/quick-add/meta-settings"
@@ -31,7 +31,8 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   const prices = (p.variants || []).flatMap((v: any) => v.prices || []).filter((x: any) => x.currency_code === "usd")
   const price = prices.length ? Math.min(...prices.map((x: any) => Number(x.amount))) : undefined
   // الهاشتاقات لا تدخل نص المنشور ولا المنتج: تُنشر كأول تعليق
-  const caption = buildCaption({ title: p.title, price, text: b.text, link, whatsapp: process.env.WHATSAPP_NUMBER || "967770777736" })
+  const short = shortLinks(p.id, storeUrl())
+  const caption = buildCaption({ title: p.title, price, text: b.text, link: short.shop, waLink: short.wa })
   const comment = hashtagComment(b.hashtags)
 
   // ميتا تحتاج JPEG برابط عام: نسخ الإضافة السريعة، وإلا صور المنتج نفسها

@@ -233,79 +233,124 @@ export function matchFaq(a: Analysis, faqs: Faq[]): { faq: Faq; score: number } 
 // ---------- 5) صياغة الرد ----------
 const fmt = (n?: number | null) => (n && n > 0 ? `${Number.isInteger(n) ? n : n.toFixed(2)}$` : "")
 
+// وعود المتجر الثابتة: تُذكر في آخر ردود البيع (صادقة ومختصرة)
+const PROMISE = "✅ أصلي ومفحوص · 🚚 توصيل سريع في صنعاء · 💵 الدفع عند الاستلام"
+
 export function reply(text: string, ctx: BotContext): BotReply {
   const url = ctx.productUrl || ((h: string) => `${ctx.storeUrl.replace(/\/$/, "")}/ye/products/${encodeURIComponent(h)}`)
   const wa = ctx.whatsapp ? `https://wa.me/${ctx.whatsapp.replace(/[^\d]/g, "")}` : ""
   const vocab = ctx.products.flatMap(productTokens).filter((w) => w.length >= 3 && !/^\d+$/.test(w))
   const a = analyze(text, vocab)
   const c = a.concepts
+  const norm = normalize(text)
   const products = matchProducts(a, ctx.products)
-  const line = (p: Product) => `• ${p.title}${fmt(p.price) ? ` — ${fmt(p.price)}` : ""}\n${url(p.handle)}`
+  const line = (p: Product) => `📱 ${p.title}${fmt(p.price) ? `\n💰 ${fmt(p.price)}` : ""}\n🔗 ${url(p.handle)}`
+  const orderCta = `🛒 للحجز اكتب «اطلب» مع اسم الجهاز${wa ? `، أو راسلنا واتساب: ${wa}` : ""}`
 
   if (c.has("human")) {
-    return { intent: "handoff", handoff: true, order: false, confidence: 1, text: "أبشر، حوّلت محادثتك لموظف لمسة فون وسيرد عليك قريباً 🌹" }
+    return { intent: "handoff", handoff: true, order: false, confidence: 1, text: "أبشر 🌹 حوّلت محادثتك الآن لأحد موظفي لمسة فون، وسيرد عليك في أقرب وقت." }
   }
   // شكوى أو مشكلة: لا يرد الآلي بإجابة جاهزة، بل يحوّل للموظف مباشرة
   if (c.has("complaint")) {
-    return { intent: "handoff", handoff: true, order: false, confidence: 1, text: "نعتذر عن أي إزعاج 🙏 حوّلت رسالتك لموظف لمسة فون وسيتابعها معك حالاً." }
+    return { intent: "handoff", handoff: true, order: false, confidence: 1, text: "نعتذر منك عن أي إزعاج 🙏 رضاك يهمنا. حوّلت رسالتك لموظف لمسة فون ليتابعها معك شخصياً حالاً." }
   }
   // سؤال عن طلب سابق للعميل نفسه ("وين طلبي"، "متى توصل طلبيتي"): موظف يتابعه
-  if (/(^| )(طلبي|طلبيتي|طلبنا|طلبيتنا|شحنتي|اوردري)( |$)/.test(normalize(text)) && !products.length) {
-    return { intent: "handoff", handoff: true, order: false, confidence: 0.9, text: "حوّلت استفسارك لموظف لمسة فون ليتابع طلبك ويرد عليك حالاً 🌹" }
+  if (/(^| )(طلبي|طلبيتي|طلبنا|طلبيتنا|شحنتي|اوردري)( |$)/.test(norm) && !products.length) {
+    return { intent: "handoff", handoff: true, order: false, confidence: 0.9, text: "حاضر 🌹 حوّلت استفسارك لموظف لمسة فون ليتابع طلبك ويطمئنك عليه حالاً." }
   }
 
   if (c.has("order") && products.length) {
     const p = products[0].product
+    // اقتراح إكسسوار مناسب مع الجوال (بيع إضافي لطيف، مرة واحدة)
+    const extra =
+      Number(p.price) >= 100
+        ? ctx.products.find((x) => x.handle !== p.handle && Number(x.price) > 0 && Number(x.price) <= 60 && /شاحن|كفر|حمايه|سماع|باور|كيبل|وصل/.test(normalize(`${x.title} ${x.category || ""}`)))
+        : undefined
     return {
       intent: "order",
       handoff: true,
       order: true,
       products: [p],
       confidence: products[0].score,
-      text: `ممتاز، اخترت:\n${line(p)}\n\nلتأكيد الطلب أرسل: الاسم، العنوان بالتفصيل، ورقم الجوال. التوصيل برسوم رمزية والدفع عند الاستلام، وسيؤكد لك موظفنا الطلب.`,
+      text:
+        `اختيار ممتاز 👌\n${line(p)}\n\nلتأكيد الحجز أرسل لنا:\n1️⃣ الاسم\n2️⃣ العنوان بالتفصيل\n3️⃣ رقم الجوال\n\n${PROMISE}\nوسيؤكد موظفنا طلبك خلال دقائق.` +
+        (extra ? `\n\n🎁 كثير من عملائنا يضيفون معه: ${extra.title}${fmt(extra.price) ? ` بـ ${fmt(extra.price)}` : ""}. اذكره لموظفنا إن رغبت.` : ""),
+    }
+  }
+
+  // ميزانية: "ميزانيتي 300" / "جوال بحدود 250" ← أفضل الخيارات ضمن المبلغ
+  const budget = /(ميزاني|حدود|بحدود|تحت|اقل من|ما يزيد|لا يزيد|معي|budget)/.test(norm) ? Number((norm.match(/(^| )(\d{2,4})( |$)/) || [])[2]) : NaN
+  if (Number.isFinite(budget) && budget >= 20 && !products.length) {
+    const priced = ctx.products.filter((x) => Number(x.price) > 0)
+    const within = priced.filter((x) => Number(x.price) <= budget).sort((x, y) => Number(y.price) - Number(x.price)).slice(0, 3)
+    const pick = within.length ? within : [...priced].sort((x, y) => Number(x.price) - Number(y.price)).slice(0, 2)
+    if (pick.length) {
+      return {
+        intent: "product",
+        handoff: false,
+        order: false,
+        products: pick,
+        confidence: 0.7,
+        text: `${within.length ? `أفضل اختياراتنا ضمن ${fmt(budget)} 👇` : `الأقرب لميزانيتك حالياً 👇`}\n\n${pick.map(line).join("\n\n")}\n\n${PROMISE}\n${orderCta}`,
+      }
     }
   }
 
   // سؤال عن منتج معيّن (سعر / توفر / بدون كلمة)
   if (products.length && (c.has("price") || c.has("available") || !matchFaq(a, ctx.faqs))) {
     const top = products.filter((p) => p.score >= products[0].score * 0.7)
-    const head = c.has("available") ? "نعم متوفر ✅" : top.length > 1 ? "هذه الأقرب لطلبك:" : "تفضل:"
+    const head = c.has("available") ? "نعم متوفر الآن ✅" : top.length > 1 ? "هذه الأقرب لطلبك 👇" : "تفضل 🌹"
     return {
       intent: "product",
       handoff: false,
       order: false,
       products: top.map((x) => x.product),
       confidence: products[0].score,
-      text: `${head}\n${top.map((x) => line(x.product)).join("\n")}\n\nللطلب اكتب "اطلب" مع اسم الجهاز${wa ? `، أو اطلب مباشرة عبر واتساب: ${wa}` : ""}`,
+      text: `${head}\n\n${top.map((x) => line(x.product)).join("\n\n")}\n\n${PROMISE}\n${orderCta}`,
     }
   }
 
   const faq = matchFaq(a, ctx.faqs)
   if (faq) {
-    return { intent: "faq", handoff: false, order: false, faq_id: faq.faq.id, confidence: faq.score, text: faq.faq.answer }
+    // جواب السؤال ثم دعوة لطيفة للخطوة التالية
+    return {
+      intent: "faq",
+      handoff: false,
+      order: false,
+      faq_id: faq.faq.id,
+      confidence: faq.score,
+      text: `${faq.faq.answer}\n\nتحب أساعدك تختار جهازك؟ اكتب اسمه أو ميزانيتك 📱`,
+    }
   }
 
   if (c.has("price") || c.has("list")) {
+    // نعرض أحدث ثلاثة منتجات بدل رابط فقط
+    const picks = ctx.products.filter((x) => Number(x.price) > 0).slice(0, 3)
     return {
       intent: "price_list",
       handoff: false,
       order: false,
+      products: picks,
       confidence: 0.6,
-      text: `كل الأسعار محدّثة في متجرنا: ${ctx.storeUrl}\nأو اكتب اسم الجهاز (مثل: سامسونج S25) وأرسل لك سعره.`,
+      text:
+        (picks.length ? `من أحدث ما وصلنا 👇\n\n${picks.map(line).join("\n\n")}\n\n` : "") +
+        `🛍️ كل المنتجات والأسعار محدّثة هنا: ${ctx.storeUrl}\nأو اكتب اسم الجهاز (مثل: سامسونج S24) وأرسل لك سعره فوراً.`,
     }
   }
   // متابعة طلب سابق ("وين طلبي"، "تأخر"): موظف يتابع
   if (c.has("followup")) {
-    return { intent: "handoff", handoff: true, order: false, confidence: 0.8, text: "حوّلت استفسارك لموظف لمسة فون ليتابع طلبك ويرد عليك حالاً 🌹" }
+    return { intent: "handoff", handoff: true, order: false, confidence: 0.8, text: "حاضر 🌹 حوّلت استفسارك لموظف لمسة فون ليتابع طلبك ويطمئنك عليه حالاً." }
   }
-  if (c.has("thanks") && !c.has("greeting")) return { intent: "thanks", handoff: false, order: false, confidence: 1, text: "العفو، في خدمتك دائماً 🌹" }
+  if (c.has("thanks") && !c.has("greeting")) {
+    return { intent: "thanks", handoff: false, order: false, confidence: 1, text: "العفو 🌹 سعدنا بخدمتك، ولمسة فون دائماً في خدمتك." }
+  }
   if (c.has("greeting") && a.tokens.length <= 3) {
     return {
       intent: "greeting",
       handoff: false,
       order: false,
       confidence: 1,
-      text: `وعليكم السلام، أهلاً بك في لمسة فون 📱\nاكتب اسم الجهاز أو سؤالك وأرد عليك فوراً.\nالمتجر: ${ctx.storeUrl}`,
+      text: `وعليكم السلام ورحمة الله، حيّاك الله في لمسة فون 📱✨\nجوالات وإكسسوارات أصلية في صنعاء.\n\nاكتب اسم الجهاز الذي تبحث عنه أو ميزانيتك، وأرسل لك السعر فوراً.\n🛍️ المتجر: ${ctx.storeUrl}`,
     }
   }
   return {
@@ -313,7 +358,7 @@ export function reply(text: string, ctx: BotContext): BotReply {
     handoff: true,
     order: false,
     confidence: 0,
-    text: `وصلت رسالتك، وسيرد عليك موظف لمسة فون قريباً.\nتقدر تتصفح المنتجات والأسعار الآن: ${ctx.storeUrl}`,
+    text: `وصلتنا رسالتك 🌹 وسيرد عليك أحد موظفي لمسة فون في أقرب وقت.\nوإلى ذلك الحين تقدر تتصفح المنتجات والأسعار: ${ctx.storeUrl}`,
   }
 }
 
@@ -363,14 +408,14 @@ export function correctArabic(text: string): string {
 
 // ---------- 7) الأسئلة الشائعة الافتراضية (تُعدَّل من اللوحة) ----------
 export const DEFAULT_FAQS: { question: string; answer: string; keywords: string }[] = [
-  { question: "كيف التوصيل وكم يأخذ؟", answer: "التوصيل برسوم رمزية، وموظفنا يتواصل معك لتحديد وقت التوصيل بعد تأكيد الطلب 🚚", keywords: "توصيل شحن مندوب يوصل متى" },
-  { question: "كيف الدفع؟", answer: "الدفع عند الاستلام بعد فحص الجهاز أمامك 💵", keywords: "دفع كاش حساب استلام" },
-  { question: "هل في ضمان؟", answer: "نعم، مدة الضمان مذكورة في صفحة كل منتج، والاستبدال خلال 3 أيام حسب سياسة الاسترجاع.", keywords: "ضمان كفالة مضمون" },
-  { question: "سياسة الاسترجاع والاستبدال", answer: "الاستبدال أو الاسترجاع خلال 3 أيام من الاستلام إذا كان الجهاز بحالته الأصلية مع كامل ملحقاته وعلبته.", keywords: "استرجاع استبدال ارجاع تبديل" },
-  { question: "وين مكانكم؟", answer: "نحن في صنعاء، ونوصل لك إلى باب البيت برسوم رمزية.", keywords: "مكان عنوان موقع وين محل" },
-  { question: "متى الدوام؟", answer: "نرد على الرسائل طوال اليوم، والتوصيل خلال ساعات العمل.", keywords: "دوام ساعات وقت تفتحون" },
-  { question: "هل الأجهزة أصلية؟", answer: "نعم، كل أجهزتنا أصلية 100% ومفحوصة قبل التسليم.", keywords: "اصلي اصليه تقليد مقلد كوبي" },
+  { question: "كيف التوصيل وكم يأخذ؟", answer: "🚚 نوصل لك إلى باب البيت في صنعاء بسرعة وبرسوم رمزية. بعد تأكيد الطلب يتواصل معك المندوب لتحديد الوقت المناسب لك.", keywords: "توصيل شحن مندوب يوصل متى" },
+  { question: "كيف الدفع؟", answer: "💵 الدفع عند الاستلام: تستلم جهازك، تفحصه بنفسك أمام المندوب، ثم تدفع. بلا أي مخاطرة عليك.", keywords: "دفع كاش حساب استلام" },
+  { question: "هل في ضمان؟", answer: "🛡️ نعم، كل جهاز له ضمان مذكور في صفحته، ومعه استبدال خلال 3 أيام حسب سياسة الاسترجاع. تشتري وأنت مطمئن.", keywords: "ضمان كفالة مضمون" },
+  { question: "سياسة الاسترجاع والاستبدال", answer: "🔄 تقدر تستبدل أو تسترجع خلال 3 أيام من الاستلام، بشرط أن يكون الجهاز بحالته الأصلية مع كامل ملحقاته وعلبته.", keywords: "استرجاع استبدال ارجاع تبديل" },
+  { question: "وين مكانكم؟", answer: "📍 نحن في صنعاء، ونوصل لك إلى باب البيت برسوم رمزية، فلا تحتاج تتعب في المشوار.", keywords: "مكان عنوان موقع وين محل" },
+  { question: "متى الدوام؟", answer: "🕘 نرد على رسائلك طوال اليوم، والتوصيل خلال ساعات العمل.", keywords: "دوام ساعات وقت تفتحون" },
+  { question: "هل الأجهزة أصلية؟", answer: "✅ نعم، كل أجهزتنا أصلية 100% ومفحوصة قبل التسليم، وتفحصها بنفسك قبل الدفع.", keywords: "اصلي اصليه تقليد مقلد كوبي" },
   // الحالة لا تُذكر إلا إذا سأل العميل
-  { question: "الجهاز جديد ولا مستخدم؟", answer: "أجهزة سامسونج (النسخة الأمريكية) عندنا أغلبها مستخدمة بحالة شبه جديدة ومفحوصة، وبعضها جديد، والأجهزة الصينية والماركات الأخرى جديدة. اكتب لنا اسم الجهاز ونؤكد لك حالته بالضبط.", keywords: "جديد مستعمل مستخدم نظيف مختوم كرتونه حالته حالة شبه" },
-  { question: "هل يوجد تقسيط؟", answer: "حالياً الدفع كاش عند الاستلام. للاستفسار عن أي ترتيب خاص اكتب (موظف).", keywords: "تقسيط اقساط قسط" },
+  { question: "الجهاز جديد ولا مستخدم؟", answer: "أجهزة سامسونج (النسخة الأمريكية) عندنا أغلبها مستخدمة بحالة شبه جديدة ومفحوصة بعناية، وبعضها جديد، والأجهزة الصينية والماركات الأخرى جديدة. اكتب لنا اسم الجهاز ونؤكد لك حالته بالضبط.", keywords: "جديد مستعمل مستخدم نظيف مختوم كرتونه حالته حالة شبه" },
+  { question: "هل يوجد تقسيط؟", answer: "حالياً الدفع كاش عند الاستلام. ولأي ترتيب خاص اكتب «موظف» ونخدمك بما نقدر عليه 🌹", keywords: "تقسيط اقساط قسط" },
 ]

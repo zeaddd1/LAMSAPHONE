@@ -110,3 +110,20 @@ describe("condition only when asked", () => {
     expect(reply("بكم سامسونج اس 25 الترا", ctx).text.includes("مستعمل")).toBe(false)
   })
 })
+
+describe("marketing replies", () => {
+  it("suggests the best phones within a budget", () => {
+    const r = reply("ميزانيتي 800 ايش تنصحني", ctx)
+    expect(r.intent).toBe("product")
+    expect(r.products?.[0].handle).toBe("samsung-s-25-ultra")
+  })
+  it("offers an accessory with a phone order", () => {
+    const r = reply("اشتي ايفون 15 برو ماكس", ctx)
+    expect(r.text).toContain("🎁")
+  })
+  it("sales replies carry the store promise and a next step", () => {
+    const r = reply("بكم سامسونج اس 25 الترا", ctx)
+    expect(r.text).toContain("الدفع عند الاستلام")
+    expect(r.text).toContain("اطلب")
+  })
+})

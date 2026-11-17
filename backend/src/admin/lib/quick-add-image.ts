@@ -27,45 +27,50 @@ export function loadLogo(): Promise<HTMLImageElement | null> {
 export function drawBranding(ctx: CanvasRenderingContext2D, w: number, h: number, logo: HTMLImageElement | null) {
   if (!logo) return
   const unit = Math.min(w, h)
-  const R = Math.round(unit * 0.125) // نصف قطر الختم
-  const margin = Math.round(unit * 0.035)
+  const R = Math.round(unit * 0.095) // نصف قطر الختم (صغير وهادئ حتى لا يزعج)
+  const margin = Math.round(unit * 0.03)
   const cx = w - margin - R
   const cy = h - margin - R
   const orange = "#FF6000"
   ctx.save()
   ctx.translate(cx, cy)
   ctx.rotate(-0.17) // ميلان خفيف كختم مطبوع
+  ctx.globalAlpha = 0.72 // شفافية خفيفة ليبقى الختم هادئاً فوق الصورة
   // القرص الأبيض
   ctx.save()
-  ctx.shadowColor = "rgba(0, 0, 0, 0.22)"
-  ctx.shadowBlur = Math.round(unit * 0.018)
-  ctx.shadowOffsetY = Math.round(unit * 0.004)
-  ctx.fillStyle = "rgba(255, 255, 255, 0.92)"
+  ctx.shadowColor = "rgba(0, 0, 0, 0.12)"
+  ctx.shadowBlur = Math.round(unit * 0.012)
+  ctx.shadowOffsetY = Math.round(unit * 0.002)
+  ctx.fillStyle = "rgba(255, 255, 255, 0.85)"
   ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill()
   ctx.restore()
   // حلقتان: خارجية سميكة وداخلية رفيعة
   ctx.strokeStyle = orange
-  ctx.lineWidth = Math.max(2, R * 0.045)
+  ctx.lineWidth = Math.max(1.5, R * 0.035)
   ctx.beginPath(); ctx.arc(0, 0, R * 0.93, 0, Math.PI * 2); ctx.stroke()
-  ctx.lineWidth = Math.max(1, R * 0.018)
+  ctx.lineWidth = Math.max(1, R * 0.014)
   ctx.beginPath(); ctx.arc(0, 0, R * 0.7, 0, Math.PI * 2); ctx.stroke()
   // نص دائري بين الحلقتين
-  const text = "LAMSA PHONE • SANA'A • YEMEN • "
-  const fs = Math.round(R * 0.13)
+  const text = "LAMSA PHONE • lamsaphone.yemenbay.com • "
+  const fs = Math.round(R * 0.12)
   ctx.fillStyle = orange
   ctx.font = `700 ${fs}px Arial, Helvetica, sans-serif`
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
   const rt = R * 0.815
+  // توزيع الحروف حسب عرض كل حرف حتى تبدو المسافات متساوية حول الدائرة
   const chars = Array.from(text)
-  const step = (Math.PI * 2) / chars.length
+  const widths = chars.map((ch) => ctx.measureText(ch).width)
+  const total = widths.reduce((a, b) => a + b, 0)
+  let a = -Math.PI / 2
   chars.forEach((ch: string, i: number) => {
-    const a = -Math.PI / 2 + i * step
+    const span = (widths[i] / total) * Math.PI * 2
     ctx.save()
-    ctx.rotate(a + Math.PI / 2)
+    ctx.rotate(a + span / 2 + Math.PI / 2)
     ctx.translate(0, -rt)
     ctx.fillText(ch, 0, 0)
     ctx.restore()
+    a += span
   })
   // الشعار في المنتصف
   const lw = R * 1.0

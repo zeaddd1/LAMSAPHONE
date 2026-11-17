@@ -112,7 +112,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   const [processing, setProcessing] = useState(0)
   const [mode, setMode] = useState<FitMode>("contain")
   const [autoTrim, setAutoTrim] = useState(true)
-  // هوية المتجر على الصور والفيديو (إطار خفيف + الشعار)
+  // هوية المتجر على الصور والفيديو (الشعار)
   const [brand, setBrand] = useState(true)
   const [video, setVideo] = useState<ProcessedVideo | null>(null)
   const [videoProgress, setVideoProgress] = useState<number | null>(null)
@@ -412,7 +412,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <Switch id="qa-brand" checked={brand} onCheckedChange={setBrand} />
-                <Label htmlFor="qa-brand" size="small">إطار وشعار المتجر</Label>
+                <Label htmlFor="qa-brand" size="small">شعار المتجر</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch id="qa-trim" checked={autoTrim} onCheckedChange={setAutoTrim} />

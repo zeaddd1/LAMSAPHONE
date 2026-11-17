@@ -8,7 +8,7 @@ import { STORE_LOGO } from "./store-logo"
 
 export type ProcessOptions = { mode: FitMode; autoTrim: boolean; background: "auto" | "white"; brand?: boolean }
 
-// ---------- هوية المتجر: إطار خفيف + شعار صغير شبه شفاف أسفل يمين الصورة ----------
+// ---------- هوية المتجر: شعار صغير شبه شفاف أسفل يمين الصورة ----------
 let logoPromise: Promise<HTMLImageElement | null> | null = null
 export function loadLogo(): Promise<HTMLImageElement | null> {
   if (!logoPromise) {
@@ -22,27 +22,12 @@ export function loadLogo(): Promise<HTMLImageElement | null> {
   return logoPromise
 }
 
-// يرسم الإطار والشعار فوق الصورة أو إطار الفيديو. نسبي للمقاس حتى يناسب أي دقة.
+// يرسم الشعار فوق الصورة أو إطار الفيديو. نسبي للمقاس حتى يناسب أي دقة.
 export function drawBranding(ctx: CanvasRenderingContext2D, w: number, h: number, logo: HTMLImageElement | null) {
   const unit = Math.min(w, h)
-  // إطار رفيع بلون الشعار وبشفافية خفيفة، بزوايا دائرية من الداخل
   const inset = Math.round(unit * 0.022)
-  const radius = Math.round(unit * 0.035)
-  ctx.save()
-  ctx.lineWidth = Math.max(2, Math.round(unit * 0.006))
-  ctx.strokeStyle = "rgba(255, 102, 0, 0.35)"
-  ctx.beginPath()
-  const x = inset, y = inset, rw = w - inset * 2, rh = h - inset * 2
-  ctx.moveTo(x + radius, y)
-  ctx.arcTo(x + rw, y, x + rw, y + rh, radius)
-  ctx.arcTo(x + rw, y + rh, x, y + rh, radius)
-  ctx.arcTo(x, y + rh, x, y, radius)
-  ctx.arcTo(x, y, x + rw, y, radius)
-  ctx.closePath()
-  ctx.stroke()
-  ctx.restore()
   if (!logo) return
-  // الشعار: عرضه 15% من الصورة، أسفل اليمين داخل الإطار، بشفافية 75%
+  // الشعار: عرضه 15% من الصورة، أسفل اليمين، بشفافية 75%
   const lw = Math.round(w * 0.15)
   const lh = Math.round((logo.naturalHeight / logo.naturalWidth) * lw)
   const pad = inset + Math.round(unit * 0.025)
@@ -112,6 +97,7 @@ export async function processImage(file: File, opts: ProcessOptions): Promise<Pr
     // 1) تحليل نسخة مصغّرة لإيجاد حدود المنتج ولون الخلفية
     let crop = { x: 0, y: 0, w: src.w, h: src.h }
     let bg = "#ffffff"
+    let uniform = true // خلفية متجانسة (صور الموردين/الاستوديو)
     if (opts.autoTrim || opts.background === "auto") {
       const scale = Math.min(1, 256 / Math.max(src.w, src.h))
       const aw = Math.max(1, Math.round(src.w * scale))
@@ -122,6 +108,7 @@ export async function processImage(file: File, opts: ProcessOptions): Promise<Pr
       const actx = a.getContext("2d", { willReadFrequently: true })!
       actx.drawImage(src.img, 0, 0, aw, ah)
       const t = trimBox(actx.getImageData(0, 0, aw, ah).data, aw, ah)
+      uniform = t.uniform
       if (opts.background === "auto") bg = `rgb(${t.bg[0]},${t.bg[1]},${t.bg[2]})`
       if (opts.autoTrim) {
         const pad = 2
@@ -140,7 +127,9 @@ export async function processImage(file: File, opts: ProcessOptions): Promise<Pr
     ctx.imageSmoothingQuality = "high"
     ctx.fillStyle = bg
     ctx.fillRect(0, 0, TARGET_W, TARGET_H)
-    const box = fitBox(crop.w, crop.h, TARGET_W, TARGET_H, opts.mode)
+    // صور المحل (خلفية غير متجانسة): تملأ الإطار كاملاً بلا أي فراغ (قص خفيف للأطراف)
+    const photo = !uniform
+    const box = fitBox(crop.w, crop.h, TARGET_W, TARGET_H, photo ? "cover" : opts.mode)
     ctx.drawImage(src.img, crop.x, crop.y, crop.w, crop.h, box.x, box.y, box.w, box.h)
     if (opts.brand) drawBranding(ctx, TARGET_W, TARGET_H, await loadLogo())
 

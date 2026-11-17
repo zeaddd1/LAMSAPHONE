@@ -27,7 +27,7 @@ export function fitBox(srcW: number, srcH: number, dstW = TARGET_W, dstH = TARGE
 
 // يجد حدود المنتج بإزالة الخلفية المتجانسة حول الصورة (مثل الأبيض في صور الموردين)
 // data: بكسلات RGBA لنسخة مصغّرة من الصورة بعرض w وارتفاع h
-export function trimBox(data: ArrayLike<number>, w: number, h: number, tolerance = 28): Box & { bg: [number, number, number] } {
+export function trimBox(data: ArrayLike<number>, w: number, h: number, tolerance = 28): Box & { bg: [number, number, number]; uniform: boolean } {
   const px = (x: number, y: number) => {
     const i = (y * w + x) * 4
     return [data[i], data[i + 1], data[i + 2], data[i + 3]]
@@ -36,7 +36,7 @@ export function trimBox(data: ArrayLike<number>, w: number, h: number, tolerance
   const corners = [px(0, 0), px(w - 1, 0), px(0, h - 1), px(w - 1, h - 1)]
   const bg: [number, number, number] = [0, 1, 2].map((k) => Math.round(corners.reduce((s, c) => s + c[k], 0) / 4)) as any
   const cornersAlike = corners.every((c) => Math.abs(c[0] - bg[0]) + Math.abs(c[1] - bg[1]) + Math.abs(c[2] - bg[2]) <= tolerance * 1.5)
-  if (!cornersAlike) return { x: 0, y: 0, w, h, bg: [255, 255, 255] } // خلفية غير متجانسة: لا قص
+  if (!cornersAlike) return { x: 0, y: 0, w, h, bg: [255, 255, 255], uniform: false } // خلفية غير متجانسة: لا قص
 
   const isBg = (x: number, y: number) => {
     const [r, g, b, a] = px(x, y)
@@ -54,11 +54,11 @@ export function trimBox(data: ArrayLike<number>, w: number, h: number, tolerance
       }
     }
   }
-  if (maxX < 0) return { x: 0, y: 0, w, h, bg } // صورة فارغة
+  if (maxX < 0) return { x: 0, y: 0, w, h, bg, uniform: true } // صورة فارغة
   const box = { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 }
   // لا نقص إن كان المنتج يملأ الصورة تقريباً أو كان صغيراً جداً (ضجيج)
-  if (box.w * box.h > 0.92 * w * h || box.w < w * 0.08 || box.h < h * 0.08) return { x: 0, y: 0, w, h, bg }
-  return { ...box, bg }
+  if (box.w * box.h > 0.92 * w * h || box.w < w * 0.08 || box.h < h * 0.08) return { x: 0, y: 0, w, h, bg, uniform: true }
+  return { ...box, bg, uniform: true }
 }
 
 // اختيار الجودة: نبدأ عالية وننزل حتى يصبح الحجم ضمن الهدف

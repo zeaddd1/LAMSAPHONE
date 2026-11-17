@@ -23,19 +23,38 @@ export function loadLogo(): Promise<HTMLImageElement | null> {
 }
 
 // يرسم الشعار فوق الصورة أو إطار الفيديو. نسبي للمقاس حتى يناسب أي دقة.
+// الصورة تملأ الإطار كاملاً، لذلك يوضع الشعار بوضوح كامل على شارة بيضاء صغيرة
+// بزوايا دائرية وظل خفيف، فيبقى واضحاً فوق أي خلفية (حتى البرتقالية أو المزدحمة).
 export function drawBranding(ctx: CanvasRenderingContext2D, w: number, h: number, logo: HTMLImageElement | null) {
-  const unit = Math.min(w, h)
-  const inset = Math.round(unit * 0.022)
   if (!logo) return
-  // الشعار: عرضه 15% من الصورة، أسفل اليمين، بشفافية 75%
-  const lw = Math.round(w * 0.15)
+  const unit = Math.min(w, h)
+  const lw = Math.round(w * 0.16)
   const lh = Math.round((logo.naturalHeight / logo.naturalWidth) * lw)
-  const pad = inset + Math.round(unit * 0.025)
+  const padIn = Math.round(unit * 0.014) // مسافة داخل الشارة
+  const margin = Math.round(unit * 0.03) // بُعد الشارة عن حافة الصورة
+  const bw = lw + padIn * 2
+  const bh = lh + padIn * 2
+  const bx = w - margin - bw
+  const by = h - margin - bh
+  const r = Math.round(unit * 0.02)
   ctx.save()
-  ctx.globalAlpha = 0.75
-  ctx.shadowColor = "rgba(255, 255, 255, 0.9)"
-  ctx.shadowBlur = Math.round(unit * 0.01)
-  ctx.drawImage(logo, w - pad - lw, h - pad - lh, lw, lh)
+  ctx.shadowColor = "rgba(0, 0, 0, 0.18)"
+  ctx.shadowBlur = Math.round(unit * 0.016)
+  ctx.shadowOffsetY = Math.round(unit * 0.003)
+  ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
+  ctx.beginPath()
+  ctx.moveTo(bx + r, by)
+  ctx.arcTo(bx + bw, by, bx + bw, by + bh, r)
+  ctx.arcTo(bx + bw, by + bh, bx, by + bh, r)
+  ctx.arcTo(bx, by + bh, bx, by, r)
+  ctx.arcTo(bx, by, bx + bw, by, r)
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
+  ctx.save()
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = "high"
+  ctx.drawImage(logo, bx + padIn, by + padIn, lw, lh)
   ctx.restore()
 }
 

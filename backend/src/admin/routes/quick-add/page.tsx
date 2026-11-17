@@ -238,9 +238,15 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     setDone(null)
   }
 
+  // نرفع كل ملف في طلب مستقل: الخادم يرفض أي طلب أكبر من 1MB،
+  // وعدة صور معاً في طلب واحد كانت تتجاوز الحد رغم أن كل صورة صغيرة
   const upload = async (files: File[]) => {
-    const r = await sdk.admin.upload.create({ files })
-    return r.files.map((f: any) => f.url as string)
+    const urls: string[] = []
+    for (const file of files) {
+      const r = await sdk.admin.upload.create({ files: [file] })
+      urls.push((r.files[0] as any).url as string)
+    }
+    return urls
   }
 
   const save = async (publish: boolean) => {

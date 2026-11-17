@@ -27,34 +27,34 @@ export function loadLogo(): Promise<HTMLImageElement | null> {
 export function drawBranding(ctx: CanvasRenderingContext2D, w: number, h: number, logo: HTMLImageElement | null) {
   if (!logo) return
   const unit = Math.min(w, h)
-  const R = Math.round(unit * 0.095) // نصف قطر الختم (صغير وهادئ حتى لا يزعج)
+  const R = Math.round(unit * 0.105) // نصف قطر الختم
   const margin = Math.round(unit * 0.03)
   const cx = w - margin - R
   const cy = h - margin - R
-  const orange = "#FF6000"
+  const orange = "rgba(255, 96, 0, 0.85)"
   ctx.save()
+  ctx.globalAlpha = 0.82 // ختم هادئ لا يطغى على صورة المنتج
   ctx.translate(cx, cy)
-  ctx.rotate(-0.17) // ميلان خفيف كختم مطبوع
-  ctx.globalAlpha = 0.72 // شفافية خفيفة ليبقى الختم هادئاً فوق الصورة
+  ctx.rotate(-0.12) // ميلان خفيف كختم مطبوع
   // القرص الأبيض
   ctx.save()
   ctx.shadowColor = "rgba(0, 0, 0, 0.12)"
   ctx.shadowBlur = Math.round(unit * 0.012)
   ctx.shadowOffsetY = Math.round(unit * 0.002)
-  ctx.fillStyle = "rgba(255, 255, 255, 0.85)"
+  ctx.fillStyle = "rgba(255, 255, 255, 0.78)"
   ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill()
   ctx.restore()
   // حلقتان: خارجية سميكة وداخلية رفيعة
   ctx.strokeStyle = orange
-  ctx.lineWidth = Math.max(1.5, R * 0.035)
+  ctx.lineWidth = Math.max(1.5, R * 0.028)
   ctx.beginPath(); ctx.arc(0, 0, R * 0.93, 0, Math.PI * 2); ctx.stroke()
-  ctx.lineWidth = Math.max(1, R * 0.014)
+  ctx.lineWidth = Math.max(1, R * 0.012)
   ctx.beginPath(); ctx.arc(0, 0, R * 0.7, 0, Math.PI * 2); ctx.stroke()
   // نص دائري بين الحلقتين
-  const text = "LAMSA PHONE • lamsaphone.yemenbay.com • "
-  const fs = Math.round(R * 0.12)
+  const text = "LAMSA PHONE • LAMSAPHONE.YEMENBAY.COM • "
+  const fs = Math.round(R * 0.105)
   ctx.fillStyle = orange
-  ctx.font = `700 ${fs}px Arial, Helvetica, sans-serif`
+  ctx.font = `600 ${fs}px Arial, Helvetica, sans-serif`
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
   const rt = R * 0.815
@@ -73,7 +73,7 @@ export function drawBranding(ctx: CanvasRenderingContext2D, w: number, h: number
     a += span
   })
   // الشعار في المنتصف
-  const lw = R * 1.0
+  const lw = R * 1.05
   const lh = (logo.naturalHeight / logo.naturalWidth) * lw
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = "high"

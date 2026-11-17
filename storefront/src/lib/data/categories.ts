@@ -26,7 +26,16 @@ export const listCategories = async (query?: Record<string, any>) => {
 }
 
 export const getCategoryByHandle = async (categoryHandle: string[]) => {
-  const handle = `${categoryHandle.join("/")}`
+  // الأسماء العربية تصل مرمَّزة (%D8...) فنفكّها قبل البحث، وإلا تظهر الصفحة 404
+  const handle = categoryHandle
+    .map((h) => {
+      try {
+        return decodeURIComponent(h)
+      } catch {
+        return h
+      }
+    })
+    .join("/")
 
   const next = {
     ...(await getCacheOptions("categories")),

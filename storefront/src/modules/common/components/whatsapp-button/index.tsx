@@ -1,6 +1,7 @@
+import { whatsappNumber } from "@lib/store-info"
 /** زر واتساب عائم. الرقم من NEXT_PUBLIC_WHATSAPP_NUMBER (بصيغة دولية بدون +). */
 export default function WhatsAppButton() {
-  const number = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "").replace(/[^\d]/g, "")
+  const number = whatsappNumber()
   if (!number) return null
   return (
     <a

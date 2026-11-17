@@ -1,3 +1,4 @@
+import { whatsappNumber } from "@lib/store-info"
 import { listProductsWithSort } from "@lib/data/products"
 import { Metadata } from "next"
 import Image from "next/image"
@@ -15,7 +16,7 @@ export default async function Links({ params }: { params: Promise<{ countryCode:
   const {
     response: { products },
   } = await listProductsWithSort({ page: 1, countryCode, sortBy: "created_at", queryParams: { limit: 60 } as any })
-  const wa = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "").replace(/[^\d]/g, "")
+  const wa = whatsappNumber()
   const price = (p: any) => {
     const n = (p.variants || []).map((v: any) => v?.calculated_price?.calculated_amount).filter((x: any) => typeof x === "number").sort((a: number, b: number) => a - b)[0]
     return typeof n === "number" ? `${Number.isInteger(n) ? n : n.toFixed(2)}$` : ""

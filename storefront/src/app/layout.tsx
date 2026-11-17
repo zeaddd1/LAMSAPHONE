@@ -1,6 +1,7 @@
 import { getExchangeRates } from "@lib/data/exchange-rates"
 import { CurrencyProvider } from "@lib/currency/context"
 import { getBaseURL } from "@lib/util/env"
+import { STORE } from "@lib/store-info"
 import WhatsAppButton from "@modules/common/components/whatsapp-button"
 import { Metadata } from "next"
 import { Tajawal } from "next/font/google"
@@ -11,8 +12,28 @@ const tajawal = Tajawal({ subsets: ["arabic", "latin"], weight: ["400", "500", "
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
-  title: { default: "لمسة فون | جوالات وإكسسوارات", template: "%s | لمسة فون" },
-  description: "لمسة فون: جوالات جديدة ومستعملة ومجددة، وإكسسوارات أصلية، والدفع عند الاستلام.",
+  title: { default: `${STORE.name} | جوالات سامسونج وارد أمريكا في صنعاء`, template: `%s | ${STORE.shortName}` },
+  description: `${STORE.name}: ${STORE.tagline}. ${STORE.address}. توصيل والدفع عند الاستلام. واتساب ${STORE.phoneDisplay}.`,
+  keywords: ["لمسة فون", "جوالات صنعاء", "جوالات سامسونج وارد أمريكا", "سامسونج صنعاء", "جوالات اليمن", "S24 Ultra صنعاء", "S23 Ultra اليمن", "إكسسوارات جوال صنعاء", "Lamsa Phone"],
+  openGraph: { type: "website", siteName: STORE.shortName, locale: "ar_YE", url: "/" },
+  twitter: { card: "summary_large_image" },
+}
+
+// بيانات منظمة للمتجر (تظهر في نتائج البحث والخرائط)
+const storeJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "MobilePhoneStore",
+  name: STORE.name,
+  alternateName: STORE.nameEn,
+  description: STORE.tagline,
+  url: STORE.url,
+  telephone: `+${STORE.whatsapp}`,
+  image: `${STORE.url}/logo.png`,
+  address: { "@type": "PostalAddress", streetAddress: "شارع القصر، أمام السيفي", addressLocality: STORE.city, addressCountry: STORE.country },
+  areaServed: ["صنعاء", "اليمن"],
+  currenciesAccepted: "USD, SAR, YER",
+  paymentAccepted: "Cash",
+  sameAs: [STORE.instagram, STORE.facebook],
 }
 
 export default async function RootLayout(props: { children: React.ReactNode }) {
@@ -20,6 +41,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
   return (
     <html lang="ar" dir="rtl" data-mode="light" className={tajawal.variable}>
       <body className={tajawal.className}>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd).replace(/</g, "\\u003c") }} />
         <CurrencyProvider rates={rates}>
           <main className="relative">{props.children}</main>
           <WhatsAppButton />

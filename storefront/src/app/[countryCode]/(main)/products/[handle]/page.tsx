@@ -1,3 +1,4 @@
+import { STORE } from "@lib/store-info"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { listProducts } from "@lib/data/products"
@@ -72,9 +73,18 @@ function getImagesForVariant(
   return product.images!.filter((i) => imageIdsMap.has(i.id))
 }
 
+function safeDecode(v: string): string {
+  try {
+    return decodeURIComponent(v)
+  } catch {
+    return v
+  }
+}
+
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params
-  const { handle } = params
+  // الأسماء العربية تصل مرمَّزة في الرابط
+  const handle = safeDecode(params.handle)
   const region = await getRegion(params.countryCode)
 
   if (!region) {
@@ -90,14 +100,29 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     notFound()
   }
 
+  const amount = (product.variants || [])
+    .map((v: any) => v?.calculated_price?.calculated_amount)
+    .filter((n: any) => typeof n === "number")
+    .sort((x: number, y: number) => x - y)[0]
+  const price = typeof amount === "number" ? ` بسعر ${amount}$` : ""
+  const description =
+    (product.description || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 150) ||
+    `${product.title}${price} من ${STORE.name} في ${STORE.city}: فحص شامل، توصيل والدفع عند الاستلام. اطلب عبر واتساب ${STORE.phoneDisplay}.`
+  const url = `/${params.countryCode}/products/${product.handle}`
   return {
-    title: `${product.title} | لمسة فون`,
-    description: `${product.title}`,
+    title: `${product.title}${price ? ` | ${amount}$` : ""}`,
+    description,
+    alternates: { canonical: url },
     openGraph: {
-      title: `${product.title} | لمسة فون`,
-      description: `${product.title}`,
-      images: product.thumbnail ? [product.thumbnail] : [],
+      type: "website",
+      siteName: STORE.shortName,
+      locale: "ar_YE",
+      url,
+      title: `${product.title}${price}`,
+      description,
+      images: product.thumbnail ? [{ url: product.thumbnail, width: 1200, height: 1400, alt: `${product.title} - ${STORE.shortName} ${STORE.city}` }] : [],
     },
+    twitter: { card: "summary_large_image", title: `${product.title}${price}`, description, images: product.thumbnail ? [product.thumbnail] : [] },
   }
 }
 
@@ -114,7 +139,7 @@ export default async function ProductPage(props: Props) {
 
   const pricedProduct = await listProducts({
     countryCode: params.countryCode,
-    queryParams: { handle: params.handle },
+    queryParams: { handle: safeDecode(params.handle) },
   }).then(({ response }) => response.products[0])
 
   const images = getImagesForVariant(pricedProduct, selectedVariantId)

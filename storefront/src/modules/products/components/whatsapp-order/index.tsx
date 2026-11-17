@@ -1,4 +1,5 @@
 "use client"
+import { whatsappNumber } from "@lib/store-info"
 import { HttpTypes } from "@medusajs/types"
 
 /**
@@ -14,7 +15,7 @@ export default function WhatsAppOrder({
   variant?: HttpTypes.StoreProductVariant
   disabled?: boolean
 }) {
-  const number = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "").replace(/[^\d]/g, "")
+  const number = whatsappNumber()
   if (!number) return null
 
   const options = (variant?.options || [])

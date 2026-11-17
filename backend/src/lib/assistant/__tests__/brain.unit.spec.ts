@@ -7,7 +7,7 @@ const products = [
   { title: "شاحن سامسونج 45 واط", handle: "samsung-charger-45w", price: 25, category: "شواحن" },
 ]
 const faqs = DEFAULT_FAQS.map((f, i) => ({ id: `faq${i}`, ...f }))
-const ctx = { storeUrl: "https://lamsaphone.yemenbay.com", whatsapp: "967770777736", products, faqs }
+const ctx = { storeUrl: "https://lamsaphone.yemenbay.com", whatsapp: "967777128281", products, faqs }
 
 describe("normalize", () => {
   it("unifies Arabic letters, digits and repeats", () => {

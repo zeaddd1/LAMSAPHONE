@@ -10,7 +10,8 @@ import { getAssistantSettings } from "./settings"
 
 type Scope = { resolve: (key: string) => any }
 
-export const whatsappNumber = () => process.env.WHATSAPP_NUMBER || "967770777736"
+// الرقم الرسمي للمتجر (هاتف وواتساب)
+export const whatsappNumber = () => process.env.WHATSAPP_NUMBER || "967777128281"
 const svc = (scope: Scope) => scope.resolve(ASSISTANT_MODULE) as AssistantModuleService
 
 // قائمة المنتجات للرد الآلي: كاش 5 دقائق حتى لا نثقل قاعدة البيانات

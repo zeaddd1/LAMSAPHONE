@@ -1,3 +1,4 @@
+import { whatsappNumber } from "@lib/store-info"
 import { findByShortCode } from "@lib/data/short-links"
 import { publicOrigin } from "@lib/util/public-origin"
 import { NextRequest, NextResponse } from "next/server"
@@ -6,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server"
 // ومع رمز المنتج (/wa/xxxxxx) يفتح المحادثة برسالة جاهزة فيها اسم المنتج وسعره ورابطه
 export async function GET(req: NextRequest, { params }: { params: Promise<{ countryCode: string; code?: string[] }> }) {
   const { countryCode, code } = await params
-  const number = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "").replace(/[^\d]/g, "")
+  const number = whatsappNumber()
   if (!number) return NextResponse.redirect(new URL(`/${countryCode}/contact`, publicOrigin(req)), 307)
   const p = code?.[0] ? await findByShortCode(code[0]) : null
   if (!p) return NextResponse.redirect(`https://wa.me/${number}`, 307)

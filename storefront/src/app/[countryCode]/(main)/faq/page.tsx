@@ -1,3 +1,4 @@
+import { whatsappNumber } from "@lib/store-info"
 import { getFaqs } from "@lib/data/faqs"
 import StaticPage from "@modules/common/components/static-page"
 import { Metadata } from "next"
@@ -8,7 +9,7 @@ export const revalidate = 300
 // الأسئلة الشائعة: تُدار من لوحة التحكم (الأسئلة الشائعة)، ونفسها يجيب منها الرد الآلي
 export default async function Faq() {
   const faqs = await getFaqs()
-  const wa = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "").replace(/[^\d]/g, "")
+  const wa = whatsappNumber()
   return (
     <StaticPage title="الأسئلة الشائعة">
       {faqs.length === 0 && <p>لا توجد أسئلة حالياً.</p>}

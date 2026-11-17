@@ -123,9 +123,20 @@ export default async function Footer() {
           </div>
         </div>
         <div className="flex w-full mb-16 justify-between text-ui-fg-muted">
-          <Text className="txt-compact-small">
-            © {new Date().getFullYear()} لمسة فون. جميع الحقوق محفوظة.
-          </Text>
+          <div className="flex flex-col gap-y-1 txt-compact-small">
+            <span>📍 صنعاء - شارع القصر، أمام السيفي</span>
+            <span>
+              📲{" "}
+              <a href="https://wa.me/967777128281" target="_blank" rel="noopener noreferrer" dir="ltr" className="hover:text-ui-fg-base">
+                +967 777 128 281
+              </a>
+              {" · "}
+              <a href="https://www.instagram.com/lamsaphone7/" target="_blank" rel="noopener noreferrer" dir="ltr" className="hover:text-ui-fg-base">
+                Instagram @lamsaphone7
+              </a>
+            </span>
+            <span>© {new Date().getFullYear()} لمسة فون للهواتف الذكية. جميع الحقوق محفوظة.</span>
+          </div>
         </div>
       </div>
     </footer>

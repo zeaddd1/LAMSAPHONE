@@ -10,6 +10,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CartButton from "@modules/layout/components/cart-button"
 import CurrencySelect from "@modules/layout/components/currency-select"
 import SideMenu from "@modules/layout/components/side-menu"
+import SearchBox from "@modules/layout/components/search-box"
 
 export default async function Nav() {
   const [regions, locales, currentLocale] = await Promise.all([
@@ -39,6 +40,7 @@ export default async function Nav() {
           </div>
 
           <div className="flex items-center gap-x-3 small:gap-x-6 h-full flex-1 basis-0 justify-end whitespace-nowrap">
+            <SearchBox className="hidden small:flex w-48" />
             <CurrencySelect />
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
@@ -65,6 +67,9 @@ export default async function Nav() {
           </div>
         </nav>
       </header>
+      <div className="border-b border-ui-border-base bg-white px-4 py-2 small:hidden">
+        <SearchBox />
+      </div>
     </div>
   )
 }

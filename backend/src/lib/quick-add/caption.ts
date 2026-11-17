@@ -99,7 +99,7 @@ export function buildCaption(input: CaptionInput, maxLen = 2200): string {
       lines.push(`💬 اطلب عبر واتساب 👈 wa.me/${input.whatsapp.replace(/[^\d]/g, "")}`)
     }
   }
-  lines.push("📍 صنعاء | 🚚 توصيل سريع والدفع عند الاستلام")
+  lines.push("📍 صنعاء - شارع القصر | 🚚 توصيل للمحافظات | ✅ ضمان فحص")
 
   // إنستغرام: 30 هاشتاق كحد أقصى و2200 حرف للنص كاملاً
   const tags = normalizeHashtags(input.hashtags, 30)

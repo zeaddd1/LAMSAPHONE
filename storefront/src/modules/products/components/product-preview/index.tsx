@@ -28,15 +28,25 @@ export default async function ProductPreview({
     product,
   })
 
+  const isSamsungPhone = /samsung|galaxy|سامسونج|جالكسي|s\d{2}|note/i.test(product.title || "") && !/شاحن|كيبل|وصل|كفر|سماع|charger|cable|case/i.test(product.title || "")
+
   return (
     <LocalizedClientLink href={`/products/${product.handle}`} className="group">
       <div data-testid="product-wrapper">
         <Thumbnail
           thumbnail={product.thumbnail}
           images={product.images}
+          alt={`${product.title} - لمسة فون صنعاء`}
           size="full"
           isFeatured={isFeatured}
         />
+        {/* شارات ثقة لجوالات سامسونج (تخصص المتجر) */}
+        {isSamsungPhone && (
+          <div className="mt-2 flex flex-wrap gap-1 text-[11px]">
+            <span className="rounded-full bg-[#fff1e6] px-2 py-0.5 text-[#c24e00]">وارد أمريكا 🇺🇸</span>
+            <span className="rounded-full bg-[#e8f7ee] px-2 py-0.5 text-[#157a3c]">ضمان فحص</span>
+          </div>
+        )}
         <div className="flex txt-compact-medium mt-4 justify-between">
           <Text className="text-ui-fg-subtle text-right" dir="auto" data-testid="product-title">
             {product.title}

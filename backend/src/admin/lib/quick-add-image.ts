@@ -22,39 +22,57 @@ export function loadLogo(): Promise<HTMLImageElement | null> {
   return logoPromise
 }
 
-// يرسم الشعار فوق الصورة أو إطار الفيديو. نسبي للمقاس حتى يناسب أي دقة.
-// الصورة تملأ الإطار كاملاً، لذلك يوضع الشعار بوضوح كامل على شارة بيضاء صغيرة
-// بزوايا دائرية وظل خفيف، فيبقى واضحاً فوق أي خلفية (حتى البرتقالية أو المزدحمة).
+// يرسم ختم المتجر فوق الصورة أو إطار الفيديو (أسفل اليمين). نسبي للمقاس حتى يناسب أي دقة.
+// ختم دائري: قرص أبيض بظل خفيف، حلقتان برتقاليتان، نص دائري، والشعار في المنتصف، بميلان خفيف.
 export function drawBranding(ctx: CanvasRenderingContext2D, w: number, h: number, logo: HTMLImageElement | null) {
   if (!logo) return
   const unit = Math.min(w, h)
-  const lw = Math.round(w * 0.16)
-  const lh = Math.round((logo.naturalHeight / logo.naturalWidth) * lw)
-  const padIn = Math.round(unit * 0.014) // مسافة داخل الشارة
-  const margin = Math.round(unit * 0.03) // بُعد الشارة عن حافة الصورة
-  const bw = lw + padIn * 2
-  const bh = lh + padIn * 2
-  const bx = w - margin - bw
-  const by = h - margin - bh
-  const r = Math.round(unit * 0.02)
+  const R = Math.round(unit * 0.125) // نصف قطر الختم
+  const margin = Math.round(unit * 0.035)
+  const cx = w - margin - R
+  const cy = h - margin - R
+  const orange = "#FF6000"
   ctx.save()
-  ctx.shadowColor = "rgba(0, 0, 0, 0.18)"
-  ctx.shadowBlur = Math.round(unit * 0.016)
-  ctx.shadowOffsetY = Math.round(unit * 0.003)
-  ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
-  ctx.beginPath()
-  ctx.moveTo(bx + r, by)
-  ctx.arcTo(bx + bw, by, bx + bw, by + bh, r)
-  ctx.arcTo(bx + bw, by + bh, bx, by + bh, r)
-  ctx.arcTo(bx, by + bh, bx, by, r)
-  ctx.arcTo(bx, by, bx + bw, by, r)
-  ctx.closePath()
-  ctx.fill()
+  ctx.translate(cx, cy)
+  ctx.rotate(-0.17) // ميلان خفيف كختم مطبوع
+  // القرص الأبيض
+  ctx.save()
+  ctx.shadowColor = "rgba(0, 0, 0, 0.22)"
+  ctx.shadowBlur = Math.round(unit * 0.018)
+  ctx.shadowOffsetY = Math.round(unit * 0.004)
+  ctx.fillStyle = "rgba(255, 255, 255, 0.92)"
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill()
   ctx.restore()
-  ctx.save()
+  // حلقتان: خارجية سميكة وداخلية رفيعة
+  ctx.strokeStyle = orange
+  ctx.lineWidth = Math.max(2, R * 0.045)
+  ctx.beginPath(); ctx.arc(0, 0, R * 0.93, 0, Math.PI * 2); ctx.stroke()
+  ctx.lineWidth = Math.max(1, R * 0.018)
+  ctx.beginPath(); ctx.arc(0, 0, R * 0.7, 0, Math.PI * 2); ctx.stroke()
+  // نص دائري بين الحلقتين
+  const text = "LAMSA PHONE • SANA'A • YEMEN • "
+  const fs = Math.round(R * 0.13)
+  ctx.fillStyle = orange
+  ctx.font = `700 ${fs}px Arial, Helvetica, sans-serif`
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+  const rt = R * 0.815
+  const chars = Array.from(text)
+  const step = (Math.PI * 2) / chars.length
+  chars.forEach((ch: string, i: number) => {
+    const a = -Math.PI / 2 + i * step
+    ctx.save()
+    ctx.rotate(a + Math.PI / 2)
+    ctx.translate(0, -rt)
+    ctx.fillText(ch, 0, 0)
+    ctx.restore()
+  })
+  // الشعار في المنتصف
+  const lw = R * 1.0
+  const lh = (logo.naturalHeight / logo.naturalWidth) * lw
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = "high"
-  ctx.drawImage(logo, bx + padIn, by + padIn, lw, lh)
+  ctx.drawImage(logo, -lw / 2, -lh / 2, lw, lh)
   ctx.restore()
 }
 

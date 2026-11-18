@@ -115,6 +115,8 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   const [autoTrim, setAutoTrim] = useState(true)
   // هوية المتجر على الصور والفيديو (الشعار)
   const [brand, setBrand] = useState(true)
+  // الختم على صورة المتجر نفسها: اختياري، والافتراضي بدونه (معيار المتاجر العالمية)
+  const [storeBrand, setStoreBrand] = useState(false)
   const [video, setVideo] = useState<ProcessedVideo | null>(null)
   const [videoProgress, setVideoProgress] = useState<number | null>(null)
   const [useVideo, setUseVideo] = useState(true)
@@ -185,7 +187,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     setProcessing((n) => n + Math.min(files.length, room))
     for (const f of files.slice(0, room)) {
       try {
-        const img = await processImage(f, { mode, autoTrim, background: "auto", brand })
+        const img = await processImage(f, { mode, autoTrim, background: "auto", brand, storeBrand })
         setImages((xs) => [...xs, img])
       } catch {
         toast.error(`تعذّر قراءة الصورة ${f.name} (جرّب JPG أو PNG)`)
@@ -204,7 +206,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.message || "تعذّر تحميل الصورة")
       const blob = await r.blob()
       const name = (u.split("/").pop() || "image").split("?")[0].slice(0, 40) || "image"
-      const img = await processImage(new File([blob], name, { type: blob.type }), { mode, autoTrim, background: "auto", brand })
+      const img = await processImage(new File([blob], name, { type: blob.type }), { mode, autoTrim, background: "auto", brand, storeBrand })
       setImages((xs) => [...xs, img].slice(0, 10))
       setImageUrl("")
     } catch (e: any) {
@@ -223,7 +225,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     })
 
   const reset = () => {
-    images.forEach((i) => URL.revokeObjectURL(i.preview))
+    images.forEach((i) => (URL.revokeObjectURL(i.preview), URL.revokeObjectURL(i.postPreview)))
     setTitle("")
     setPrice("")
     setImages([])
@@ -419,7 +421,11 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <Switch id="qa-brand" checked={brand} onCheckedChange={setBrand} />
-                <Label htmlFor="qa-brand" size="small">شعار المتجر</Label>
+                <Label htmlFor="qa-brand" size="small">ختم المتجر على المنشورات</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="qa-store-brand" checked={storeBrand} onCheckedChange={setStoreBrand} />
+                <Label htmlFor="qa-store-brand" size="small">ختم على صورة المتجر</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch id="qa-trim" checked={autoTrim} onCheckedChange={setAutoTrim} />
@@ -447,7 +453,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
           >
             <Text>اسحب الصور أو الفيديو هنا، أو اضغط للاختيار</Text>
             <Text size="small" className="text-ui-fg-subtle">
-              الصور تُحوَّل إلى WebP بمقاس 1080×1350 (4:5، مقاس إنستغرام القياسي)، والفيديو يُضغط إلى أقل من 1MB (حتى {VIDEO_MAX_SECONDS} ثانية) مع الحفاظ على وضوحه
+              صورة المتجر مربعة 1600×1600 على خلفية نظيفة والمنتج يملأ 85% منها (معيار أمازون ونون)، بلا ختم إلا إن فعّلت زره، وصورة المنشور 1080×1350 مع ختم المتجر، والفيديو يُضغط إلى أقل من 1MB (حتى {VIDEO_MAX_SECONDS} ثانية) مع الحفاظ على وضوحه
             </Text>
             <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
           </div>
@@ -481,7 +487,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
               {images.map((img, i) => (
                 <div key={img.preview} className="relative overflow-hidden rounded-md border">
-                  <img src={img.preview} alt="" className="aspect-[4/5] w-full object-cover" />
+                  <img src={img.preview} alt="" className="aspect-square w-full bg-white object-contain" />
                   {i === 0 && <Badge size="2xsmall" color="blue" className="absolute top-1 right-1">الرئيسية</Badge>}
                   <div className="flex items-center justify-between bg-ui-bg-subtle px-1 py-0.5 text-[11px]">
                     <span title="الحجم قبل وبعد">{kb(img.originalBytes)} ← {kb(img.webp.size)}</span>
@@ -576,7 +582,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
             caption={preview.caption}
             igCaption={preview.ig_caption || preview.caption}
             comment={preview.comment}
-            image={images[0]?.preview || undefined}
+            image={images[0]?.postPreview || images[0]?.preview || undefined}
             video={video && useVideo && video.type === "mp4" ? video.preview : undefined}
             count={images.length}
           />

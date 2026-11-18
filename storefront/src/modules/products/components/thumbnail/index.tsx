@@ -32,9 +32,9 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
         "relative w-full overflow-hidden bg-white shadow-elevation-card-rest rounded-large group-hover:shadow-elevation-card-hover transition-shadow ease-in-out duration-150",
         className,
         {
-          // صور المنتجات مقاسها 1080×1350 (4:5)، فالإطار بنفس النسبة لتملأه الصورة كاملة
-          "aspect-[4/5]": size !== "square",
-          "aspect-[1/1]": size === "square",
+          // صور المنتجات مربعة 1600×1600 (معيار المتاجر العالمية)، فالإطار مربع لكل المقاسات.
+          // الصور القديمة الطولية تُعرض كاملة بلا قص على خلفية بيضاء
+          "aspect-square": true,
           "w-[180px]": size === "small",
           "w-[290px]": size === "medium",
           "w-[440px]": size === "large",

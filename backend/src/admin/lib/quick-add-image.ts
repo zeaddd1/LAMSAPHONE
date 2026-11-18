@@ -1,12 +1,13 @@
-import { FitMode, MAX_BYTES, QUALITY_STEPS, TARGET_BYTES, TARGET_H, TARGET_W, fitBox, trimBox } from "./quick-add-geometry"
+import { FitMode, MAX_BYTES, POST_H, POST_MARGIN, POST_W, QUALITY_STEPS, STORE_MARGIN, STORE_SIZE, TARGET_BYTES, fitBox, trimBox } from "./quick-add-geometry"
 import { STORE_LOGO } from "./store-logo"
 
 // أداة الصور: تقبل أي مقاس وأي صيغة يفهمها المتصفح، وتُخرج:
-// - webp بمقاس 1080×1350 (4:5) للمتجر (خفيف وسريع)
-// - jpeg بنفس المقاس لميتا (إنستغرام لا يقبل webp)
+// - webp مربع 1600×1600 للمتجر، المنتج يملأ 85% والخلفية نظيفة بلا ختم (معيار المتاجر العالمية)
+// - jpeg طولي 1080×1350 (4:5) لمنشورات ميتا مع ختم المتجر (إنستغرام لا يقبل webp)
 // كل المعالجة في المتصفح، فلا تحمّل على الخادم ولا تتجاوز حد الرفع 1MB.
 
-export type ProcessOptions = { mode: FitMode; autoTrim: boolean; background: "auto" | "white"; brand?: boolean }
+// brand: ختم المتجر على صور المنشورات. storeBrand: الختم على صورة المتجر أيضاً (المتاجر العالمية لا تضعه، فالافتراضي لا)
+export type ProcessOptions = { mode: FitMode; autoTrim: boolean; background: "auto" | "white"; brand?: boolean; storeBrand?: boolean }
 
 // ---------- هوية المتجر: شعار صغير شبه شفاف أسفل يمين الصورة ----------
 let logoPromise: Promise<HTMLImageElement | null> | null = null
@@ -83,7 +84,8 @@ export function drawBranding(ctx: CanvasRenderingContext2D, w: number, h: number
 
 export type ProcessedImage = {
   name: string
-  preview: string // رابط معاينة محلي
+  preview: string // معاينة صورة المتجر (مربعة)
+  postPreview: string // معاينة صورة المنشور (4:5 مع الختم)
   webp: File
   jpeg: File
   originalBytes: number
@@ -160,35 +162,41 @@ export async function processImage(file: File, opts: ProcessOptions): Promise<Pr
       }
     }
 
-    // 2) الرسم على إطار 1080×1350 والمنتج في المنتصف
-    const canvas = document.createElement("canvas")
-    canvas.width = TARGET_W
-    canvas.height = TARGET_H
-    const ctx = canvas.getContext("2d")!
-    ctx.imageSmoothingEnabled = true
-    ctx.imageSmoothingQuality = "high"
-    ctx.fillStyle = bg
-    ctx.fillRect(0, 0, TARGET_W, TARGET_H)
-    // صور المحل (خلفية غير متجانسة): تملأ الإطار كاملاً بلا أي فراغ (قص خفيف للأطراف)
+    // 2) الرسم: المنتج في المنتصف. صور المحل (خلفية غير متجانسة) تملأ الإطار كاملاً بلا فراغ (قص خفيف للأطراف)
     const photo = !uniform
-    const box = fitBox(crop.w, crop.h, TARGET_W, TARGET_H, photo ? "cover" : opts.mode)
-    ctx.drawImage(src.img, crop.x, crop.y, crop.w, crop.h, box.x, box.y, box.w, box.h)
-    if (opts.brand) drawBranding(ctx, TARGET_W, TARGET_H, await loadLogo())
+    const logo = opts.brand || opts.storeBrand ? await loadLogo() : null
+    const render = (W: number, H: number, margin: number, stamp: boolean) => {
+      const canvas = document.createElement("canvas")
+      canvas.width = W
+      canvas.height = H
+      const ctx = canvas.getContext("2d")!
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = "high"
+      ctx.fillStyle = bg
+      ctx.fillRect(0, 0, W, H)
+      const box = fitBox(crop.w, crop.h, W, H, photo ? "cover" : opts.mode, margin)
+      ctx.drawImage(src.img, crop.x, crop.y, crop.w, crop.h, box.x, box.y, box.w, box.h)
+      if (stamp && logo) drawBranding(ctx, W, H, logo)
+      return canvas
+    }
+    const storeCanvas = render(STORE_SIZE, STORE_SIZE, STORE_MARGIN, !!opts.storeBrand)
+    const postCanvas = render(POST_W, POST_H, POST_MARGIN, !!opts.brand)
 
     // 3) التحويل: webp للمتجر (أو jpeg إن كان المتصفح لا يدعم webp) و jpeg لميتا
     const name = baseName(file.name)
-    let webpBlob = await encode(canvas, "image/webp")
+    let webpBlob = await encode(storeCanvas, "image/webp")
     let webpType = "image/webp"
     let ext = "webp"
     if (webpBlob.type !== "image/webp") {
-      webpBlob = await encode(canvas, "image/jpeg")
+      webpBlob = await encode(storeCanvas, "image/jpeg")
       webpType = "image/jpeg"
       ext = "jpg"
     }
-    const jpegBlob = await encode(canvas, "image/jpeg")
+    const jpegBlob = await encode(postCanvas, "image/jpeg")
     return {
       name,
       preview: URL.createObjectURL(webpBlob),
+      postPreview: URL.createObjectURL(jpegBlob),
       webp: new File([webpBlob], `${name}.${ext}`, { type: webpType }),
       jpeg: new File([jpegBlob], `${name}-meta.jpg`, { type: "image/jpeg" }),
       originalBytes: file.size,

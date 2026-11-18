@@ -1,6 +1,6 @@
 import { buildCaption, hashtagComment, normalizeHashtags, productUrl, shortCode, shortLinks, suggestHashtags } from "../caption"
 import { addComment, feedItemToBatch, postToFacebook, postToInstagram, pushToCatalog } from "../meta-graph"
-import { fitBox, trimBox } from "../../../admin/lib/quick-add-geometry"
+import { POST_H, POST_MARGIN, POST_W, STORE_MARGIN, STORE_SIZE, fitBox, trimBox } from "../../../admin/lib/quick-add-geometry"
 
 describe("caption", () => {
   it("encodes Arabic handles in the store link", () => {
@@ -152,5 +152,25 @@ describe("instagram captions", () => {
     const c = buildCaption({ title: "T", link: "lamsaphone.yemenbay.com/p/abc123", waLink: "lamsaphone.yemenbay.com/wa/abc123", network: "facebook" })
     expect(c).toContain("/p/abc123")
     expect(c).toContain("/wa/abc123")
+  })
+})
+
+describe("global store image standard", () => {
+  it("store image is square 1600, post image is 1080x1350", () => {
+    expect(STORE_SIZE).toBe(1600)
+    expect([POST_W, POST_H]).toEqual([1080, 1350])
+  })
+  it("a trimmed product fills about 85% of the store frame", () => {
+    for (const [w, h] of [[400, 900], [900, 400], [700, 700]]) {
+      const b = fitBox(w, h, STORE_SIZE, STORE_SIZE, "contain", STORE_MARGIN)
+      expect(Math.max(b.w, b.h)).toBe(Math.round(STORE_SIZE * 0.85))
+      expect(b.x).toBeGreaterThanOrEqual(0)
+      expect(b.y).toBeGreaterThanOrEqual(0)
+    }
+  })
+  it("post frame keeps the whole product with a small margin", () => {
+    const b = fitBox(400, 900, POST_W, POST_H, "contain", POST_MARGIN)
+    expect(b.h).toBeLessThanOrEqual(POST_H)
+    expect(b.h).toBeGreaterThan(POST_H * 0.85)
   })
 })

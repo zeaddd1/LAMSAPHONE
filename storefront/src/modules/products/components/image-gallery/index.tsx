@@ -10,9 +10,11 @@ type ImageGalleryProps = {
   videos?: ProductVideo[]
 }
 
-// صور المنتج بمقاس 1080×1350، فالإطار بنفس النسبة (4:5) لتملأه الصورة كاملة.
-// الصور القديمة (6:7) تُعرض كاملة بلا قص (object-contain) مع هامش أبيض خفيف
-const BOX = "relative aspect-[4/5] w-full overflow-hidden bg-white"
+// صور المنتج مربعة 1600×1600 (معيار أمازون وأبل وشوبيفاي)، فالإطار مربع لتملأه الصورة كاملة.
+// الصور القديمة الطولية تُعرض كاملة بلا قص (object-contain) على خلفية بيضاء
+const BOX = "relative aspect-square w-full overflow-hidden bg-white"
+// الفيديو طولي 4:5 (720×900) فيبقى إطاره بنسبته
+const VBOX = "relative aspect-[4/5] w-full overflow-hidden bg-white"
 
 const ImageGallery = ({ images, videos = [] }: ImageGalleryProps) => {
   // ترتيب العرض: الصورة الرئيسية، ثم الفيديو، ثم باقي الصور
@@ -28,7 +30,7 @@ const ImageGallery = ({ images, videos = [] }: ImageGalleryProps) => {
       <div className="flex flex-col flex-1 small:mx-16 gap-y-4">
         {items.map((item, k) =>
           item.kind === "video" ? (
-            <Container key={`video-${k}`} className={BOX}>
+            <Container key={`video-${k}`} className={VBOX}>
               <video
                 src={item.video.url}
                 poster={item.video.poster}

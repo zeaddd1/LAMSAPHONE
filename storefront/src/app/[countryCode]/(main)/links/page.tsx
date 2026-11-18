@@ -41,7 +41,7 @@ export default async function Links({ params }: { params: Promise<{ countryCode:
       <div className="flex flex-col gap-3">
         {products.map((p: any) => (
           <div key={p.id} className="flex items-center gap-3 rounded-xl border border-ui-border-base bg-white p-2">
-            <Link href={`/${countryCode}/products/${p.handle}`} className="relative aspect-[4/5] w-20 shrink-0 overflow-hidden rounded-lg bg-white">
+            <Link href={`/${countryCode}/products/${p.handle}`} className="relative aspect-square w-20 shrink-0 overflow-hidden rounded-lg bg-white">
               {p.thumbnail && <Image src={p.thumbnail} alt={p.title} fill sizes="80px" className="object-contain" />}
             </Link>
             <div className="flex min-w-0 flex-1 flex-col gap-1">

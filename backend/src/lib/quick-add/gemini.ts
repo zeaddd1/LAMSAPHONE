@@ -40,6 +40,17 @@ export function arabicError(e: unknown): string {
   return err?.message ? `خطأ من Gemini: ${err.message}` : "خطأ غير معروف من Gemini"
 }
 
+// دقة 1K فقط (الافتراضي). موديلات 2.5 القديمة لا تقبل imageSize فلا نرسله لها
+export function imageConfig(req: Pick<GeminiRequest, "model" | "aspectRatio">) {
+  return { ...(req.aspectRatio ? { aspectRatio: req.aspectRatio } : {}), ...(/2\.5/.test(req.model) ? {} : { imageSize: "1K" }) }
+}
+
+// 429 بحد صفري أو حصة مجانية غير متاحة = الموديل للحسابات المفوترة فقط
+export function isPaidOnly(e: unknown) {
+  const m = String((e as any)?.message || "")
+  return /limit:\s*0\b|free[_ ]?tier|billing|not available on the free/i.test(m)
+}
+
 // عميل حقيقي عبر @google/genai (يُحمَّل عند الحاجة فقط حتى لا يثقل التشغيل إن لم تُستخدم الميزة)
 export function createGeminiApi(apiKey: string): GeminiApi {
   let client: any = null
@@ -59,7 +70,7 @@ export function createGeminiApi(apiKey: string): GeminiApi {
           contents: [{ role: "user", parts: req.parts }],
           config: {
             ...(req.wantImage ? { responseModalities: ["IMAGE", "TEXT"] } : {}),
-            ...(req.wantImage && req.aspectRatio ? { imageConfig: { aspectRatio: req.aspectRatio } } : {}),
+            ...(req.wantImage ? { imageConfig: imageConfig(req) } : {}),
             ...(req.json ? { responseMimeType: "application/json" } : {}),
             ...(req.signal ? { abortSignal: req.signal } : {}),
           },
@@ -76,7 +87,8 @@ export function createGeminiApi(apiKey: string): GeminiApi {
         }
       } catch (e: any) {
         const status = Number(e?.status || e?.code) || undefined
-        throw new GeminiError(redact(e?.message || String(e), apiKey), status, status === 429 || (status !== undefined && status >= 500))
+        // 429 لا يُعاد بسرعة: يتولاه حارس الحصص (تبريد متصاعد)
+        throw new GeminiError(redact(e?.message || String(e), apiKey), status, status !== undefined && status >= 500)
       }
     },
   }
@@ -84,7 +96,7 @@ export function createGeminiApi(apiKey: string): GeminiApi {
 
 const sleepDefault = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-// مهلة + إعادة المحاولة مرتين عند 429/5xx/انتهاء المهلة، مع انتظار متزايد
+// مهلة + إعادة المحاولة مرتين عند 5xx/انتهاء المهلة، مع انتظار متزايد. 429 لا يُعاد أبداً هنا
 export async function withRetry<T>(
   fn: (signal: AbortSignal) => Promise<T>,
   opts: { retries?: number; timeoutMs?: number; baseMs?: number; sleep?: (ms: number) => Promise<void> } = {}
@@ -105,7 +117,7 @@ export async function withRetry<T>(
       return await Promise.race([fn(ac.signal), timeout])
     } catch (e: any) {
       last = e
-      const retryable = e instanceof GeminiError ? e.retryable : false
+      const retryable = e instanceof GeminiError ? e.retryable && e.status !== 429 : false
       if (!retryable || attempt === retries) throw e
       await sleep((opts.baseMs ?? 1500) * 2 ** attempt)
     } finally {

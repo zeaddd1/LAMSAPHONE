@@ -1,6 +1,6 @@
 import { Badge, Button, Input, Label, Text, toast } from "@medusajs/ui"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { GeminiPublic, Job, checkSourceFile, fetchJobImage, isBusy, jobApi, prepareSource, testGemini, uploadOne } from "../lib/quick-add-ai"
+import { GeminiPublic, Job, checkSourceFile, fetchJobImage, isBusy, jobApi, prepareSource, testGemini, uploadOne, withCostConfirm } from "../lib/quick-add-ai"
 import {
   ANGLES,
   ANGLE_LABELS,
@@ -39,7 +39,10 @@ export default function QuickAddAiAngles({ job, gemini, setGemini, locked, onJob
 
   const generate = async (angle?: Angle) => {
     try {
-      onJob((await jobApi.action(job.id, "angles", angle ? { angle } : {})).job)
+      // الوضع المدفوع: تأكيد التكلفة التقديرية قبل الزوايا
+      const r = await withCostConfirm<any>((x) => jobApi.action(job.id, "angles", { ...(angle ? { angle } : {}), ...x }))
+      if (!r) return
+      onJob(r.job)
       poll()
     } catch (e: any) {
       toast.error(e?.message || "تعذّر بدء توليد الزوايا")
@@ -55,7 +58,8 @@ export default function QuickAddAiAngles({ job, gemini, setGemini, locked, onJob
   }
   const enhanceManual = async (id: string) => {
     try {
-      await jobApi.action(job.id, "regenerate", { image_id: id })
+      const r = await withCostConfirm<any>((x) => jobApi.action(job.id, "regenerate", { image_id: id, ...x }))
+      if (!r) return
       poll()
     } catch (e: any) {
       toast.error(e?.message || "حدث خطأ")
@@ -70,7 +74,7 @@ export default function QuickAddAiAngles({ job, gemini, setGemini, locked, onJob
         <Text weight="plus">الزوايا الأربع (أمامي، خلفي، ثلاثة أرباع، جانبي)</Text>
         {!locked && (
           <div className="flex flex-wrap gap-2">
-            <Button size="small" disabled={!isNew || generating || !gemini?.has_key} onClick={() => generate()}>
+            <Button size="small" disabled={!isNew || generating || !gemini?.has_key || gemini?.image_mode !== "paid_api"} onClick={() => generate()}>
               ولّد الزوايا الأربع
             </Button>
             {!showManual && (
@@ -82,6 +86,9 @@ export default function QuickAddAiAngles({ job, gemini, setGemini, locked, onJob
         )}
       </div>
       {!isNew && <Text size="small" className="text-ui-fg-error">⚠️ {USED_ANGLES_NOTE}</Text>}
+      {isNew && gemini?.has_key && gemini.image_mode !== "paid_api" && (
+        <Text size="xsmall" className="text-ui-fg-subtle">توليد الصور عبر API متوقف (الوضع اليدوي){gemini.cap_note ? `: ${gemini.cap_note}` : ""}. استخدم التوليد اليدوي أدناه، أو فعّل الوضع المدفوع من إعدادات Gemini.</Text>
+      )}
       {isNew && !hasAngles && (
         <Text size="xsmall" className="text-ui-fg-subtle">
           صورة منفصلة لكل زاوية بنفس الجهاز والخلفية (1:1). الأمامي يُولَّد أولاً ثم يُستخدم مرجعاً لبقية الزوايا.
@@ -221,6 +228,7 @@ function ManualCard({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Text weight="plus">التوليد اليدوي عبر Gemini</Text>
         <div className="flex gap-2">
+          <Button size="small" onClick={() => (window.location.href = `/app/image-studio?job=${job.id}`)}>افتح في استوديو الصور</Button>
           <Button size="small" variant="secondary" isLoading={testing} onClick={retryApi}>تجربة الربط من جديد</Button>
           {onClose && <Button size="small" variant="transparent" onClick={onClose}>إغلاق</Button>}
         </div>

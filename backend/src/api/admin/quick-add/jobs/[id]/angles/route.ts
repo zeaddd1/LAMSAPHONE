@@ -1,5 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { actorOf, enqueue, isRunning, loadJob, quickAdd, rateLimited, serializeJob } from "../../../../../../lib/quick-add/ai-jobs"
+import { actorOf, enqueue, imageGate, isRunning, loadJob, quickAdd, rateLimited, serializeJob } from "../../../../../../lib/quick-add/ai-jobs"
 import { ANGLES, Angle, angleKind, angleOf, isAngleKind } from "../../../../../../lib/quick-add/gemini"
 import { getGeminiSettings } from "../../../../../../lib/quick-add/gemini-settings"
 import { quickAddGenerateWorkflow } from "../../../../../../workflows/quick-add-generate"
@@ -39,6 +39,13 @@ export async function POST(req: MedusaRequest<AnglesBody>, res: MedusaResponse) 
   const qa = quickAdd(req.scope)
   const only = req.validatedBody.angle
   const wanted: Angle[] = only ? [only] : [...ANGLES]
+  // اليدوي: ممنوع. المدفوع: تأكيد التكلفة (كل زاوية قد تُعاد مرة ببرومت مبسّط عند الرفض)
+  const toRun = wanted.filter((a) => only || images.find((i) => angleOf(i.kind) === a)?.source !== "manual")
+  const gate = await imageGate(req.scope, s, toRun.length, req.validatedBody.confirm_cost, toRun.length)
+  if (gate) {
+    res.status(gate[0]).json(gate[1])
+    return
+  }
   for (const a of wanted) {
     const rec = images.find((i) => angleOf(i.kind) === a)
     if (!rec) {

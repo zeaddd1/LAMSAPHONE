@@ -89,9 +89,9 @@ describe("QuickAddService: images", () => {
     expect(last(updates, "qai_0").status).toBe("done")
   })
 
-  it("retries twice on 429/5xx then succeeds", async () => {
+  it("retries twice on 5xx then succeeds", async () => {
     const { api, calls } = mockApi(async (_r, n) => {
-      if (n <= 2) throw new GeminiError("busy", n === 1 ? 429 : 503, true)
+      if (n <= 2) throw new GeminiError("busy", 503, true)
       return { image: { data: "AAAA", mimeType: "image/png" } }
     })
     const { svc } = makeService(api)
@@ -100,14 +100,14 @@ describe("QuickAddService: images", () => {
     expect(calls).toHaveLength(3)
   })
 
-  it("gives up after 2 retries with an Arabic message", async () => {
+  it("never retries a 429 quickly (handed to the quota guard), Arabic message", async () => {
     const { api, calls } = mockApi(async () => {
       throw new GeminiError("quota", 429, true)
     })
     const { svc, updates } = makeService(api)
     const r = await svc.enhanceImages(job, imgs, ["qai_1"])
     expect(r.failed).toBe(1)
-    expect(calls).toHaveLength(3)
+    expect(calls).toHaveLength(1)
     expect(last(updates, "qai_1").error).toMatch(/حد الاستخدام/)
   })
 

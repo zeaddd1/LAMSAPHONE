@@ -56,10 +56,12 @@ export function buildManualPrompts(i: ManualPromptInput): string[] {
 // متى تظهر بطاقة "التوليد اليدوي عبر Gemini" تلقائياً: المفتاح غير موجود، الاختبار فشل،
 // أو فشل التوليد (حد الاستخدام، رفض متكرر، شبكة) في المهمة
 export function shouldOfferManual(
-  gemini: { has_key: boolean; status: string } | null,
+  gemini: { has_key: boolean; status: string; image_mode?: string } | null,
   job?: { status: string; images: { kind: string; status: string; source?: string }[] } | null
 ): boolean {
   if (!gemini || !gemini.has_key || gemini.status === "error") return true
+  // الوضع اليدوي (الافتراضي): لا توليد صور عبر API، فالبطاقة اليدوية هي المسار
+  if (gemini.image_mode === "manual") return true
   if (!job) return false
   if (job.status === "failed" && !job.images.some((i) => i.status === "done")) return true
   return job.images.some((i) => isAngleKind(i.kind) && i.source !== "manual" && i.status === "failed")

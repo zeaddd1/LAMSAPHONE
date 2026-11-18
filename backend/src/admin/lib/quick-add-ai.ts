@@ -57,7 +57,9 @@ export type JobImage = {
 export type StepResult = { ok: boolean; url?: string; error?: string; skipped?: boolean }
 export type Job = {
   id: string
-  status: "pending" | "generating" | "ready_for_review" | "approved" | "publishing" | "published" | "failed" | "rejected"
+  status: "pending" | "generating" | "waiting" | "ready_for_review" | "approved" | "publishing" | "published" | "failed" | "rejected"
+  // بانتظار تجدد حد الاستخدام: تكمل تلقائياً في هذا الموعد
+  wait_until?: string | null
   error: string | null
   title: string
   brand: string
@@ -94,6 +96,7 @@ export type Job = {
 export const STATUS_LABELS: Record<Job["status"], string> = {
   pending: "في الانتظار",
   generating: "جارٍ التوليد",
+  waiting: "بانتظار تجدد الحد",
   ready_for_review: "جاهزة للمراجعة",
   approved: "معتمدة",
   publishing: "جارٍ النشر",
@@ -163,11 +166,27 @@ export const jobApi = {
   get: (id: string) => sdk.client.fetch<{ job: Job }>(`/admin/quick-add/jobs/${id}`).then((r) => r.job),
   list: () => sdk.client.fetch<{ jobs: Job[]; count: number }>("/admin/quick-add/jobs?limit=30"),
   create: (body: Record<string, any>) => sdk.client.fetch<{ job: Job }>("/admin/quick-add/jobs", { method: "POST", body }).then((r) => r.job),
+  // مثل create لكن يعرض تأكيد التكلفة في الوضع المدفوع (null = أُلغي)
+  createConfirmed: (body: Record<string, any>) =>
+    withCostConfirm<{ job: Job; manual_images?: boolean }>((x) => sdk.client.fetch<any>("/admin/quick-add/jobs", { method: "POST", body: { ...body, ...x } })),
   update: (id: string, body: Record<string, any>) => sdk.client.fetch<{ job: Job }>(`/admin/quick-add/jobs/${id}`, { method: "POST", body }).then((r) => r.job),
   action: (id: string, action: "analyze-parts" | "regenerate" | "regenerate-copy" | "approve" | "reject" | "published" | "angles" | "manual-angle", body: Record<string, any> = {}) =>
     sdk.client.fetch<any>(`/admin/quick-add/jobs/${id}/${action}`, { method: "POST", body }),
 }
 
+export type ModelTest = { state: "works" | "paid_only" | "rate_limited" | "error" | "available"; message: string; at: string }
+export type GeminiUsage = {
+  text_minute: number
+  text_today: number
+  rpm_limit: number
+  rpd_limit: number
+  month_spend: number
+  day_spend: number
+  monthly_cap: number
+  daily_cap: number
+  day_resets_at: string
+  cooldown_until: string | null
+}
 export type GeminiPublic = {
   has_key: boolean
   key_hint: string
@@ -177,12 +196,45 @@ export type GeminiPublic = {
   margin_type: "percent" | "fixed"
   margin_value: number
   concurrency: number
+  image_mode: "manual" | "paid_api"
+  paid_confirmed: boolean
+  monthly_cap_usd: number
+  daily_cap_usd: number
+  image_costs: Record<string, number>
+  image_cost: number
+  image_sunset: string | null
+  use_batch: boolean
+  rpm: number
+  rpd: number
+  safety_pct: number
+  cooldown_until: string | null
   status: "connected" | "disconnected" | "error"
   last_success_at: string | null
   last_error: string | null
-  usage: { month_calls: number; total_calls: number; month_jobs: number }
+  text_test: ModelTest | null
+  image_test: ModelTest | null
+  cap_note: string | null
+  usage: GeminiUsage
 }
+
+export type CostEstimate = { count: number; per_image: number; cost_usd: number; max_cost_usd: number; month_spend: number; monthly_cap: number; day_spend: number; daily_cap: number }
+export function costText(e: CostEstimate) {
+  const max = e.max_cost_usd > e.cost_usd ? ` (حتى ${e.max_cost_usd}$ إن أُعيدت زوايا مرفوضة)` : ""
+  const day = e.daily_cap > 0 ? `\nاليوم: ${e.day_spend}$ من ${e.daily_cap}$` : ""
+  return `توليد ${e.count} صورة عبر API المدفوع.\nالتكلفة التقديرية: ${e.cost_usd}$${max}.\nهذا الشهر: ${e.month_spend}$ من ${e.monthly_cap}$${day}\n\nمتابعة؟`
+}
+/**
+ * يرسل طلب توليد. في الوضع المدفوع يعيد السيرفر needs_confirm مع التقدير: نعرضه ونعيد الطلب بعد التأكيد.
+ * يعيد null إن ألغى المستخدم.
+ */
+export async function withCostConfirm<T>(send: (extra: { confirm_cost?: boolean }) => Promise<any>): Promise<T | null> {
+  const r = await send({})
+  if (!r?.needs_confirm) return r as T
+  if (!window.confirm(costText(r.estimate as CostEstimate))) return null
+  return (await send({ confirm_cost: true })) as T
+}
+
 export const getGemini = () => sdk.client.fetch<{ settings: GeminiPublic }>("/admin/quick-add/settings/gemini").then((r) => r.settings)
 
 export const testGemini = () =>
-  sdk.client.fetch<{ ok: boolean; error?: string; settings: GeminiPublic }>("/admin/quick-add/settings/gemini/test", { method: "POST" })
+  sdk.client.fetch<{ ok: boolean; error?: string; text?: ModelTest; image?: ModelTest; settings: GeminiPublic }>("/admin/quick-add/settings/gemini/test", { method: "POST" })

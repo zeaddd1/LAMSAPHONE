@@ -66,6 +66,8 @@ export const CreateJobBody = z
     generate_copy: z.boolean().default(true),
     // false = إنشاء المهمة بدون توليد (لاقتراح الأجزاء أولاً)
     generate: z.boolean().default(true),
+    // الوضع المدفوع: تأكيد التكلفة التقديرية قبل توليد الصور
+    confirm_cost: z.boolean().optional(),
   })
   .refine(honest, honestMsg)
 export type CreateJobBody = z.infer<typeof CreateJobBody>
@@ -90,7 +92,7 @@ export const UpdateJobBody = z
   .refine(honest, honestMsg)
 export type UpdateJobBody = z.infer<typeof UpdateJobBody>
 
-export const RegenerateBody = z.object({ image_id: z.string().optional() })
+export const RegenerateBody = z.object({ image_id: z.string().optional(), confirm_cost: z.boolean().optional() })
 export type RegenerateBody = z.infer<typeof RegenerateBody>
 
 const Step = z.object({ ok: z.boolean(), url: z.string().max(1000).optional(), error: z.string().max(1000).optional(), skipped: z.boolean().optional() })
@@ -103,7 +105,7 @@ export const PublishedBody = z.object({
 export type PublishedBody = z.infer<typeof PublishedBody>
 
 // الزوايا الأربع: كلها، أو زاوية واحدة (إعادة توليدها فقط)
-export const AnglesBody = z.object({ angle: z.enum(ANGLES).optional() })
+export const AnglesBody = z.object({ angle: z.enum(ANGLES).optional(), confirm_cost: z.boolean().optional() })
 export type AnglesBody = z.infer<typeof AnglesBody>
 
 // التوليد اليدوي: صورة زاوية رفعها المستخدم (مرفوعة مسبقاً عبر /admin/uploads، أقل من 1MB)

@@ -1,5 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { actorOf, enqueue, fixStale, quickAdd, rateLimited, serializeJob } from "../../../../lib/quick-add/ai-jobs"
+import { actorOf, enqueue, fixStale, imageGate, quickAdd, rateLimited, serializeJob } from "../../../../lib/quick-add/ai-jobs"
 import { getGeminiSettings } from "../../../../lib/quick-add/gemini-settings"
 import { quickAddGenerateWorkflow } from "../../../../workflows/quick-add-generate"
 import type { CreateJobBody } from "./validators"
@@ -26,10 +26,20 @@ export async function POST(req: MedusaRequest<CreateJobBody>, res: MedusaRespons
     res.status(429).json({ message: "طلبات كثيرة: الحد 10 طلبات توليد في الدقيقة. انتظر قليلاً" })
     return
   }
+  // الصور: اليدوي = لا طلبات صور (تُنشأ المهمة وتُولَّد النصوص فقط)، والمدفوع = تأكيد التكلفة أولاً
+  const manualImages = s.image_mode !== "paid_api"
+  if (b.generate && !manualImages) {
+    const gate = await imageGate(req.scope, s, b.images.length, b.confirm_cost)
+    if (gate) {
+      res.status(gate[0]).json(gate[1])
+      return
+    }
+  }
+  const runAi = b.generate && (!manualImages || b.generate_copy)
   const qa = quickAdd(req.scope)
   const job: any = await qa.createQuickAddJobs({
     // بلا توليد (يدوي): المهمة جاهزة للمراجعة مباشرة
-    status: b.generate ? "pending" : "ready_for_review",
+    status: runAi ? "pending" : "ready_for_review",
     title: b.title,
     brand: b.brand,
     model_name: b.model_name,
@@ -57,9 +67,9 @@ export async function POST(req: MedusaRequest<CreateJobBody>, res: MedusaRespons
     })) as any
   )
   req.scope.resolve("logger").info(`quick-add ai: job ${job.id} created (${b.images.length} images)`)
-  if (b.generate) {
-    enqueue(req.scope, { job_id: job.id, images: true, copy: b.generate_copy }, (input) => quickAddGenerateWorkflow(req.scope).run({ input }))
+  if (runAi) {
+    enqueue(req.scope, { job_id: job.id, images: !manualImages, copy: b.generate_copy }, (input) => quickAddGenerateWorkflow(req.scope).run({ input }))
   }
   const fresh = await qa.retrieveQuickAddJob(job.id, { relations: ["images"] })
-  res.json({ job: serializeJob(fresh, ((fresh as any).images || []).sort((a: any, b: any) => a.rank - b.rank), true) })
+  res.json({ job: serializeJob(fresh, ((fresh as any).images || []).sort((a: any, b: any) => a.rank - b.rank), true), manual_images: b.generate && manualImages })
 }

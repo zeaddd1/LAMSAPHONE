@@ -27,6 +27,9 @@ const QuickAddJob = model.define("quick_add_job", {
   steps: model.json().nullable(),
   product_id: model.text().nullable(),
   ai_calls: model.number().default(0),
+  // وصلت حد الاستخدام المجاني: تكمل المهمة تلقائياً بعد هذا الوقت بتنفيذ wait_task
+  wait_until: model.dateTime().nullable(),
+  wait_task: model.json().nullable(),
   created_by: model.text().nullable(),
   images: model.hasMany(() => QuickAddImage, { mappedBy: "job" }),
 })

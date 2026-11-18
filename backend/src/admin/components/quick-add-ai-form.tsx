@@ -166,7 +166,7 @@ export default function QuickAddAiForm(p: Props) {
     const specsLabeled: Record<string, string> = {}
     for (const [k, label] of SPEC_FIELDS) if (specs[k]?.trim()) specsLabeled[label] = specs[k].trim()
     const warranty = [warrantyTime.trim(), warrantyBy.trim() && `من ${warrantyBy.trim()}`].filter(Boolean).join(" ")
-    return jobApi.create({
+    const body = {
       title: fullTitle,
       brand: brand.trim(),
       model_name: model.trim(),
@@ -196,7 +196,12 @@ export default function QuickAddAiForm(p: Props) {
         margin_type: marginType,
         margin_value: Number(marginValue) || 0,
       },
-    })
+    }
+    if (!generate) return jobApi.create(body)
+    // الوضع المدفوع: تأكيد التكلفة التقديرية للصور قبل البدء
+    const r = await jobApi.createConfirmed(body)
+    if (!r) throw new Error("أُلغي التوليد")
+    return r.job
   }
 
   const generate = async () => {
@@ -204,7 +209,7 @@ export default function QuickAddAiForm(p: Props) {
     try {
       // بدون ربط: مهمة بلا توليد، ثم بطاقة التوليد اليدوي في المراجعة
       const job = await createJob(connected)
-      toast.success(connected ? "بدأ التحسين في الخلفية" : "أُنشئت المهمة: أكمل بالتوليد اليدوي")
+      toast.success(!connected ? "أُنشئت المهمة: أكمل بالتوليد اليدوي" : g?.image_mode === "paid_api" ? "بدأ التحسين في الخلفية" : "بدأت كتابة النصوص. الصور: الوضع اليدوي (بلا طلبات صور للـ API)")
       p.onCreated(job)
     } catch (e: any) {
       toast.error(e?.message || "تعذّر بدء التوليد")

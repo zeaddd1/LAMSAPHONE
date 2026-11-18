@@ -1,9 +1,10 @@
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { QUICK_ADD_MODULE } from "../../modules/quick-add"
 import type QuickAddModuleService from "../../modules/quick-add/service"
-import { AiImage, AiJob, QuickAddService, deviceContext } from "./ai-service"
+import { AiImage, AiJob, GenResult, QuickAddService, deviceContext, errorText } from "./ai-service"
 import { Angle, GeminiApi, InlineImage, angleStyle, arabicError, createGeminiApi, isAngleKind } from "./gemini"
-import { getGeminiSettings } from "./gemini-settings"
+import { GeminiSettings, getGeminiSettings, patchGeminiSettings } from "./gemini-settings"
+import { MANUAL_MESSAGE, QuotaGuard, QuotaWaitError, UsageStore, WAIT_MESSAGE, estimateImages } from "./quota"
 
 // ربط QuickAddService بـ Medusa: قراءة الصور وحفظها عبر File Module، وتحديث جداول المهام،
 // وطابور خفيف (مهمة واحدة في كل مرة) حتى لا يُثقل السيرفر المشترك.
@@ -26,13 +27,50 @@ function sniffMime(buf: Buffer) {
 }
 const EXT: Record<string, string> = { "image/png": "png", "image/webp": "webp", "image/jpeg": "jpg" }
 
-export async function buildService(scope: Scope) {
+// ---------- سجل الاستهلاك وحارس الحصص ----------
+export function usageStore(scope: Scope): UsageStore {
+  const qa = quickAdd(scope)
+  return {
+    countText: async (since) => {
+      const [, count] = await qa.listAndCountGeminiUsageLogs({ kind: "text", created_at: { $gte: since } } as any, { take: 1, select: ["id"] })
+      return count
+    },
+    spend: async (since) => {
+      const rows: any[] = await qa.listGeminiUsageLogs({ kind: "image", created_at: { $gte: since } } as any, { select: ["cost_usd"], take: 100000 })
+      return rows.reduce((a, r) => a + (Number(r.cost_usd) || 0), 0)
+    },
+    log: async (e) => {
+      await qa.createGeminiUsageLogs(e as any)
+    },
+    getSettings: () => getGeminiSettings(scope),
+    patchSettings: (p) => patchGeminiSettings(scope, () => p),
+  }
+}
+export const quotaGuard = (scope: Scope) => new QuotaGuard(usageStore(scope))
+export const geminiUsage = (scope: Scope) => quotaGuard(scope).usage()
+
+/**
+ * بوابة الصور قبل أي توليد عبر API: اليدوي = ممنوع، والمدفوع = يحتاج تأكيد التكلفة التقديرية.
+ * تعيد null إن سُمح، أو [status, body] للرد.
+ */
+export async function imageGate(scope: Scope, s: GeminiSettings, count: number, confirmed?: boolean, retriesUpTo = 0): Promise<[number, any] | null> {
+  if (count <= 0) return null
+  if (s.image_mode !== "paid_api") return [400, { message: s.cap_note ? `${s.cap_note}. ${MANUAL_MESSAGE}` : MANUAL_MESSAGE, manual: true }]
+  if (confirmed) return null
+  const u = await geminiUsage(scope)
+  const estimate = { ...estimateImages(s, count, retriesUpTo), month_spend: u.month_spend, monthly_cap: u.monthly_cap, day_spend: u.day_spend, daily_cap: u.daily_cap }
+  return [200, { needs_confirm: true, estimate }]
+}
+
+export async function buildService(scope: Scope, jobId?: string) {
   const s = await getGeminiSettings(scope)
   if (!s.api_key) throw new Error("Gemini غير مربوط: أضف المفتاح من صفحة ربط ميتا ← Gemini")
   const files = scope.resolve(Modules.FILE)
   const qa = quickAdd(scope)
   const logger = scope.resolve(ContainerRegistrationKeys.LOGGER)
   return new QuickAddService({
+    guard: quotaGuard(scope),
+    jobId,
     api: apiFactory(s.api_key),
     imageModel: s.image_model,
     textModel: s.text_model,
@@ -67,20 +105,29 @@ export async function runGeneration(scope: Scope, input: GenerateInput) {
   const logger = scope.resolve(ContainerRegistrationKeys.LOGGER)
   const { job, images } = await loadJob(scope, input.job_id)
   if (["published", "publishing", "rejected"].includes(job.status)) return
-  await qa.updateQuickAddJobs({ id: job.id, status: "generating", error: null, ...(input.copy ? { copy_status: "generating", copy_error: null } : {}) })
+  await qa.updateQuickAddJobs({ id: job.id, status: "generating", error: null, wait_until: null, wait_task: null, ...(input.copy ? { copy_status: "generating", copy_error: null } : {}) })
   let svc: QuickAddService
   try {
-    svc = await buildService(scope)
+    svc = await buildService(scope, job.id)
   } catch (e: any) {
     await qa.updateQuickAddJobs({ id: job.id, status: "failed", error: e.message, ...(input.copy ? { copy_status: "failed", copy_error: e.message } : {}) })
     return
   }
-  logger.info(`quick-add ai: job ${job.id} started`)
+  const settings = await getGeminiSettings(scope)
+  // الوضع اليدوي: لا طلبات صور للـ API إطلاقاً (تبقى الصور الأصلية، والتوليد من بطاقة الوضع اليدوي)
+  const manual = settings.image_mode !== "paid_api"
+  logger.info(`quick-add ai: job ${job.id} started${manual ? " (manual image mode)" : ""}`)
   const aiJob = job as AiJob
   const tasks: Promise<unknown>[] = []
-  let imgResult = { done: 0, failed: 0 }
+  let imgResult: GenResult = { done: 0, failed: 0 }
   let copyOk = true
-  if (input.angles?.length) {
+  let copyWait: Date | null = null
+  const wantAngles = !manual && Boolean(input.angles?.length)
+  const wantImages = !manual && !input.angles?.length && input.images !== false
+  if (manual && input.angles?.length) {
+    for (const i of images) if (input.angles.some((a) => i.kind === `angle_${a}`) && i.source !== "manual") await qa.updateQuickAddImages({ id: i.id, status: "failed", error: MANUAL_MESSAGE })
+  }
+  if (wantAngles) {
     // الزوايا الأربع (تُشغَّل وحدها، بعد أي توليد آخر في الطابور)
     const uploads = images.filter((i: any) => !isAngleKind(i.kind))
     const angleImgs = images.filter((i: any) => isAngleKind(i.kind))
@@ -89,11 +136,11 @@ export async function runGeneration(scope: Scope, input: GenerateInput) {
         (r) => (imgResult = r),
         async (e) => {
           imgResult = { done: 0, failed: input.angles!.length }
-          for (const i of angleImgs) if (input.angles!.some((a) => i.kind === `angle_${a}`) && i.source !== "manual") await qa.updateQuickAddImages({ id: i.id, status: "failed", error: e?.status ? arabicError(e) : e?.message || arabicError(e) })
+          for (const i of angleImgs) if (input.angles!.some((a) => i.kind === `angle_${a}`) && i.source !== "manual") await qa.updateQuickAddImages({ id: i.id, status: "failed", error: errorText(e) })
         }
       )
     )
-  } else if (input.images !== false) {
+  } else if (wantImages) {
     tasks.push(svc.enhanceImages(aiJob, images as AiImage[], input.image_ids).then((r) => (imgResult = r)))
   }
   if (input.copy) {
@@ -102,21 +149,63 @@ export async function runGeneration(scope: Scope, input: GenerateInput) {
         .generateCopy(aiJob)
         .then((copy) => qa.updateQuickAddJobs({ id: job.id, copy, copy_status: "done", copy_error: null }))
         .catch(async (e) => {
+          if (e instanceof QuotaWaitError) {
+            copyWait = e.retryAt
+            await qa.updateQuickAddJobs({ id: job.id, copy_status: "waiting", copy_error: WAIT_MESSAGE })
+            return
+          }
           copyOk = false
-          await qa.updateQuickAddJobs({ id: job.id, copy_status: "failed", copy_error: arabicError(e) })
+          await qa.updateQuickAddJobs({ id: job.id, copy_status: "failed", copy_error: errorText(e) })
         })
     )
   }
   await Promise.allSettled(tasks)
   const fresh = await qa.retrieveQuickAddJob(job.id)
-  const allFailed = !input.angles?.length && input.images !== false && imgResult.done === 0 && imgResult.failed > 0 && (!input.copy || !copyOk)
+  const calls = (fresh.ai_calls || 0) + svc.calls
+
+  // حد الاستخدام: نحفظ ما تبقى ونكمل تلقائياً عند التجدد (لا تُفقد بيانات المهمة)
+  const waitTimes = [imgResult.retryAt ? new Date(imgResult.retryAt) : null, copyWait as Date | null].filter(Boolean) as Date[]
+  if (waitTimes.length) {
+    const until = new Date(Math.max(...waitTimes.map((d) => d.getTime())))
+    const task: GenerateInput = {
+      job_id: job.id,
+      copy: Boolean(copyWait),
+      images: Boolean(imgResult.waiting?.length) && !wantAngles,
+      ...(imgResult.waiting?.length && wantImages ? { image_ids: imgResult.waiting } : {}),
+      ...(imgResult.waiting?.length && wantAngles ? { angles: imgResult.waiting as Angle[] } : {}),
+    }
+    await qa.updateQuickAddJobs({ id: job.id, status: "waiting", error: WAIT_MESSAGE, wait_until: until, wait_task: task as any, ai_calls: calls })
+    scheduleResume(scope, job.id, until)
+    logger.info(`quick-add ai: job ${job.id} waiting for quota until ${until.toISOString()}`)
+    return
+  }
+  const allFailed = wantImages && imgResult.done === 0 && imgResult.failed > 0 && (!input.copy || !copyOk)
   await qa.updateQuickAddJobs({
     id: job.id,
     status: allFailed ? "failed" : "ready_for_review",
     error: allFailed ? "فشل توليد كل الصور والنصوص. راجع إعدادات Gemini ثم أعد المحاولة" : null,
-    ai_calls: (fresh.ai_calls || 0) + svc.calls,
+    ai_calls: calls,
   })
   logger.info(`quick-add ai: job ${job.id} ready (${imgResult.done} ok, ${imgResult.failed} failed, copy ${copyOk ? "ok" : "failed"})`)
+}
+
+// ---------- الاستكمال التلقائي بعد التجدد ----------
+const timers = new Map<string, ReturnType<typeof setTimeout>>()
+export function scheduleResume(scope: Scope, jobId: string, at: Date) {
+  clearTimeout(timers.get(jobId))
+  const delay = Math.min(2_000_000_000, Math.max(1000, at.getTime() - Date.now() + 2000))
+  const t = setTimeout(() => {
+    timers.delete(jobId)
+    resumeJob(scope, jobId).catch(() => null)
+  }, delay)
+  ;(t as any).unref?.()
+  timers.set(jobId, t)
+}
+export async function resumeJob(scope: Scope, jobId: string) {
+  if (running.has(jobId)) return
+  const job: any = await quickAdd(scope).retrieveQuickAddJob(jobId).catch(() => null)
+  if (!job || job.status !== "waiting" || !job.wait_task) return
+  enqueue(scope, { ...(job.wait_task as GenerateInput), job_id: jobId }, (input) => runGeneration(scope, input))
 }
 
 // ---------- طابور خفيف ----------
@@ -139,11 +228,16 @@ export function enqueue(scope: Scope, input: GenerateInput, runner: (input: Gene
     .finally(() => running.delete(input.job_id))
 }
 
-// مهام بقيت "جاري التوليد" بعد إعادة تشغيل السيرفر: نعلّمها فاشلة حتى يعيد المستخدم المحاولة بلا فقد بيانات
+// مهام بقيت "جاري التوليد" بعد إعادة تشغيل السيرفر: نعلّمها فاشلة حتى يعيد المستخدم المحاولة بلا فقد بيانات.
+// ومهام "بانتظار التجدد": نعيد جدولتها (المؤقت يضيع عند إعادة التشغيل)
 export async function fixStale(scope: Scope, jobs: any[]) {
   const qa = quickAdd(scope)
   const limit = Date.now() - 15 * 60_000
   for (const j of jobs) {
+    if (j.status === "waiting" && j.wait_task && !running.has(j.id) && !timers.has(j.id)) {
+      scheduleResume(scope, j.id, j.wait_until ? new Date(j.wait_until) : new Date())
+      continue
+    }
     if (j.status !== "generating" || running.has(j.id) || new Date(j.updated_at).getTime() > limit) continue
     await qa.updateQuickAddJobs({ id: j.id, status: "failed", error: "انقطع التوليد (ربما أُعيد تشغيل السيرفر). أعد المحاولة" })
     const imgs = await qa.listQuickAddImages({ job_id: j.id, status: "generating" } as any)
@@ -187,6 +281,7 @@ export function serializeJob(job: any, images: any[] = [], withPrivate = false) 
     copy_status: job.copy_status,
     copy_error: job.copy_error,
     steps: job.steps || {},
+    wait_until: job.wait_until || null,
     product_id: job.product_id,
     created_at: job.created_at,
     updated_at: job.updated_at,
@@ -217,16 +312,3 @@ export async function cleanupFiles(scope: Scope, images: any[]) {
   if (!ids.length) return
   await scope.resolve(Modules.FILE).deleteFiles(ids).catch(() => null)
 }
-
-// عدّاد استهلاك بسيط: عدد طلبات Gemini هذا الشهر وإجمالاً (من جدول المهام)
-export async function geminiUsage(scope: Scope) {
-  const qa = quickAdd(scope)
-  const all: any[] = await qa.listQuickAddJobs({}, { select: ["id", "ai_calls", "created_at"], take: 5000, withDeleted: true } as any)
-  const start = new Date()
-  start.setUTCDate(1)
-  start.setUTCHours(0, 0, 0, 0)
-  const month = all.filter((j) => new Date(j.created_at) >= start)
-  const sum = (xs: any[]) => xs.reduce((a, j) => a + (j.ai_calls || 0), 0)
-  return { month_calls: sum(month), total_calls: sum(all), month_jobs: month.length }
-}
-

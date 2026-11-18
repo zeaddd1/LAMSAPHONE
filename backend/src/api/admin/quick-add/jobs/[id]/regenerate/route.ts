@@ -1,6 +1,8 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { actorOf, enqueue, isRunning, loadJob, rateLimited, serializeJob } from "../../../../../../lib/quick-add/ai-jobs"
+import { actorOf, enqueue, imageGate, isRunning, loadJob, rateLimited, serializeJob } from "../../../../../../lib/quick-add/ai-jobs"
 import { quickAddGenerateWorkflow } from "../../../../../../workflows/quick-add-generate"
+import { getGeminiSettings } from "../../../../../../lib/quick-add/gemini-settings"
+import { isAngleKind } from "../../../../../../lib/quick-add/gemini"
 import type { RegenerateBody } from "../../validators"
 
 // إعادة توليد كل الصور أو صورة واحدة فقط (image_id)
@@ -21,6 +23,12 @@ export async function POST(req: MedusaRequest<RegenerateBody>, res: MedusaRespon
   const id = req.validatedBody.image_id
   if (id && !images.some((i) => i.id === id)) {
     res.status(404).json({ message: "الصورة غير موجودة في هذه المهمة" })
+    return
+  }
+  const count = id ? 1 : images.filter((i) => !i.excluded && !isAngleKind(i.kind)).length
+  const gate = await imageGate(req.scope, await getGeminiSettings(req.scope), count, req.validatedBody.confirm_cost)
+  if (gate) {
+    res.status(gate[0]).json(gate[1])
     return
   }
   enqueue(req.scope, { job_id: job.id, images: true, image_ids: id ? [id] : undefined, copy: false }, (input) => quickAddGenerateWorkflow(req.scope).run({ input }))

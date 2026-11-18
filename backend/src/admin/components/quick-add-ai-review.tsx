@@ -4,7 +4,7 @@ import type { MetaPublic } from "./quick-add-meta-connect"
 import PostPreview from "./quick-add-post-preview"
 import { createQuickAddProduct, publishProduct, type QuickAddCtx } from "../lib/quick-add-create"
 import { ProcessOptions, ProcessedImage, processImage } from "../lib/quick-add-image"
-import { GeminiPublic, HONESTY_NOTE, ImageKind, Job, KIND_LABELS, STATUS_LABELS, StepResult, fetchJobImage, getGemini, isBusy, jobApi } from "../lib/quick-add-ai"
+import { GeminiPublic, HONESTY_NOTE, ImageKind, Job, KIND_LABELS, STATUS_LABELS, StepResult, fetchJobImage, getGemini, isBusy, jobApi, withCostConfirm } from "../lib/quick-add-ai"
 import { isAngleKind } from "../lib/quick-add-angles"
 import QuickAddAiAngles from "./quick-add-ai-angles"
 
@@ -100,7 +100,12 @@ export default function QuickAddAiReview({
     }
   }
   const updateImage = (id: string, patch: Record<string, unknown>) => act(async () => apply(await jobApi.update(job.id, { images: [{ id, ...patch }] })))
-  const regenerate = (image_id?: string) => act(() => jobApi.action(job.id, "regenerate", image_id ? { image_id } : {}), () => (setJob({ ...job, running: true }), poll()))
+  const regenerate = (image_id?: string) =>
+    act(async () => {
+      // الوضع المدفوع: تأكيد التكلفة أولاً (null = أُلغي)
+      const r = await withCostConfirm<any>((x) => jobApi.action(job.id, "regenerate", { ...(image_id ? { image_id } : {}), ...x }))
+      if (r) (setJob({ ...job, running: true }), poll())
+    })
   const regenerateCopy = () => act(() => jobApi.action(job.id, "regenerate-copy"), () => (setCopyDirty(false), setJob({ ...job, running: true, copy_status: "generating" }), poll()))
   const saveCopy = () => (copyDirty ? act(async () => apply(await jobApi.update(job.id, { copy })), () => setCopyDirty(false)) : Promise.resolve())
 
@@ -236,7 +241,14 @@ export default function QuickAddAiReview({
         {onNew && <Button size="small" variant="secondary" onClick={onNew}>إضافة جهاز آخر</Button>}
       </div>
       {generating && <Text size="small">جارٍ التحسين في الخلفية… يمكنك إضافة جهاز آخر الآن، وستجد هذه المهمة في تبويب «مهام الذكاء الاصطناعي».</Text>}
-      {job.error && <Text size="small" className="text-ui-fg-error">{job.error}</Text>}
+      {job.status === "waiting" ? (
+        <Text size="small" className="rounded-md bg-ui-tag-orange-bg p-2 text-ui-tag-orange-text">
+          ⏳ {job.error}
+          {job.wait_until ? ` (حوالي ${new Date(job.wait_until).toLocaleString("ar")})` : ""}
+        </Text>
+      ) : (
+        job.error && <Text size="small" className="text-ui-fg-error">{job.error}</Text>
+      )}
       {job.condition !== "new" && <Text size="small" className="text-ui-fg-subtle">⚠️ {HONESTY_NOTE}</Text>}
 
       {/* قبل / بعد */}
@@ -260,7 +272,7 @@ export default function QuickAddAiReview({
                   <img src={img.result_url} alt="بعد" className="aspect-[6/7] w-full rounded bg-ui-bg-subtle object-contain" />
                 ) : (
                   <div className="flex aspect-[6/7] w-full items-center justify-center rounded bg-ui-bg-subtle p-2 text-center text-xs">
-                    {img.status === "failed" ? <span className="text-ui-fg-error">{img.error || "فشل"}</span> : img.status === "generating" ? "جارٍ التحسين…" : locked ? "—" : "في الانتظار"}
+                    {img.status === "failed" ? <span className="text-ui-fg-error">{img.error || "فشل"}</span> : img.status === "generating" ? "جارٍ التحسين…" : locked ? "—" : img.error ? img.error : gemini?.image_mode === "manual" ? "الأصل (الوضع اليدوي)" : "في الانتظار"}
                   </div>
                 )}
                 <figcaption className="text-center text-[11px] text-ui-fg-subtle">بعد</figcaption>

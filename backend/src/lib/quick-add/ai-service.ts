@@ -13,6 +13,7 @@ import {
   Preset,
   angleOf,
   arabicError,
+  isPaidOnly,
   buildAnglePrompt,
   buildCopyPrompt,
   buildImagePrompt,
@@ -23,6 +24,7 @@ import {
   parseCopy,
   withRetry,
 } from "./gemini"
+import { CapReachedError, ManualModeError, QuotaGuard, QuotaWaitError, UsageKind } from "./quota"
 
 export type AiJob = {
   id: string
@@ -47,7 +49,7 @@ export type AiImage = {
   excluded: boolean
   source_file_id: string
 }
-export type ImagePatch = { status: "generating" | "done" | "failed"; error?: string | null; result_file_id?: string | null; result_url?: string | null }
+export type ImagePatch = { status: "pending" | "generating" | "done" | "failed"; error?: string | null; result_file_id?: string | null; result_url?: string | null }
 
 export type AiDeps = {
   api: GeminiApi
@@ -60,6 +62,22 @@ export type AiDeps = {
   log?: (msg: string) => void
   timeoutMs?: number
   sleep?: (ms: number) => Promise<void>
+  // حارس الحصص والتكلفة (اختياري في الاختبارات القديمة)
+  guard?: Pick<QuotaGuard, "before" | "after">
+  jobId?: string
+}
+
+export type GenResult = { done: number; failed: number; waiting?: string[]; retryAt?: string }
+
+const isQuotaStop = (e: unknown) => e instanceof QuotaWaitError || e instanceof ManualModeError || e instanceof CapReachedError
+// رسالة عربية للخطأ: رسائلنا كما هي، وأخطاء Google تُترجم
+export function errorText(e: unknown) {
+  if (isQuotaStop(e)) return (e as Error).message
+  return e instanceof GeminiError && !e.status && !/timeout/.test(e.message) ? e.message : arabicError(e)
+}
+function latest(a?: string, b?: Date) {
+  if (!b) return a
+  return !a || new Date(a) < b ? b.toISOString() : a
 }
 
 const MAX_REFS = 4
@@ -80,10 +98,31 @@ export class QuickAddService {
   }
 
   private call(req: Parameters<GeminiApi["generate"]>[0]) {
+    const kind: UsageKind = req.wantImage ? "image" : "text"
+    const guard = this.deps.guard
     return withRetry(
-      (signal) => {
+      async (signal) => {
+        // قبل كل إرسال: الحد المحلي، التبريد، الوضع اليدوي، السقف المالي
+        await guard?.before(kind, req.model)
         this.calls++
-        return this.deps.api.generate({ ...req, signal })
+        try {
+          const r = await this.deps.api.generate({ ...req, signal })
+          await guard?.after(kind, req.model, req.wantImage && !r.image ? "refused" : "ok", this.deps.jobId)
+          return r
+        } catch (e) {
+          if (e instanceof GeminiError && e.status === 429) {
+            if (isPaidOnly(e)) {
+              await guard?.after(kind, req.model, "error", this.deps.jobId)
+              throw new GeminiError("هذا الموديل متاح للحسابات المفوترة فقط (حصته المجانية صفر)", 429)
+            }
+            const until = await guard?.after(kind, req.model, "rate_limited", this.deps.jobId)
+            // لا إعادة محاولة سريعة: ننتظر انتهاء التبريد
+            if (until) throw new QuotaWaitError(until, "cooldown")
+            throw e
+          }
+          await guard?.after(kind, req.model, "error", this.deps.jobId)
+          throw e
+        }
       },
       { timeoutMs: this.deps.timeoutMs, sleep: this.deps.sleep }
     )
@@ -102,6 +141,8 @@ export class QuickAddService {
       return cache.get(img.source_file_id)!
     }
     for (const t of targets) await this.deps.updateImage(t.id, { status: "generating", error: null })
+    const waiting: string[] = []
+    let retryAt: string | undefined
 
     const results = await mapLimit(targets, this.deps.concurrency, async (target) => {
       const refs = active
@@ -128,16 +169,24 @@ export class QuickAddService {
         this.log(`quick-add ai: image ${target.id} done`)
         return saved
       } catch (e) {
-        const msg = e instanceof GeminiError && !e.status && !/timeout/.test(e.message) ? e.message : arabicError(e)
-        await this.deps.updateImage(target.id, { status: "failed", error: msg })
+        if (e instanceof QuotaWaitError) {
+          // حد الاستخدام: الصورة تبقى معلّقة وتُكمل تلقائياً عند التجدد
+          await this.deps.updateImage(target.id, { status: "pending", error: e.message })
+          waiting.push(target.id)
+          retryAt = latest(retryAt, e.retryAt)
+          throw e
+        }
+        await this.deps.updateImage(target.id, { status: "failed", error: errorText(e) })
         this.log(`quick-add ai: image ${target.id} failed (${(e as any)?.status || "-"})`)
         throw e
       }
     })
-    return {
+    const r: GenResult = {
       done: results.filter((r) => r.status === "fulfilled").length,
-      failed: results.filter((r) => r.status === "rejected").length,
+      failed: results.filter((r) => r.status === "rejected").length - waiting.length,
     }
+    if (waiting.length) Object.assign(r, { waiting, retryAt })
+    return r
   }
 
   /**
@@ -162,6 +211,8 @@ export class QuickAddService {
     const primaryData = await read(primary.source_file_id)
 
     for (const a of wanted) await this.deps.updateImage(record(a)!.id, { status: "generating", error: null })
+    const waiting: string[] = []
+    let retryAt: string | undefined
 
     const runAngle = async (a: Angle, frontResult?: InlineImage) => {
       const rec = record(a)!
@@ -186,8 +237,13 @@ export class QuickAddService {
         this.log(`quick-add ai: angle ${a} done`)
         return r.image
       } catch (e) {
-        const msg = e instanceof GeminiError && !e.status && !/timeout/.test(e.message) ? e.message : arabicError(e)
-        await this.deps.updateImage(rec.id, { status: "failed", error: msg })
+        if (e instanceof QuotaWaitError) {
+          await this.deps.updateImage(rec.id, { status: "pending", error: e.message })
+          waiting.push(a)
+          retryAt = latest(retryAt, e.retryAt)
+          throw e
+        }
+        await this.deps.updateImage(rec.id, { status: "failed", error: errorText(e) })
         this.log(`quick-add ai: angle ${a} failed (${(e as any)?.status || "-"})`)
         throw e
       }
@@ -201,7 +257,12 @@ export class QuickAddService {
       try {
         front = await runAngle("front")
         done++
-      } catch {
+      } catch (e) {
+        if (e instanceof QuotaWaitError) {
+          // بدون الأمامي لا نكمل البقية: كلها تنتظر التجدد للحفاظ على التناسق
+          for (const a of wanted.filter((x) => x !== "front")) await this.deps.updateImage(record(a)!.id, { status: "pending", error: e.message })
+          return { done: 0, failed: 0, waiting: [...wanted], retryAt } as GenResult
+        }
         failed++
       }
     } else {
@@ -212,8 +273,10 @@ export class QuickAddService {
     const rest = wanted.filter((a) => a !== "front")
     const results = await mapLimit(rest, this.deps.concurrency, (a) => runAngle(a, front))
     done += results.filter((r) => r.status === "fulfilled").length
-    failed += results.filter((r) => r.status === "rejected").length
-    return { done, failed }
+    failed += results.filter((r) => r.status === "rejected").length - waiting.length
+    const r: GenResult = { done, failed }
+    if (waiting.length) Object.assign(r, { waiting, retryAt })
+    return r
   }
 
   /** يقترح وصف الأجزاء الظاهرة من الصور فقط (مسودة يراجعها المستخدم). */

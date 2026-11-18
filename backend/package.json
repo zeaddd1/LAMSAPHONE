@@ -23,13 +23,12 @@
     "setup": "medusa exec ./src/scripts/setup-lamsaphone.ts"
   },
   "dependencies": {
-    "@google/genai": "2.32.0",
     "@medusajs/admin-sdk": "2.22.6",
     "@medusajs/cli": "2.22.6",
     "@medusajs/framework": "2.22.6",
-    "@medusajs/icons": "2.22.6",
-    "@medusajs/js-sdk": "2.22.6",
     "@medusajs/medusa": "2.22.6",
+    "@medusajs/js-sdk": "2.22.6",
+    "@medusajs/icons": "2.22.6",
     "@medusajs/ui": "4.2.13"
   },
   "devDependencies": {

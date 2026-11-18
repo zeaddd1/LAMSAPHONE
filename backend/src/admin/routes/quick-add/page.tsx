@@ -9,11 +9,6 @@ import PostPreview from "../../components/quick-add-post-preview"
 import type { FitMode } from "../../lib/quick-add-geometry"
 import type { MetaPublic } from "../../components/quick-add-meta-connect"
 import QuickAddProducts from "../../components/quick-add-products"
-import { createQuickAddProduct } from "../../lib/quick-add-create"
-import QuickAddAiForm, { AiImageMeta } from "../../components/quick-add-ai-form"
-import QuickAddAiReview from "../../components/quick-add-ai-review"
-import QuickAddAiJobs from "../../components/quick-add-ai-jobs"
-import { GeminiPublic, getGemini } from "../../lib/quick-add-ai"
 
 // صفحة "إضافة سريعة": منتج كامل في المتجر + نشره على ميتا من مكان واحد.
 // تستخدم واجهات Medusa الرسمية فقط (upload / products / inventory) ولا تعدّل كود Medusa.
@@ -43,9 +38,7 @@ const suggestCondition = (categoryLabel: string) => (/سامسونج|samsung/i.t
 
 const QuickAddPage = () => {
   const [ctx, setCtx] = useState<Ctx | null>(null)
-  const [view, setView] = useState<"add" | "list" | "ai">(() =>
-    typeof window !== "undefined" && window.location.hash === "#list" ? "list" : typeof window !== "undefined" && window.location.hash === "#ai" ? "ai" : "add"
-  )
+  const [view, setView] = useState<"add" | "list">(() => (typeof window !== "undefined" && window.location.hash === "#list" ? "list" : "add"))
   const loadCtx = () => sdk.client.fetch<Ctx>("/admin/quick-add/context").then(setCtx).catch((e) => toast.error(String(e?.message || e)))
   useEffect(() => {
     loadCtx()
@@ -60,6 +53,7 @@ const QuickAddPage = () => {
             أضف منتجاً للمتجر وانشره على فيسبوك وإنستغرام وكتالوج ميتا وواتساب في خطوة واحدة.
           </Text>
         </div>
+        <a href="/app/image-studio" className="text-sm text-ui-fg-interactive underline">🎨 استوديو الصور</a>
         {/* ربط ميتا صار صفحة مستقلة حتى لا يتغير الربط بالخطأ أثناء إضافة المنتجات */}
         {ctx && (
           <a href="/app/meta-connect" className="text-sm text-ui-fg-interactive underline">
@@ -69,7 +63,7 @@ const QuickAddPage = () => {
       </div>
       {/* تبويبان: إضافة منتج جديد، أو إدارة كل المنتجات (تعديل، ترتيب، حذف، نشر على ميتا) */}
       <div className="flex gap-2 border-b px-4 py-2 sm:px-6">
-        {([["add", "إضافة منتج"], ["list", "المنتجات (تعديل ونشر)"], ["ai", "مهام الذكاء الاصطناعي"]] as const).map(([k, label]) => (
+        {([["add", "إضافة منتج"], ["list", "المنتجات (تعديل ونشر)"]] as const).map(([k, label]) => (
           <button
             key={k}
             type="button"
@@ -84,8 +78,6 @@ const QuickAddPage = () => {
         <Text className="p-6">جارٍ التحميل…</Text>
       ) : view === "add" ? (
         <AddForm ctx={ctx} goMeta={() => (window.location.href = "/app/meta-connect")} />
-      ) : view === "ai" ? (
-        <QuickAddAiJobs ctx={ctx} processOpts={{ mode: "contain", autoTrim: true, background: "auto", brand: true }} />
       ) : (
         <QuickAddProducts meta={ctx.meta} currency={ctx.currency_code} />
       )}
@@ -143,16 +135,6 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
 
   const [busy, setBusy] = useState<string>("")
   const [done, setDone] = useState<Done | null>(null)
-  // تحسين بالذكاء الاصطناعي (اختياري): عند إيقافه تعمل الصفحة كما كانت تماماً
-  const [aiOn, setAiOn] = useState(false)
-  const [gemini, setGemini] = useState<GeminiPublic | null>(null)
-  const [sources, setSources] = useState<Record<string, File>>({})
-  const [aiMeta, setAiMeta] = useState<Record<string, AiImageMeta>>({})
-  const [aiJobId, setAiJobId] = useState<string | null>(null)
-  useEffect(() => {
-    if (aiOn && !gemini) getGemini().then(setGemini).catch(() => {})
-    if (!aiOn && condition === "refurbished") setCondition("used")
-  }, [aiOn])
   const fileRef = useRef<HTMLInputElement>(null)
 
   const cat = cats.find((c) => c.id === categoryId)
@@ -204,7 +186,6 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     for (const f of files.slice(0, room)) {
       try {
         const img = await processImage(f, { mode, autoTrim, background: "auto", brand })
-        setSources((m) => ({ ...m, [img.preview]: f }))
         setImages((xs) => [...xs, img])
       } catch {
         toast.error(`تعذّر قراءة الصورة ${f.name} (جرّب JPG أو PNG)`)
@@ -223,9 +204,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.message || "تعذّر تحميل الصورة")
       const blob = await r.blob()
       const name = (u.split("/").pop() || "image").split("?")[0].slice(0, 40) || "image"
-      const file = new File([blob], name, { type: blob.type })
-      const img = await processImage(file, { mode, autoTrim, background: "auto", brand })
-      setSources((m) => ({ ...m, [img.preview]: file }))
+      const img = await processImage(new File([blob], name, { type: blob.type }), { mode, autoTrim, background: "auto", brand })
       setImages((xs) => [...xs, img].slice(0, 10))
       setImageUrl("")
     } catch (e: any) {
@@ -258,18 +237,18 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     setColor("")
     setConditionTouched(false)
     setDone(null)
-    setSources({})
-    setAiMeta({})
-    setAiJobId(null)
   }
-  // ترتيب الصور (السحب في قسم الذكاء الاصطناعي): الأولى هي الرئيسية
-  const reorder = (from: number, to: number) =>
-    setImages((xs) => {
-      const c = [...xs]
-      const [x] = c.splice(from, 1)
-      c.splice(to, 0, x)
-      return c
-    })
+
+  // نرفع كل ملف في طلب مستقل: الخادم يرفض أي طلب أكبر من 1MB،
+  // وعدة صور معاً في طلب واحد كانت تتجاوز الحد رغم أن كل صورة صغيرة
+  const upload = async (files: File[]) => {
+    const urls: string[] = []
+    for (const file of files) {
+      const r = await sdk.admin.upload.create({ files: [file] })
+      urls.push((r.files[0] as any).url as string)
+    }
+    return urls
+  }
 
   const save = async (publish: boolean) => {
     if (missing.length) {
@@ -277,13 +256,60 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       return
     }
     try {
-      // نفس دالة الإنشاء تخدم الإضافة العادية والإضافة بالذكاء الاصطناعي
-      const product = await createQuickAddProduct(
-        ctx,
-        { title: fullTitle, description, categoryId, images, video, price: priceNum, qty, condition, storage, color },
-        setBusy,
-        (m) => toast.warning(m)
-      )
+      setBusy("رفع الصور…")
+      // الفيديو: الملف + غلافه. الغلاف يصبح صورة المنتج إن لم توجد صور
+      let videoMeta: { url: string; poster: string; type: string; seconds: number }[] = []
+      let posterUrl = ""
+      if (video) {
+        setBusy("رفع الفيديو…")
+        const [vu, pu] = await upload([video.file, video.poster])
+        videoMeta = [{ url: vu, poster: pu, type: video.type, seconds: video.seconds }]
+        posterUrl = pu
+        setBusy("رفع الصور…")
+      }
+      const urls = images.length ? await upload(images.map((i) => i.webp)) : [posterUrl]
+      // نسخ JPEG لميتا (إنستغرام لا يقبل webp)، لا تظهر في المتجر
+      const metaUrls = images.length ? await upload(images.map((i) => i.jpeg)).catch(() => [] as string[]) : [posterUrl]
+
+      setBusy("إنشاء المنتج…")
+      const track = qty.trim() !== "" && Number(qty) >= 0
+      const { product } = await sdk.admin.product.create({
+        title: fullTitle,
+        description: description.trim() || undefined,
+        status: "published",
+        thumbnail: urls[0],
+        images: urls.map((url) => ({ url })),
+        categories: [{ id: categoryId }],
+        sales_channels: ctx.default_sales_channel_id ? [{ id: ctx.default_sales_channel_id }] : undefined,
+        shipping_profile_id: ctx.shipping_profile_id || undefined,
+        // الحالة للكتالوج فقط (ميتا تشترطها صحيحة)، ولا تظهر في المنشور ولا في اسم المنتج
+        metadata: { condition, ...(storage ? { storage } : {}), ...(color ? { color } : {}), meta_images: metaUrls, ...(videoMeta.length ? { videos: videoMeta } : {}), added_by: "quick-add" },
+        options: [{ title: "الخيار", values: ["افتراضي"] }],
+        variants: [
+          {
+            title: "افتراضي",
+            options: { الخيار: "افتراضي" },
+            prices: [{ currency_code: ctx.currency_code || "usd", amount: priceNum }],
+            manage_inventory: track,
+            allow_backorder: false,
+          },
+        ],
+      } as any)
+
+      if (track && ctx.stock_locations[0]) {
+        setBusy("ضبط الكمية…")
+        try {
+          const { product: full } = await sdk.admin.product.retrieve(product.id, { fields: "variants.inventory_items.inventory_item_id" } as any)
+          const itemId = (full as any).variants?.[0]?.inventory_items?.[0]?.inventory_item_id
+          if (itemId)
+            await sdk.client.fetch(`/admin/inventory-items/${itemId}/location-levels`, {
+              method: "POST",
+              body: { location_id: ctx.stock_locations[0].id, stocked_quantity: Number(qty) },
+            })
+        } catch {
+          toast.warning("أُضيف المنتج، لكن تعذّر ضبط الكمية. اضبطها من صفحة المنتج.")
+        }
+      }
 
       const d: Done = { id: product.id, handle: product.handle, title: product.title, link: STORE + encodeURIComponent(product.handle) }
       setDone(d)
@@ -321,22 +347,12 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   const addTag = (t: string) => setHashtags((h) => (h.includes(t) ? h : `${h} ${t}`.trim()))
 
   return (
-    <div className={`grid gap-6 p-4 sm:p-6 ${aiOn ? "" : "lg:grid-cols-[1fr_360px]"}`}>
+    <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1fr_360px]">
       <div className="flex flex-col gap-5">
-        {/* مفتاح الذكاء الاصطناعي: اختياري بالكامل */}
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed p-3">
-          <div className="flex items-center gap-2">
-            <Switch id="qa-ai" checked={aiOn} disabled={Boolean(aiJobId)} onCheckedChange={setAiOn} />
-            <Label htmlFor="qa-ai">✨ تحسين بالذكاء الاصطناعي (Gemini)</Label>
-          </div>
-          <Text size="xsmall" className="text-ui-fg-subtle">
-            {aiOn ? "تحسين الصور وكتابة الوصف والمنشورات بالعربي مع مراجعة قبل/بعد" : "اختياري: بدونه تعمل الإضافة كالمعتاد"}
-          </Text>
-        </div>
         {/* 1. الأساسيات */}
         <section className="grid gap-4 md:grid-cols-2">
           {/* الحالة: تبويبان واضحان. تُحفظ للكتالوج (شرط ميتا)، ولا تُكتب في المنشور ولا في اسم المنتج */}
-          <div className={`flex flex-col gap-1 md:col-span-2 ${aiOn ? "hidden" : ""}`}>
+          <div className="flex flex-col gap-1 md:col-span-2">
             <Label>حالة الجهاز *</Label>
             <div className="grid grid-cols-2 gap-2">
               {CONDITIONS.map(([v, label]) => (
@@ -511,7 +527,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       </div>
 
       {/* عمود ميتا */}
-      <aside className={`flex flex-col gap-4 rounded-lg border p-4 ${aiOn ? "hidden" : ""}`}>
+      <aside className="flex flex-col gap-4 rounded-lg border p-4">
         <Heading level="h2">النشر على ميتا</Heading>
         {!metaReady && (
           <Text size="small" className="text-ui-fg-subtle">
@@ -569,34 +585,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
 
       {/* الأزرار والنتيجة */}
       <div className="flex flex-col gap-3 lg:col-span-2">
-        {aiOn ? (
-          aiJobId ? (
-            <QuickAddAiReview jobId={aiJobId} ctx={ctx} processOpts={{ mode, autoTrim, background: "auto", brand }} onNew={reset} />
-          ) : (
-            <QuickAddAiForm
-              gemini={gemini}
-              currency={ctx.currency_code}
-              title={title}
-              categoryId={categoryId}
-              price={price}
-              setPrice={setPrice}
-              qty={qty}
-              condition={condition}
-              setCondition={(c) => {
-                setCondition(c)
-                setConditionTouched(true)
-              }}
-              storage={storage}
-              color={color}
-              images={images}
-              sources={sources}
-              imageMeta={aiMeta}
-              setImageMeta={setAiMeta}
-              reorder={reorder}
-              onCreated={(job) => setAiJobId(job.id)}
-            />
-          )
-        ) : !done ? (
+        {!done ? (
           <div className="flex flex-wrap gap-2">
             <Button size="large" isLoading={Boolean(busy)} disabled={processing > 0} onClick={() => save(metaReady && (toFb || toIg || toCatalog))}>
               {metaReady && (toFb || toIg || toCatalog) ? "إضافة للمتجر ونشر على ميتا" : "إضافة للمتجر"}

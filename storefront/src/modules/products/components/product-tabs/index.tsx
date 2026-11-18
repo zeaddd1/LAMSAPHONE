@@ -119,19 +119,7 @@ const ShippingInfoTab = () => {
   )
 }
 
-const SPEC_LABELS: Record<string, string> = {
-  screen: "الشاشة",
-  cpu: "المعالج",
-  ram: "الرام",
-  camera: "الكاميرا",
-  battery: "البطارية",
-  network: "الشبكة",
-  sim: "الشريحة",
-  region: "النسخة",
-  warranty: "الضمان",
-  battery_health: "صحة البطارية",
-  condition_note: "وصف الحالة",
-}
+const SPEC_LABELS: Record<string, string> = { screen: "الشاشة", cpu: "المعالج", camera: "الكاميرا", battery: "البطارية" }
 
 // مواصفات الجوال السريعة المُدخلة من لوحة التحكم (metadata.specs)
 const SpecsTab = ({ specs }: { specs: Record<string, string> }) => (

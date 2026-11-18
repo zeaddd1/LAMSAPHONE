@@ -120,7 +120,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       url,
       title: `${product.title}${price}`,
       description,
-      images: product.thumbnail ? [{ url: product.thumbnail, width: 1200, height: 1400, alt: `${product.title} - ${STORE.shortName} ${STORE.city}` }] : [],
+      images: product.thumbnail ? [{ url: product.thumbnail, width: 1080, height: 1350, alt: `${product.title} - ${STORE.shortName} ${STORE.city}` }] : [],
     },
     twitter: { card: "summary_large_image", title: `${product.title}${price}`, description, images: product.thumbnail ? [product.thumbnail] : [] },
   }

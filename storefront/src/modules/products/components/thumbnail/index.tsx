@@ -32,8 +32,8 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
         "relative w-full overflow-hidden bg-white shadow-elevation-card-rest rounded-large group-hover:shadow-elevation-card-hover transition-shadow ease-in-out duration-150",
         className,
         {
-          // صور المنتجات مقاسها 1200×1400 (6:7)، فالمربع بنفس النسبة لتملأه الصورة كاملة بلا قص ولا فراغ
-          "aspect-[6/7]": size !== "square",
+          // صور المنتجات مقاسها 1080×1350 (4:5)، فالإطار بنفس النسبة لتملأه الصورة كاملة
+          "aspect-[4/5]": size !== "square",
           "aspect-[1/1]": size === "square",
           "w-[180px]": size === "small",
           "w-[290px]": size === "medium",
@@ -57,7 +57,7 @@ const ImageOrPlaceholder = ({
     <Image
       src={image}
       alt={alt || "صورة المنتج"}
-      className="absolute inset-0 object-cover object-center"
+      className="absolute inset-0 object-contain object-center"
       draggable={false}
       quality={50}
       sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"

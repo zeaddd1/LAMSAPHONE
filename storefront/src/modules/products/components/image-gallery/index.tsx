@@ -10,8 +10,9 @@ type ImageGalleryProps = {
   videos?: ProductVideo[]
 }
 
-// صور المنتج بمقاس 1200×1400، فالإطار بنفس النسبة (6:7) لتملأه الصورة كاملة
-const BOX = "relative aspect-[6/7] w-full overflow-hidden bg-white"
+// صور المنتج بمقاس 1080×1350، فالإطار بنفس النسبة (4:5) لتملأه الصورة كاملة.
+// الصور القديمة (6:7) تُعرض كاملة بلا قص (object-contain) مع هامش أبيض خفيف
+const BOX = "relative aspect-[4/5] w-full overflow-hidden bg-white"
 
 const ImageGallery = ({ images, videos = [] }: ImageGalleryProps) => {
   // ترتيب العرض: الصورة الرئيسية، ثم الفيديو، ثم باقي الصور
@@ -50,7 +51,7 @@ const ImageGallery = ({ images, videos = [] }: ImageGalleryProps) => {
                   alt={`Product image ${item.index + 1}`}
                   fill
                   sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
-                  style={{ objectFit: "cover" }}
+                  style={{ objectFit: "contain" }}
                 />
               )}
             </Container>

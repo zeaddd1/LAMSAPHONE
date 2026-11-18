@@ -106,7 +106,7 @@ export function effectiveStyle(c: Condition, s: Style): Style {
 }
 
 export type Ratio = "4:5" | "1:1" | "9:16"
-export const RATIOS: Record<Ratio, string> = { "4:5": "4:5 للمتجر", "1:1": "1:1 مربع", "9:16": "9:16 ستوري" }
+export const RATIOS: Record<Ratio, string> = { "4:5": "4:5 للمتجر وإنستغرام", "1:1": "1:1 مربع", "9:16": "9:16 ستوري" }
 
 export type Track = "details" | "main" | "eraser" | "angles" | "story" | "copy"
 export const TRACKS: Record<Track, { label: string; hint: string }> = {
@@ -261,12 +261,12 @@ export function buildSteps(i: StudioInput, tracks: Track[]): Step[] {
         angle: a,
         hint: first ? "محادثة جديدة ← أداة إنشاء الصور ← أرفق صورة الجهاز من الخلف." : "نفس المحادثة ← أرفق الخلفية الناتجة (صورة واحدة).",
         prompt: first
-          ? `Professional store photo of this ${name}, ${view}: ${style}, square 1:1, centered. ${keep(i)}${gsm(i)} ${ONE}`
-          : `Same ${name}, same style and lighting as this image, now shown ${view}, square 1:1, centered. ${keep(i).replace("as in the photo", "as in this image")}${gsm(i)} ${ONE}`,
+          ? `Professional store photo of this ${name}, ${view}: ${style}, ${ratioText(i.ratio)}, centered. ${keep(i)}${gsm(i)} ${ONE}`
+          : `Same ${name}, same style and lighting as this image, now shown ${view}, ${ratioText(i.ratio)}, centered. ${keep(i).replace("as in the photo", "as in this image")}${gsm(i)} ${ONE}`,
         after: first ? "نزّلها وضعها في خانة «الخلفية الناتجة»." : n === 3 ? "نزّلها، وراجع الزوايا الأربع على الجهاز الحقيقي." : "نزّلها، ثم انسخ التالي.",
         fallback: {
-          prompt: `Store photo of this product ${view}: ${style}, square 1:1. Keep its design exactly, no added text. ${ONE}`,
-          canva: `Product photo of my uploaded item ${view}, ${style}, square 1:1, centered. Keep the product unchanged, no text.`,
+          prompt: `Store photo of this product ${view}: ${style}, ${ratioText(i.ratio)}. Keep its design exactly, no added text. ${ONE}`,
+          canva: `Product photo of my uploaded item ${view}, ${style}, ${ratioText(i.ratio)}, centered. Keep the product unchanged, no text.`,
         },
       })
     })

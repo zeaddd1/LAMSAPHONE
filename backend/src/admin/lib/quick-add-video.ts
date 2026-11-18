@@ -1,11 +1,11 @@
 import { drawBranding, loadLogo } from "./quick-add-image"
 
 // أداة الفيديو: تقبل أي فيديو يشغّله المتصفح، وتعيد ترميزه في المتصفح نفسه إلى مقاس 720×840
-// (نفس نسبة صور المتجر 6:7) مع الإطار والشعار، بحجم أقل من 1MB حتى لا نرفع حد الرفع في السيرفر.
+// (نفس نسبة صور المتجر 4:5) مع الإطار والشعار، بحجم أقل من 1MB حتى لا نرفع حد الرفع في السيرفر.
 // نفضّل MP4 لأن إنستغرام وفيسبوك يقبلانه؛ وإن لم يدعمه المتصفح نستخدم WebM (للمتجر فقط).
 
 export const VIDEO_W = 720
-export const VIDEO_H = 840
+export const VIDEO_H = 900
 export const VIDEO_MAX_SECONDS = 25
 const TARGET_BYTES = 900 * 1024
 const HARD_MAX = 980 * 1024

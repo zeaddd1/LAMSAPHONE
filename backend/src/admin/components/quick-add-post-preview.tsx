@@ -58,7 +58,7 @@ export default function PostPreview({
           </div>
         </div>
         {net === "fb" && <div className="whitespace-pre-wrap px-3 pb-2">{renderText(caption, true)}</div>}
-        <div className="relative aspect-[6/7] w-full bg-gray-100">
+        <div className="relative aspect-[4/5] w-full bg-gray-100">
           {video ? (
             <video src={video} className="h-full w-full object-cover" muted playsInline loop autoPlay />
           ) : image ? (

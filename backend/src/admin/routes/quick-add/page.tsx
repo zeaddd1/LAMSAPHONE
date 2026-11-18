@@ -447,7 +447,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
           >
             <Text>اسحب الصور أو الفيديو هنا، أو اضغط للاختيار</Text>
             <Text size="small" className="text-ui-fg-subtle">
-              الصور تُحوَّل إلى WebP بمقاس 1200×1400، والفيديو يُضغط إلى أقل من 1MB (حتى {VIDEO_MAX_SECONDS} ثانية) مع الحفاظ على وضوحه
+              الصور تُحوَّل إلى WebP بمقاس 1080×1350 (4:5، مقاس إنستغرام القياسي)، والفيديو يُضغط إلى أقل من 1MB (حتى {VIDEO_MAX_SECONDS} ثانية) مع الحفاظ على وضوحه
             </Text>
             <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
           </div>
@@ -469,7 +469,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
           )}
           {video && (
             <div className="flex items-center gap-3 rounded-md border p-2">
-              <video src={video.preview} className="aspect-[6/7] w-24 rounded object-cover" muted playsInline loop autoPlay />
+              <video src={video.preview} className="aspect-[4/5] w-24 rounded object-cover" muted playsInline loop autoPlay />
               <div className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
                 <Text size="small" weight="plus">فيديو المنتج · {video.seconds} ثانية · {video.type.toUpperCase()}</Text>
                 <span>{kb(video.originalBytes)} ← {kb(video.file.size)}</span>
@@ -481,7 +481,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
               {images.map((img, i) => (
                 <div key={img.preview} className="relative overflow-hidden rounded-md border">
-                  <img src={img.preview} alt="" className="aspect-[6/7] w-full object-cover" />
+                  <img src={img.preview} alt="" className="aspect-[4/5] w-full object-cover" />
                   {i === 0 && <Badge size="2xsmall" color="blue" className="absolute top-1 right-1">الرئيسية</Badge>}
                   <div className="flex items-center justify-between bg-ui-bg-subtle px-1 py-0.5 text-[11px]">
                     <span title="الحجم قبل وبعد">{kb(img.originalBytes)} ← {kb(img.webp.size)}</span>

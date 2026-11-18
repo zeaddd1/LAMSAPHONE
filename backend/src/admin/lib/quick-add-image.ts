@@ -2,7 +2,7 @@ import { FitMode, MAX_BYTES, QUALITY_STEPS, TARGET_BYTES, TARGET_H, TARGET_W, fi
 import { STORE_LOGO } from "./store-logo"
 
 // أداة الصور: تقبل أي مقاس وأي صيغة يفهمها المتصفح، وتُخرج:
-// - webp بمقاس 1200×1400 للمتجر (خفيف وسريع)
+// - webp بمقاس 1080×1350 (4:5) للمتجر (خفيف وسريع)
 // - jpeg بنفس المقاس لميتا (إنستغرام لا يقبل webp)
 // كل المعالجة في المتصفح، فلا تحمّل على الخادم ولا تتجاوز حد الرفع 1MB.
 
@@ -27,8 +27,8 @@ export function loadLogo(): Promise<HTMLImageElement | null> {
 export function drawBranding(ctx: CanvasRenderingContext2D, w: number, h: number, logo: HTMLImageElement | null) {
   if (!logo) return
   const unit = Math.min(w, h)
-  const R = Math.round(unit * 0.105) // نصف قطر الختم
-  const margin = Math.round(unit * 0.03)
+  const R = Math.round(unit * 0.072) // نصف قطر الختم: صغير حتى لا يزاحم المنتج
+  const margin = Math.round(unit * 0.025)
   const cx = w - margin - R
   const cy = h - margin - R
   const orange = "rgba(255, 96, 0, 0.85)"
@@ -52,7 +52,7 @@ export function drawBranding(ctx: CanvasRenderingContext2D, w: number, h: number
   ctx.beginPath(); ctx.arc(0, 0, R * 0.7, 0, Math.PI * 2); ctx.stroke()
   // نص دائري بين الحلقتين
   const text = "LAMSA PHONE • LAMSAPHONE.YEMENBAY.COM • "
-  const fs = Math.round(R * 0.105)
+  const fs = Math.max(7, Math.round(R * 0.12))
   ctx.fillStyle = orange
   ctx.font = `600 ${fs}px Arial, Helvetica, sans-serif`
   ctx.textAlign = "center"
@@ -160,7 +160,7 @@ export async function processImage(file: File, opts: ProcessOptions): Promise<Pr
       }
     }
 
-    // 2) الرسم على إطار 1200×1400 والمنتج في المنتصف
+    // 2) الرسم على إطار 1080×1350 والمنتج في المنتصف
     const canvas = document.createElement("canvas")
     canvas.width = TARGET_W
     canvas.height = TARGET_H

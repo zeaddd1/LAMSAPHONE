@@ -54,6 +54,8 @@ const modules: Record<string, unknown>[] = [
   { resolve: "./src/modules/exchange-rate" },
   // الرد الآلي وإدارة محادثات ميتا
   { resolve: "./src/modules/assistant" },
+  // مهام الإضافة السريعة بالذكاء الاصطناعي (اختيارية)
+  { resolve: "./src/modules/quick-add" },
 ]
 
 if (redisUrl) {

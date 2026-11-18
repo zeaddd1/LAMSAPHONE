@@ -33,7 +33,7 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   // الهاشتاقات لا تدخل نص المنشور ولا المنتج: تُنشر كأول تعليق
   const short = shortLinks(p.id, storeUrl())
   const caption = buildCaption({ title: p.title, price, text: b.text, link: short.shop, waLink: short.wa, network: "facebook" })
-  const igCaption = buildCaption({ title: p.title, price, text: b.text, link: short.shop, waLink: short.wa, network: "instagram" })
+  const igCaption = buildCaption({ title: p.title, price, text: b.ig_text || b.text, link: short.shop, waLink: short.wa, network: "instagram" })
   const comment = hashtagComment(b.hashtags)
 
   // ميتا تحتاج JPEG برابط عام: نسخ الإضافة السريعة، وإلا صور المنتج نفسها

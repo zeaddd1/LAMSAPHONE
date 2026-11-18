@@ -5,11 +5,13 @@ import { useState } from "react"
 import MetaConnectTab from "../../components/quick-add-meta-connect"
 import BotSettings from "../../components/assistant-bot-settings"
 import MetaBackups from "../../components/meta-backups"
+import GeminiSettingsTab from "../../components/quick-add-gemini-settings"
 
 // صفحة "ربط ميتا" المستقلة: ربط الصفحة وإنستغرام والكتالوج، وإعدادات الرد الآلي وواتساب.
 // منفصلة عن إضافة المنتجات حتى لا يتغير الربط بالخطأ، وكل حفظ يطلب تأكيداً.
 const MetaConnectPage = () => {
-  const [tab, setTab] = useState("meta")
+  // #gemini يفتح تبويب Gemini مباشرة (رابط من صفحة الإضافة السريعة)
+  const [tab, setTab] = useState(() => (typeof window !== "undefined" && window.location.hash === "#gemini" ? "gemini" : "meta"))
   return (
     <Container className="p-0" dir="rtl">
       <div className="border-b px-6 py-4">
@@ -23,6 +25,7 @@ const MetaConnectPage = () => {
           <Tabs.List>
             <Tabs.Trigger value="meta">الصفحة والكتالوج</Tabs.Trigger>
             <Tabs.Trigger value="bot">الرد الآلي وواتساب</Tabs.Trigger>
+            <Tabs.Trigger value="gemini">Gemini (الذكاء الاصطناعي)</Tabs.Trigger>
             <Tabs.Trigger value="backup">النسخ الاحتياطية</Tabs.Trigger>
           </Tabs.List>
         </div>
@@ -31,6 +34,9 @@ const MetaConnectPage = () => {
         </Tabs.Content>
         <Tabs.Content value="bot">
           <BotSettings />
+        </Tabs.Content>
+        <Tabs.Content value="gemini">
+          <GeminiSettingsTab />
         </Tabs.Content>
         <Tabs.Content value="backup">
           <MetaBackups />

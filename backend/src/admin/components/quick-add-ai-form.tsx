@@ -202,8 +202,9 @@ export default function QuickAddAiForm(p: Props) {
   const generate = async () => {
     if (missing.length) return toast.error(`أكمل: ${missing.join("، ")}`)
     try {
-      const job = await createJob(true)
-      toast.success("بدأ التحسين في الخلفية")
+      // بدون ربط: مهمة بلا توليد، ثم بطاقة التوليد اليدوي في المراجعة
+      const job = await createJob(connected)
+      toast.success(connected ? "بدأ التحسين في الخلفية" : "أُنشئت المهمة: أكمل بالتوليد اليدوي")
       p.onCreated(job)
     } catch (e: any) {
       toast.error(e?.message || "تعذّر بدء التوليد")
@@ -235,28 +236,19 @@ export default function QuickAddAiForm(p: Props) {
   const setVar = (i: number, patch: Partial<AiVariant>) => setVariants((vs) => vs.map((v, k) => (k === i ? { ...v, ...patch } : v)))
   const chip = (on: boolean) => `rounded-full border px-3 py-1 text-xs ${on ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`
 
-  if (!connected) {
-    return (
-      <div className="rounded-lg border border-ui-tag-orange-border bg-ui-tag-orange-bg p-4">
-        <Text weight="plus">Gemini غير متصل</Text>
-        <Text size="small">
-          أضف مفتاح Gemini واختبره من{" "}
-          <a className="text-ui-fg-interactive underline" href="/app/meta-connect#gemini">
-            صفحة ربط ميتا ← تبويب Gemini
-          </a>
-          ، أو أوقف «تحسين بالذكاء الاصطناعي» لتكمل الإضافة العادية.
-        </Text>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-5 rounded-lg border border-ui-border-interactive p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Text weight="plus">✨ التحسين بالذكاء الاصطناعي</Text>
-        {g?.status === "error" ? <Badge color="red" size="2xsmall">خطأ في الاتصال: افحص المفتاح</Badge> : g?.status !== "connected" && <Badge color="orange" size="2xsmall">لم يُختبر الاتصال بعد</Badge>}
+        {!connected ? <Badge color="orange" size="2xsmall">Gemini غير مربوط: التوليد يدوي</Badge> : g?.status === "error" ? <Badge color="red" size="2xsmall">خطأ في الاتصال: افحص المفتاح</Badge> : g?.status !== "connected" && <Badge color="orange" size="2xsmall">لم يُختبر الاتصال بعد</Badge>}
       </div>
 
+      {!connected && (
+        <div className="rounded-md border border-ui-tag-orange-border bg-ui-tag-orange-bg p-3 text-sm">
+          الربط الآلي مع Gemini غير مضبوط. يمكنك المتابعة بالتوليد اليدوي عبر حسابك في Gemini (برومتات جاهزة للنسخ ورفع الصور)، أو أضف المفتاح من{" "}
+          <a className="text-ui-fg-interactive underline" href="/app/meta-connect#gemini">صفحة ربط ميتا ← تبويب Gemini</a>.
+        </div>
+      )}
       {/* الحالة: الثالثة (مجدّد) خاصة بهذا الوضع */}
       {p.condition === "new" ? null : (
         <div className="rounded-md border border-ui-tag-orange-border bg-ui-tag-orange-bg p-3 text-sm">⚠️ {HONESTY_NOTE}</div>
@@ -329,7 +321,7 @@ export default function QuickAddAiForm(p: Props) {
         <div className="flex flex-col gap-1 md:col-span-2">
           <div className="flex items-center justify-between gap-2">
             <Label>وصف أجزاء الجهاز (يحافظ على تفاصيله الحقيقية)</Label>
-            <Button size="small" variant="secondary" isLoading={suggesting} disabled={Boolean(busy)} onClick={suggestParts}>
+            <Button size="small" variant="secondary" isLoading={suggesting} disabled={Boolean(busy) || !connected} onClick={suggestParts}>
               اقترح الأجزاء من الصور
             </Button>
           </div>
@@ -475,7 +467,7 @@ export default function QuickAddAiForm(p: Props) {
 
       <div className="flex flex-wrap items-center gap-2">
         <Button size="large" isLoading={Boolean(busy) && !suggesting} disabled={suggesting} onClick={generate}>
-          ✨ حسّن الصور واكتب النصوص
+          {connected ? "✨ حسّن الصور واكتب النصوص" : "متابعة بالتوليد اليدوي"}
         </Button>
         {busy && <Text className="self-center">{busy}</Text>}
         {missing.length > 0 && <Text size="small" className="text-ui-fg-subtle">ناقص: {missing.join("، ")}</Text>}

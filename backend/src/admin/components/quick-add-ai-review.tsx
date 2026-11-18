@@ -4,7 +4,9 @@ import type { MetaPublic } from "./quick-add-meta-connect"
 import PostPreview from "./quick-add-post-preview"
 import { createQuickAddProduct, publishProduct, type QuickAddCtx } from "../lib/quick-add-create"
 import { ProcessOptions, ProcessedImage, processImage } from "../lib/quick-add-image"
-import { HONESTY_NOTE, Job, KIND_LABELS, STATUS_LABELS, StepResult, fetchJobImage, isBusy, jobApi } from "../lib/quick-add-ai"
+import { GeminiPublic, HONESTY_NOTE, ImageKind, Job, KIND_LABELS, STATUS_LABELS, StepResult, fetchJobImage, getGemini, isBusy, jobApi } from "../lib/quick-add-ai"
+import { isAngleKind } from "../lib/quick-add-angles"
+import QuickAddAiAngles from "./quick-add-ai-angles"
 
 // مراجعة مهمة الذكاء الاصطناعي: قبل/بعد لكل صورة، تعديل النصوص، ثم "اعتماد ونشر"
 // الذي يستدعي نفس دوال الإضافة السريعة (إنشاء المنتج ثم /admin/quick-add/publish).
@@ -38,6 +40,10 @@ export default function QuickAddAiReview({
   const [busy, setBusy] = useState("")
   const [steps, setSteps] = useState<Job["steps"]>({})
   const prompt = usePrompt()
+  const [gemini, setGemini] = useState<GeminiPublic | null>(null)
+  useEffect(() => {
+    getGemini().then(setGemini).catch(() => null)
+  }, [])
   const timer = useRef<ReturnType<typeof setTimeout>>()
 
   const apply = (j: Job) => {
@@ -81,7 +87,9 @@ export default function QuickAddAiReview({
   const generating = isBusy(job)
   const locked = ["published", "publishing", "rejected"].includes(job.status) || Boolean(job.product_id)
   const images = [...job.images].sort((a, b) => Number(b.is_main) - Number(a.is_main) || a.rank - b.rank)
-  const included = images.filter((i) => !i.excluded)
+  // الزوايا تدخل الاعتماد فقط إن كانت جاهزة؛ الصور المرفوعة تدخل دائماً (الأصل إن فشل التحسين)
+  const included = images.filter((i) => !i.excluded && (!isAngleKind(i.kind) || i.status === "done"))
+  const uploads = images.filter((i) => !isAngleKind(i.kind))
 
   const act = async (fn: () => Promise<unknown>, after?: () => void) => {
     try {
@@ -233,14 +241,14 @@ export default function QuickAddAiReview({
 
       {/* قبل / بعد */}
       <section className="grid gap-3 md:grid-cols-2">
-        {images.map((img) => (
+        {uploads.map((img) => (
           <div key={img.id} className={`flex flex-col gap-2 rounded-md border p-2 ${img.excluded ? "opacity-50" : ""}`}>
             <div className="flex items-center justify-between text-xs">
               <span>
-                {KIND_LABELS[img.kind]} {img.is_main && <Badge size="2xsmall" color="blue">الرئيسية</Badge>}
+                {KIND_LABELS[img.kind as ImageKind]} {img.is_main && <Badge size="2xsmall" color="blue">الرئيسية</Badge>}
                 {img.note && <span className="text-ui-fg-subtle"> · {img.note}</span>}
               </span>
-              <span>{{ pending: "في الانتظار", generating: "جارٍ…", done: "✓ تم", failed: "✕ فشل" }[img.status]}</span>
+              <span>{{ pending: generating ? "في الانتظار" : "بدون تحسين", generating: "جارٍ…", done: "✓ تم", failed: "✕ فشل" }[img.status]}</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <figure className="flex flex-col gap-1">
@@ -274,6 +282,9 @@ export default function QuickAddAiReview({
           </div>
         ))}
       </section>
+
+      {/* الزوايا الأربع + التوليد اليدوي */}
+      <QuickAddAiAngles job={job} gemini={gemini} setGemini={setGemini} locked={locked} onJob={apply} poll={poll} />
 
       {/* النصوص */}
       <section className="grid gap-4 lg:grid-cols-[1fr_340px]">

@@ -42,7 +42,9 @@ export type AiVariant = { storage: string; color: string; sku: string; stock: nu
 
 export type JobImage = {
   id: string
-  kind: ImageKind
+  // ImageKind أو angle_front | angle_back | angle_three_quarter | angle_side
+  kind: ImageKind | `angle_${string}`
+  source: "upload" | "api" | "manual"
   note: string
   rank: number
   is_main: boolean
@@ -85,6 +87,7 @@ export type Job = {
   created_at: string
   updated_at: string
   running: boolean
+  style_text: string
   images: JobImage[]
 }
 
@@ -161,7 +164,7 @@ export const jobApi = {
   list: () => sdk.client.fetch<{ jobs: Job[]; count: number }>("/admin/quick-add/jobs?limit=30"),
   create: (body: Record<string, any>) => sdk.client.fetch<{ job: Job }>("/admin/quick-add/jobs", { method: "POST", body }).then((r) => r.job),
   update: (id: string, body: Record<string, any>) => sdk.client.fetch<{ job: Job }>(`/admin/quick-add/jobs/${id}`, { method: "POST", body }).then((r) => r.job),
-  action: (id: string, action: "analyze-parts" | "regenerate" | "regenerate-copy" | "approve" | "reject" | "published", body: Record<string, any> = {}) =>
+  action: (id: string, action: "analyze-parts" | "regenerate" | "regenerate-copy" | "approve" | "reject" | "published" | "angles" | "manual-angle", body: Record<string, any> = {}) =>
     sdk.client.fetch<any>(`/admin/quick-add/jobs/${id}/${action}`, { method: "POST", body }),
 }
 
@@ -180,3 +183,6 @@ export type GeminiPublic = {
   usage: { month_calls: number; total_calls: number; month_jobs: number }
 }
 export const getGemini = () => sdk.client.fetch<{ settings: GeminiPublic }>("/admin/quick-add/settings/gemini").then((r) => r.settings)
+
+export const testGemini = () =>
+  sdk.client.fetch<{ ok: boolean; error?: string; settings: GeminiPublic }>("/admin/quick-add/settings/gemini/test", { method: "POST" })

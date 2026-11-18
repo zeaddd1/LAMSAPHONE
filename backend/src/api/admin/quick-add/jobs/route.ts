@@ -17,8 +17,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 export async function POST(req: MedusaRequest<CreateJobBody>, res: MedusaResponse) {
   const b = req.validatedBody
   const s = await getGeminiSettings(req.scope)
-  if (!s.api_key) {
-    res.status(400).json({ message: "Gemini غير مربوط: أضف المفتاح من صفحة ربط ميتا ← تبويب Gemini" })
+  // بدون مفتاح: يُسمح فقط بمهمة بلا توليد (للتوليد اليدوي عبر حساب Gemini)
+  if (!s.api_key && b.generate) {
+    res.status(400).json({ message: "Gemini غير مربوط: أضف المفتاح من صفحة ربط ميتا ← تبويب Gemini، أو استخدم التوليد اليدوي", manual: true })
     return
   }
   if (b.generate && rateLimited(actorOf(req))) {
@@ -27,7 +28,8 @@ export async function POST(req: MedusaRequest<CreateJobBody>, res: MedusaRespons
   }
   const qa = quickAdd(req.scope)
   const job: any = await qa.createQuickAddJobs({
-    status: "pending",
+    // بلا توليد (يدوي): المهمة جاهزة للمراجعة مباشرة
+    status: b.generate ? "pending" : "ready_for_review",
     title: b.title,
     brand: b.brand,
     model_name: b.model_name,
@@ -37,7 +39,7 @@ export async function POST(req: MedusaRequest<CreateJobBody>, res: MedusaRespons
     custom_prompt: b.custom_prompt,
     input: b.input as any,
     private: b.private as any,
-    copy_status: b.generate_copy ? "pending" : "skipped",
+    copy_status: b.generate && b.generate_copy ? "pending" : "skipped",
     steps: {},
     created_by: actorOf(req),
   })

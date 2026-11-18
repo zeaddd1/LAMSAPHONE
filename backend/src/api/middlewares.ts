@@ -3,7 +3,7 @@ import { PostAdminExchangeRates } from "./admin/exchange-rates/validators"
 import { CatalogBody, PreviewBody, PublishBody } from "./admin/quick-add/validators"
 import { ConversationPatch, CorrectBody, FaqBody, ReplyBody, TestBody } from "./admin/assistant/validators"
 import { MetaSettingsInput } from "../lib/quick-add/meta-settings"
-import { CreateJobBody, PublishedBody, RegenerateBody, UpdateJobBody } from "./admin/quick-add/jobs/validators"
+import { AnglesBody, CreateJobBody, ManualAngleBody, PublishedBody, RegenerateBody, UpdateJobBody } from "./admin/quick-add/jobs/validators"
 import { GeminiSettingsInput } from "../lib/quick-add/gemini-settings"
 import { AssistantSettingsInput } from "../lib/assistant/settings"
 
@@ -23,6 +23,8 @@ export default defineMiddlewares({
     { matcher: "/admin/quick-add/jobs", method: "POST", middlewares: [validateAndTransformBody(CreateJobBody)] },
     { matcher: "/admin/quick-add/jobs/:id", method: "POST", middlewares: [validateAndTransformBody(UpdateJobBody)] },
     { matcher: "/admin/quick-add/jobs/:id/regenerate", method: "POST", middlewares: [validateAndTransformBody(RegenerateBody)] },
+    { matcher: "/admin/quick-add/jobs/:id/angles", method: "POST", middlewares: [validateAndTransformBody(AnglesBody)] },
+    { matcher: "/admin/quick-add/jobs/:id/manual-angle", method: "POST", middlewares: [validateAndTransformBody(ManualAngleBody)] },
     { matcher: "/admin/quick-add/jobs/:id/published", method: "POST", middlewares: [validateAndTransformBody(PublishedBody)] },
     { matcher: "/admin/quick-add/settings/gemini", method: "POST", middlewares: [validateAndTransformBody(GeminiSettingsInput)] },
     // الرد الآلي والمحادثات (نحتاج نص الطلب الخام للتحقق من توقيع ميتا)

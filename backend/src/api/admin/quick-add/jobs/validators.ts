@@ -1,5 +1,5 @@
 import { z } from "@medusajs/framework/zod"
-import { CONDITIONS, IMAGE_KINDS, PRESETS, isPresetAllowed } from "../../../../lib/quick-add/gemini"
+import { ANGLES, CONDITIONS, IMAGE_KINDS, PRESETS, isPresetAllowed } from "../../../../lib/quick-add/gemini"
 
 const short = (n: number) => z.string().trim().max(n)
 
@@ -101,3 +101,15 @@ export const PublishedBody = z.object({
   error: z.string().max(1000).optional(),
 })
 export type PublishedBody = z.infer<typeof PublishedBody>
+
+// الزوايا الأربع: كلها، أو زاوية واحدة (إعادة توليدها فقط)
+export const AnglesBody = z.object({ angle: z.enum(ANGLES).optional() })
+export type AnglesBody = z.infer<typeof AnglesBody>
+
+// التوليد اليدوي: صورة زاوية رفعها المستخدم (مرفوعة مسبقاً عبر /admin/uploads، أقل من 1MB)
+export const ManualAngleBody = z.object({
+  angle: z.enum(ANGLES),
+  file_id: z.string().min(1).max(200),
+  url: z.string().min(1).max(1000),
+})
+export type ManualAngleBody = z.infer<typeof ManualAngleBody>

@@ -3,8 +3,8 @@
 
 export type InlineImage = { data: string; mimeType: string } // data = base64
 export type GeminiPart = { text: string } | { inlineData: InlineImage }
-export type GeminiRequest = { model: string; parts: GeminiPart[]; wantImage?: boolean; json?: boolean; signal?: AbortSignal }
-export type GeminiResponse = { text?: string; image?: InlineImage; finishReason?: string }
+export type GeminiRequest = { model: string; parts: GeminiPart[]; wantImage?: boolean; json?: boolean; aspectRatio?: string; signal?: AbortSignal }
+export type GeminiResponse = { text?: string; image?: InlineImage; finishReason?: string; blockReason?: string }
 
 // واجهة صغيرة تسهّل استبدال Gemini بـ mock في الاختبارات
 export interface GeminiApi {
@@ -59,6 +59,7 @@ export function createGeminiApi(apiKey: string): GeminiApi {
           contents: [{ role: "user", parts: req.parts }],
           config: {
             ...(req.wantImage ? { responseModalities: ["IMAGE", "TEXT"] } : {}),
+            ...(req.wantImage && req.aspectRatio ? { imageConfig: { aspectRatio: req.aspectRatio } } : {}),
             ...(req.json ? { responseMimeType: "application/json" } : {}),
             ...(req.signal ? { abortSignal: req.signal } : {}),
           },
@@ -71,6 +72,7 @@ export function createGeminiApi(apiKey: string): GeminiApi {
           text,
           image: img ? { data: img.inlineData.data, mimeType: img.inlineData.mimeType || "image/png" } : undefined,
           finishReason: cand?.finishReason,
+          blockReason: r?.promptFeedback?.blockReason,
         }
       } catch (e: any) {
         const status = Number(e?.status || e?.code) || undefined
@@ -144,7 +146,11 @@ const PRESET_TEXT: Record<Exclude<Preset, "custom">, string> = {
 export const KEEP_SAME =
   "Keep the phone exactly the same: do not change the model, camera module layout, buttons, ports, colors, logos, or screen content. Do not add or remove any physical features. Do not invent text."
 
-const KIND_EN: Record<ImageKind, string> = {
+const KIND_EN: Record<string, string> = {
+  angle_front: "front view",
+  angle_back: "back view",
+  angle_three_quarter: "three-quarter view",
+  angle_side: "side view",
   front: "front view",
   back: "back view",
   side: "side view",
@@ -177,7 +183,7 @@ export function presetText(ctx: Pick<DeviceContext, "preset" | "custom_prompt">)
 }
 
 export function buildImagePrompt(ctx: DeviceContext, image: { kind: string; note?: string }, refCount: number): string {
-  const kind = (IMAGE_KINDS as readonly string[]).includes(image.kind) ? (image.kind as ImageKind) : "other"
+  const kind = KIND_EN[image.kind] ? image.kind : "other"
   const lines = [
     "You are a professional e-commerce product photo retoucher for a mobile phone shop.",
     refCount > 0
@@ -290,4 +296,57 @@ export async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, in
   }
   await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, worker))
   return out
+}
+
+// ---------- الزوايا الأربع (Angles Pack) ----------
+
+export const ANGLES = ["front", "back", "three_quarter", "side"] as const
+export type Angle = (typeof ANGLES)[number]
+export const angleKind = (a: Angle) => `angle_${a}`
+export const isAngleKind = (k: string) => k.startsWith("angle_")
+export const angleOf = (kind: string): Angle | null => {
+  const a = kind.replace(/^angle_/, "")
+  return (ANGLES as readonly string[]).includes(a) && kind.startsWith("angle_") ? (a as Angle) : null
+}
+
+export const ONE_IMAGE = "Output exactly one single image, not a collage or grid."
+export const FIXED_STYLE = "clean pure white background, soft natural shadow, even diffused studio lighting"
+
+const ANGLE_TEXT: Record<Angle, string> = {
+  front: "FRONT VIEW. The phone facing straight at the camera, screen on, perfectly centered and upright.",
+  back: "BACK VIEW. The phone showing its back panel straight to the camera, perfectly centered and upright, camera module clearly visible.",
+  three_quarter: "THREE-QUARTER VIEW. The phone rotated about 30 to 40 degrees showing the front and the side edge together, slightly angled, with a soft shadow.",
+  side: "SIDE VIEW. The phone seen from its right edge, showing the thickness, buttons and frame clearly, upright and centered.",
+}
+
+// نمط ثابت للزوايا الأربع: من الـ preset إن كان غير الاستوديو، وإلا الخلفية البيضاء
+export function angleStyle(ctx: Pick<DeviceContext, "preset" | "custom_prompt">): string {
+  if (ctx.preset === "studio" || ctx.preset === "watermark_clean") return FIXED_STYLE
+  return presetText(ctx).replace(/\.$/, "")
+}
+
+export function buildAnglePrompt(
+  ctx: DeviceContext,
+  angle: Angle,
+  refs: { realAngleRef: boolean; frontResult: boolean; simplified?: boolean }
+): string {
+  const n = ANGLES.indexOf(angle) + 1
+  const lines = [
+    "You are creating a consistent set of 4 separate e-commerce product photos of the same smartphone, one image at a time.",
+  ]
+  if (!refs.simplified) {
+    lines.push("The attached photos are references of the real device. Keep its design, proportions, colors and details exactly as in the references.")
+    if (refs.realAngleRef) lines.push(`One attached photo is a real photo of the device from this exact angle (${angle.replace("_", "-")}): follow it closely.`)
+    if (refs.frontResult) lines.push("One attached photo is image 1 of this set (front view): match its background, lighting, framing and scale exactly.")
+  } else {
+    lines.push("Use the attached photo as the reference for the real device.")
+  }
+  lines.push(`Product: ${ctx.title}${ctx.brand ? ` (${ctx.brand}${ctx.model ? ` ${ctx.model}` : ""})` : ""}`)
+  if (ctx.parts?.trim()) lines.push(`Details to keep exactly (mandatory): ${ctx.parts.trim()}`)
+  lines.push(`Fixed style for ALL images in the set: ${angleStyle(ctx)}, the phone centered, sharp, high resolution, same framing and scale, square 1:1 composition.`)
+  lines.push("Do not invent text or logos.")
+  lines.push(KEEP_SAME)
+  lines.push(`Generate image ${n} of 4 now: ${ANGLE_TEXT[angle]}`)
+  lines.push(ONE_IMAGE)
+  return lines.join("\n")
 }

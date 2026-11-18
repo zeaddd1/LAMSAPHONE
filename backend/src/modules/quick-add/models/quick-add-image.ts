@@ -5,7 +5,10 @@ import QuickAddJob from "./quick-add-job"
 const QuickAddImage = model.define("quick_add_image", {
   id: model.id({ prefix: "qai" }).primaryKey(),
   // front | back | side | box | accessories | other
+  // وصور الزوايا الأربع: angle_front | angle_back | angle_three_quarter | angle_side
   kind: model.text().default("other"),
+  // upload = صورة رفعها المستخدم، api = زاوية ولّدها Gemini، manual = زاوية رفعها المستخدم من التوليد اليدوي
+  source: model.text().default("upload"),
   note: model.text().default(""),
   rank: model.number().default(0),
   is_main: model.boolean().default(false),

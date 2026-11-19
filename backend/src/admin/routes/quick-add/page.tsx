@@ -25,6 +25,8 @@ type PublishResult = { ok: boolean; url?: string; error?: string; skipped?: bool
 type Done = { id: string; handle: string; title: string; link?: string; results?: Record<string, PublishResult> }
 
 const STORE = "https://lamsaphone.yemenbay.com/ye/products/"
+// عدد الصور المسموح للمنتج (منشور إنستغرام يأخذ أول 10 فقط)
+const MAX_IMAGES = 20
 
 // قوائم ثابتة حقيقية بدل الكتابة الحرة
 const CONDITIONS: [string, string][] = [
@@ -114,9 +116,9 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   const [mode, setMode] = useState<FitMode>("contain")
   const [autoTrim, setAutoTrim] = useState(true)
   // هوية المتجر على الصور والفيديو (الشعار)
-  const [brand, setBrand] = useState(true)
-  // الختم على صورة المتجر نفسها: اختياري، والافتراضي بدونه (معيار المتاجر العالمية)
-  const [storeBrand, setStoreBrand] = useState(false)
+  // لا ختم على الصور ولا الفيديو (طلب المتجر)
+  const brand = false
+  const storeBrand = false
   const [video, setVideo] = useState<ProcessedVideo | null>(null)
   const [videoProgress, setVideoProgress] = useState<number | null>(null)
   const [useVideo, setUseVideo] = useState(true)
@@ -182,8 +184,8 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     const vids = Array.from(list).filter((f) => f.type.startsWith("video/") || /\.(mp4|mov|webm|m4v|3gp|mkv)$/i.test(f.name))
     if (vids.length) addVideo(vids[0])
     const files = Array.from(list).filter((f) => f.type.startsWith("image/") || /\.(heic|heif|avif|webp|jpe?g|png|gif|bmp)$/i.test(f.name))
-    const room = 10 - images.length
-    if (files.length > room) toast.warning(`الحد 10 صور، أُخذت أول ${room}`)
+    const room = MAX_IMAGES - images.length
+    if (files.length > room) toast.warning(`الحد ${MAX_IMAGES} صورة، أُخذت أول ${room}`)
     setProcessing((n) => n + Math.min(files.length, room))
     for (const f of files.slice(0, room)) {
       try {
@@ -207,7 +209,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       const blob = await r.blob()
       const name = (u.split("/").pop() || "image").split("?")[0].slice(0, 40) || "image"
       const img = await processImage(new File([blob], name, { type: blob.type }), { mode, autoTrim, background: "auto", brand, storeBrand })
-      setImages((xs) => [...xs, img].slice(0, 10))
+      setImages((xs) => [...xs, img].slice(0, MAX_IMAGES))
       setImageUrl("")
     } catch (e: any) {
       toast.error(e?.message || "تعذّر تحميل الصورة")
@@ -215,6 +217,8 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
       setProcessing((n) => n - 1)
     }
   }
+  // الصورة الرئيسية = الأولى (تظهر في المتجر والمنشور). نجمة على أي صورة تجعلها الأولى
+  const makeMain = (i: number) => setImages((xs) => [xs[i], ...xs.filter((_, k) => k !== i)])
   const move = (i: number, d: number) =>
     setImages((xs) => {
       const j = i + d
@@ -417,16 +421,8 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
         {/* 2. الصور */}
         <section className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label>الصور والفيديو * (حتى 10 صور + فيديو واحد، أي مقاس)</Label>
+            <Label>الصور والفيديو * (حتى {MAX_IMAGES} صورة + فيديو واحد، أي مقاس)</Label>
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Switch id="qa-brand" checked={brand} onCheckedChange={setBrand} />
-                <Label htmlFor="qa-brand" size="small">ختم المتجر على المنشورات</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch id="qa-store-brand" checked={storeBrand} onCheckedChange={setStoreBrand} />
-                <Label htmlFor="qa-store-brand" size="small">ختم على صورة المتجر</Label>
-              </div>
               <div className="flex items-center gap-2">
                 <Switch id="qa-trim" checked={autoTrim} onCheckedChange={setAutoTrim} />
                 <Label htmlFor="qa-trim" size="small">توسيط المنتج تلقائياً</Label>
@@ -453,7 +449,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
           >
             <Text>اسحب الصور أو الفيديو هنا، أو اضغط للاختيار</Text>
             <Text size="small" className="text-ui-fg-subtle">
-              صورة المتجر مربعة 1600×1600 على خلفية نظيفة والمنتج يملأ 85% منها (معيار أمازون ونون)، بلا ختم إلا إن فعّلت زره، وصورة المنشور 1080×1350 مع ختم المتجر، والفيديو يُضغط إلى أقل من 1MB (حتى {VIDEO_MAX_SECONDS} ثانية) مع الحفاظ على وضوحه
+              صورة المتجر مربعة 1600×1600 على خلفية نظيفة والمنتج يملأ 85% منها (معيار أمازون ونون)، وصورة المنشور 1080×1350، بلا أي ختم. اضغط ★ على أي صورة لتصبح الرئيسية، والفيديو يُضغط إلى أقل من 1MB (حتى {VIDEO_MAX_SECONDS} ثانية) مع الحفاظ على وضوحه
             </Text>
             <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
           </div>
@@ -492,6 +488,9 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
                   <div className="flex items-center justify-between bg-ui-bg-subtle px-1 py-0.5 text-[11px]">
                     <span title="الحجم قبل وبعد">{kb(img.originalBytes)} ← {kb(img.webp.size)}</span>
                     <span className="flex gap-1">
+                      {i > 0 && (
+                        <button type="button" title="اجعلها الصورة الرئيسية" onClick={() => makeMain(i)} aria-label="اجعلها الرئيسية">★</button>
+                      )}
                       <button type="button" onClick={() => move(i, -1)} aria-label="تقديم">→</button>
                       <button type="button" onClick={() => move(i, 1)} aria-label="تأخير">←</button>
                       <button type="button" className="text-ui-fg-error" onClick={() => setImages((xs) => xs.filter((_, k) => k !== i))} aria-label="حذف">✕</button>

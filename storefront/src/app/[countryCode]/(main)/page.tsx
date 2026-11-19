@@ -2,6 +2,9 @@ import { Metadata } from "next"
 
 import FeaturedProducts from "@modules/home/components/featured-products"
 import Hero from "@modules/home/components/hero"
+import BannerCarousel from "@modules/home/components/banner-carousel"
+import FeaturedPicks from "@modules/home/components/featured-picks"
+import { getHomeConfig } from "@lib/data/home-config"
 import LatestProducts from "@modules/home/components/latest-products"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
@@ -19,11 +22,13 @@ export default async function Home(props: { params: Promise<{ countryCode: strin
   const region = await getRegion(countryCode)
   if (!region) return null
 
-  const { collections } = await listCollections({ fields: "id, handle, title" })
+  const [{ collections }, home] = await Promise.all([listCollections({ fields: "id, handle, title" }), getHomeConfig()])
 
   return (
     <>
-      <Hero />
+      {/* الإعلانات من "واجهة المتجر" في اللوحة، وإن لم توجد يظهر الشريط الافتراضي */}
+      {home.banners.length ? <BannerCarousel banners={home.banners} /> : <Hero />}
+      <FeaturedPicks ids={home.featured} title={home.featured_title} region={region} />
       <LatestProducts region={region} />
       {collections?.length ? (
         <div className="py-12">

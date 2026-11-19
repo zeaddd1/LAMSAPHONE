@@ -42,6 +42,7 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
     .filter(Boolean)
     .map(abs)
     .filter((u: string, i: number, a: string[]) => a.indexOf(u) === i)
+    .slice(0, 10) // منشور إنستغرام وألبوم فيسبوك: 10 صور كحد أقصى
   const local = images.some((u) => /localhost|127\.0\.0\.1/.test(u))
   // فيديو المنتج (MP4 فقط تقبله ميتا)
   const vids: any[] = Array.isArray(p.metadata?.videos) ? p.metadata.videos : []

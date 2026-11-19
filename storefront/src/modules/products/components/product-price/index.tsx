@@ -19,8 +19,13 @@ export default function ProductPrice({
 
   const selectedPrice = variant ? variantPrice : cheapestPrice
 
+  // بلا سعر بعد: السعر يُطلب عبر واتساب (الزر تحته)
   if (!selectedPrice) {
-    return <div className="block w-32 h-9 bg-gray-100 animate-pulse" />
+    return (
+      <div className="flex items-center gap-2 text-lg font-bold text-[#128C7E]" data-testid="product-price-whatsapp">
+        السعر عبر واتساب
+      </div>
+    )
   }
 
   return (

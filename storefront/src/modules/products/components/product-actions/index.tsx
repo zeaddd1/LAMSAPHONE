@@ -11,6 +11,7 @@ import { isEqual } from "lodash"
 import { useParams, usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
+import { getProductPrice } from "@lib/util/get-product-price"
 import MobileActions from "./mobile-actions"
 import WhatsAppOrder from "../whatsapp-order"
 import { useRouter } from "next/navigation"
@@ -118,6 +119,15 @@ export default function ProductActions({
     return false
   }, [selectedVariant])
 
+  // منتج بلا سعر: لا إضافة للسلة، ويصبح زر واتساب "اسأل عن السعر"
+  const hasPrice = useMemo(() => {
+    const { cheapestPrice, variantPrice } = getProductPrice({ product, variantId: selectedVariant?.id })
+    return selectedVariant ? !!variantPrice : !!cheapestPrice
+  }, [product, selectedVariant])
+  const chosen = (product.options || [])
+    .map((o) => options[o.id])
+    .filter((v): v is string => !!v)
+
   const actionsRef = useRef<HTMLDivElement>(null)
 
   const inView = useIntersection(actionsRef, "0px")
@@ -165,11 +175,18 @@ export default function ProductActions({
         <ProductPrice product={product} variant={selectedVariant} />
 
         {/* الطلب عبر واتساب أولاً، أو الإضافة للسلة والشراء من المتجر */}
-        <WhatsAppOrder product={product} variant={selectedVariant} disabled={!selectedVariant || !isValidVariant || !inStock} />
+        <WhatsAppOrder
+          product={product}
+          variant={selectedVariant}
+          chosen={chosen}
+          askPrice={!hasPrice}
+          disabled={hasPrice ? !selectedVariant || !isValidVariant || !inStock : false}
+        />
 
         <Button
           onClick={handleAddToCart}
           disabled={
+            !hasPrice ||
             !inStock ||
             !selectedVariant ||
             !!disabled ||
@@ -181,7 +198,9 @@ export default function ProductActions({
           isLoading={isAdding}
           data-testid="add-product-button"
         >
-          {!selectedVariant && !options
+          {!hasPrice
+            ? "السعر عبر واتساب"
+            : !selectedVariant && !options
             ? t("Select variant")
             : !inStock || !isValidVariant
             ? t("Out of stock")

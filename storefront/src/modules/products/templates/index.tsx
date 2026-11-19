@@ -3,6 +3,7 @@ import React, { Suspense } from "react"
 import ImageGallery from "@modules/products/components/image-gallery"
 import ProductActions from "@modules/products/components/product-actions"
 import ProductTabs from "@modules/products/components/product-tabs"
+import ProductSpecs from "@modules/products/components/product-specs"
 import RelatedProducts from "@modules/products/components/related-products"
 import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
@@ -58,7 +59,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           <ProductTabs product={product} />
         </div>
         <div className="block w-full relative">
-          <ImageGallery images={images} videos={(((product.metadata as any)?.videos || []) as any[]).filter((v) => v?.url)} />
+          <ImageGallery images={images} title={product.title} videos={(((product.metadata as any)?.videos || []) as any[]).filter((v) => v?.url)} />
         </div>
         <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
           <Suspense
@@ -74,6 +75,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           </Suspense>
         </div>
       </div>
+      <ProductSpecs product={product} />
       <div
         className="content-container my-16 small:my-32"
         data-testid="related-products-container"

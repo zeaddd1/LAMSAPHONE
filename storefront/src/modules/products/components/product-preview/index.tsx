@@ -52,7 +52,11 @@ export default async function ProductPreview({
             {product.title}
           </Text>
           <div className="flex items-center gap-x-2">
-            {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
+            {cheapestPrice ? (
+              <PreviewPrice price={cheapestPrice} />
+            ) : (
+              <span className="whitespace-nowrap text-xs font-semibold text-[#128C7E]">السعر عبر واتساب</span>
+            )}
           </div>
         </div>
       </div>

@@ -97,7 +97,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   </span>
                 </div>
               ) : (
-                <div></div>
+                <span className="text-sm font-semibold text-[#128C7E]">السعر عبر واتساب</span>
               )}
             </div>
             <div className={clx("grid grid-cols-2 w-full gap-x-4", {
@@ -120,12 +120,14 @@ const MobileActions: React.FC<MobileActionsProps> = ({
               </Button>}
               <Button
                 onClick={handleAddToCart}
-                disabled={!inStock || !variant}
+                disabled={!inStock || !variant || !selectedPrice}
                 className="w-full"
                 isLoading={isAdding}
                 data-testid="mobile-cart-button"
               >
-                {!variant
+                {!selectedPrice
+                  ? "السعر عبر واتساب"
+                  : !variant
                   ? t("Select variant")
                   : !inStock
                   ? t("Out of stock")

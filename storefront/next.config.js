@@ -20,6 +20,8 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "http", hostname: "localhost" },
       { protocol: "https", hostname: "cp.lamsaphone.yemenbay.com" },
+      // صور كتالوج الموديلات الثابتة (public/catalog) بعنوان المتجر نفسه
+      { protocol: "https", hostname: "lamsaphone.yemenbay.com" },
       ...(r2 ? [{ protocol: r2.protocol.replace(":", ""), hostname: r2.hostname }] : []),
     ],
   },

@@ -36,7 +36,8 @@ export function cleanHomeConfig(raw: any): HomeConfig {
     cta: str(b?.cta, 30),
     link: safeLink(b?.link),
     image: safeImage(b?.image),
-    theme: THEMES.includes(b?.theme) ? b.theme : "navy",
+    // الخلفية البيضاء هي الافتراضية (الكحلي القديم صار أبيض بطلب صاحب المتجر)
+    theme: b?.theme === "navy" || !THEMES.includes(b?.theme) ? "light" : b.theme,
   }))
   const featured = (Array.isArray(raw?.featured) ? raw.featured : [])
     .filter((id: unknown) => typeof id === "string" && /^prod_[A-Za-z0-9]+$/.test(id))

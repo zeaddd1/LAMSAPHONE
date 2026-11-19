@@ -15,10 +15,15 @@ const FIELDS: [string, string, string][] = [
   ["dimensions", "الأبعاد والوزن", "📐"],
   ["connectivity", "الاتصال والمميزات", "📶"],
   ["release", "تاريخ الإطلاق", "📅"],
+  ["type", "النوع", "🎧"],
+  ["chip", "الشريحة", "⚡"],
+  ["features", "المميزات", "✨"],
+  ["resistance", "المقاومة والتحمل", "💧"],
 ]
 const ICONS: Record<string, string> = Object.fromEntries(FIELDS.map(([k, , i]) => [k, i]))
-// أهم أربع مواصفات تظهر كبطاقات في الأعلى، والباقي في الجدول
+// أهم أربع مواصفات تظهر كبطاقات في الأعلى، والباقي في الجدول (وللسماعات والإكسسوارات أربع أخرى)
 const HIGHLIGHTS = ["screen", "cpu", "camera", "battery"]
+const ACC_HIGHLIGHTS = ["type", "chip", "battery", "resistance"]
 
 /** قسم المواصفات في صفحة المنتج (من metadata.specs) */
 export default function ProductSpecs({ product }: { product: HttpTypes.StoreProduct }) {
@@ -28,7 +33,8 @@ export default function ProductSpecs({ product }: { product: HttpTypes.StoreProd
       ? FIELDS.map(([key, label]) => ({ key, label, value: typeof raw[key] === "string" ? (raw[key] as string).trim() : "" })).filter((s) => s.value)
       : []
   if (!specs.length) return null
-  const top = HIGHLIGHTS.map((k) => specs.find((s) => s.key === k)).filter(Boolean) as Spec[]
+  const keys = specs.some((s) => s.key === "screen" || s.key === "cpu") ? HIGHLIGHTS : ACC_HIGHLIGHTS
+  const top = keys.map((k) => specs.find((s) => s.key === k)).filter(Boolean) as Spec[]
 
   return (
     <section className="content-container my-10" aria-labelledby="specs-title">

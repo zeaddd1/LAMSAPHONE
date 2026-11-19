@@ -12,6 +12,11 @@ export const SPEC_FIELDS = [
   { key: "dimensions", label: "الأبعاد والوزن" },
   { key: "connectivity", label: "الاتصال والمميزات" },
   { key: "release", label: "تاريخ الإطلاق" },
+  // للسماعات والساعات والإكسسوارات
+  { key: "type", label: "النوع" },
+  { key: "chip", label: "الشريحة" },
+  { key: "features", label: "المميزات" },
+  { key: "resistance", label: "المقاومة والتحمل" },
 ] as const
 
 export type Specs = Record<string, string>

@@ -11,12 +11,11 @@ type Cfg = { banners: Banner[]; featured: string[]; featured_title: string }
 type P = { id: string; title: string; handle: string; thumbnail?: string | null }
 
 const THEMES = [
-  { v: "navy", l: "كحلي (هوية المتجر)" },
+  { v: "light", l: "أبيض (افتراضي)" },
   { v: "orange", l: "برتقالي" },
   { v: "dark", l: "داكن" },
-  { v: "light", l: "فاتح" },
 ]
-const newBanner = (): Banner => ({ id: `b${Date.now().toString(36)}`, active: true, badge: "عرض خاص", title: "", subtitle: "", cta: "اطلب الآن", link: "/store", image: "", theme: "navy" })
+const newBanner = (): Banner => ({ id: `b${Date.now().toString(36)}`, active: true, badge: "عروض الأسبوع", title: "", subtitle: "", cta: "اطلب الآن", link: "/store", image: "", theme: "light" })
 
 const ProductPicker = ({ onPick, placeholder }: { onPick: (p: P) => void; placeholder: string }) => {
   const [q, setQ] = useState("")
@@ -49,13 +48,14 @@ const ProductPicker = ({ onPick, placeholder }: { onPick: (p: P) => void; placeh
 }
 
 const BannerPreview = ({ b }: { b: Banner }) => {
-  const bg = { navy: "#14213d", orange: "#ff6000", dark: "#111111", light: "#f4f4f5" }[b.theme] || "#14213d"
-  const fg = b.theme === "light" ? "#14213d" : "#ffffff"
+  const light = !["orange", "dark"].includes(b.theme)
+  const bg = { orange: "#ff6000", dark: "#111111" }[b.theme] || "#ffffff"
+  const fg = light ? "#14213d" : "#ffffff"
   return (
-    <div className="flex items-center gap-3 overflow-hidden rounded-lg p-4" style={{ background: bg, color: fg }} dir="rtl">
+    <div className="flex items-center gap-3 overflow-hidden rounded-lg border p-4" style={{ background: bg, color: fg }} dir="rtl">
       <div className="flex-1">
-        {b.badge && <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px]">{b.badge}</span>}
-        <div className="mt-1 text-lg font-bold">{b.title || "عنوان الإعلان"}</div>
+        {b.badge && <span className={`rounded-full px-2 py-0.5 text-[11px] ${light ? "bg-[#fff0e6] text-[#c24e00]" : "bg-white/20"}`}>{b.badge}</span>}
+        <div className="mt-1 text-lg font-bold">{b.title || "عنوان العرض"}</div>
         <div className="text-xs opacity-80">{b.subtitle}</div>
         {b.cta && <span className="mt-2 inline-block rounded bg-[#ff6000] px-3 py-1 text-xs font-bold text-white">{b.cta}</span>}
       </div>
@@ -81,7 +81,8 @@ const StorefrontHomePage = () => {
         setStoreId(s.id)
         setMeta(s.metadata || {})
         const h = s.metadata?.lamsa_home || {}
-        const c: Cfg = { banners: h.banners || [], featured: h.featured || [], featured_title: h.featured_title || "" }
+        // الكحلي القديم يصير أبيض
+        const c: Cfg = { banners: (h.banners || []).map((b: Banner) => (b.theme === "navy" ? { ...b, theme: "light" } : b)), featured: h.featured || [], featured_title: h.featured_title || "" }
         setCfg(c)
         if (c.featured.length) {
           const pr: any = await sdk.admin.product.list({ id: c.featured, limit: 50, fields: "id,title,handle,thumbnail" } as any)
@@ -123,7 +124,7 @@ const StorefrontHomePage = () => {
       <Container className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
         <div>
           <Heading>واجهة المتجر</Heading>
-          <Text size="small" className="text-ui-fg-subtle">الإعلانات أعلى الصفحة الرئيسية والمنتجات المميزة. أي تعديل يظهر للزبائن بعد الحفظ خلال دقيقة.</Text>
+          <Text size="small" className="text-ui-fg-subtle">عروض الأسبوع أعلى الصفحة الرئيسية والمنتجات المميزة. أي تعديل يظهر للزبائن بعد الحفظ خلال دقيقة.</Text>
         </div>
         <Button onClick={save} isLoading={saving} disabled={!dirty || !storeId}>حفظ التغييرات</Button>
       </Container>
@@ -131,11 +132,11 @@ const StorefrontHomePage = () => {
       <Container className="flex flex-col gap-4 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <Heading level="h2">الإعلانات (شريط متحرك)</Heading>
-            <Text size="small" className="text-ui-fg-subtle">حتى 8 إعلانات. اختر منتجاً فتؤخذ صورته ورابطه تلقائياً، ثم عدّل النصوص. بلا إعلانات يظهر الشريط الافتراضي.</Text>
+            <Heading level="h2">عروض الأسبوع</Heading>
+            <Text size="small" className="text-ui-fg-subtle">أول ما يراه الزبون في الصفحة الرئيسية (شريط متحرك بخلفية بيضاء). حتى 8 عروض: اختر منتجاً فتؤخذ صورته ورابطه، ثم اكتب العنوان والوصف واحفظ.</Text>
           </div>
-          <Button variant="secondary" size="small" disabled={cfg.banners.length >= 8} onClick={() => update((c) => ({ ...c, banners: [...c.banners, newBanner()] }))}>
-            + إعلان جديد
+          <Button size="small" disabled={cfg.banners.length >= 8} onClick={() => update((c) => ({ ...c, banners: [...c.banners, newBanner()] }))}>
+            + إضافة عرض
           </Button>
         </div>
         {cfg.banners.map((b, i) => (
@@ -153,9 +154,9 @@ const StorefrontHomePage = () => {
                   <Button variant="transparent" size="small" className="text-ui-fg-error" onClick={() => update((c) => ({ ...c, banners: c.banners.filter((_, k) => k !== i) }))}>حذف</Button>
                 </div>
               </div>
-              <ProductPicker placeholder="اختر منتجاً للإعلان (ابحث بالاسم)…" onPick={(p) => setBanner(i, { image: p.thumbnail || b.image, link: `/products/${p.handle}`, title: b.title || p.title })} />
+              <ProductPicker placeholder="اختر منتج العرض (ابحث بالاسم)…" onPick={(p) => setBanner(i, { image: p.thumbnail || b.image, link: `/products/${p.handle}`, title: b.title || p.title })} />
               <div className="grid grid-cols-2 gap-2">
-                <Input value={b.badge} onChange={(e) => setBanner(i, { badge: e.target.value })} placeholder="الشارة (مثل: عرض خاص)" />
+                <Input value={b.badge} onChange={(e) => setBanner(i, { badge: e.target.value })} placeholder="الشارة (مثل: عروض الأسبوع)" />
                 <Select value={b.theme} onValueChange={(v) => setBanner(i, { theme: v })}>
                   <Select.Trigger><Select.Value /></Select.Trigger>
                   <Select.Content>{THEMES.map((t) => <Select.Item key={t.v} value={t.v}>{t.l}</Select.Item>)}</Select.Content>
@@ -177,7 +178,7 @@ const StorefrontHomePage = () => {
       <Container className="flex flex-col gap-3 px-6 py-4">
         <Heading level="h2">العروض والمنتجات المميزة</Heading>
         <Text size="small" className="text-ui-fg-subtle">
-          تظهر بعد الإعلانات: أول 8 منتجات في «ترتيب العرض» (1، 2، 3…) من «إضافة سريعة ← المنتجات». نفس الترتيب يجعلها أول ما يظهر في المتجر وفي أقسامها.
+          تظهر بعد عروض الأسبوع: أول 8 منتجات في «ترتيب العرض» (1، 2، 3…) من «إضافة سريعة ← المنتجات». نفس الترتيب يجعلها أول ما يظهر في المتجر وفي أقسامها.
         </Text>
         <Input value={cfg.featured_title} onChange={(e) => update((c) => ({ ...c, featured_title: e.target.value }))} placeholder="عنوان القسم (افتراضي: عروض ومنتجات مميزة)" />
         <a href="/app/quick-add#list" className="self-start text-sm text-ui-fg-interactive underline">إدارة ترتيب العرض ←</a>

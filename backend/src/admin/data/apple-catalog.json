@@ -1,0 +1,1879 @@
+[
+ {
+  "handle": "apple-iphone-11",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 11",
+  "title": "آبل آيفون 11",
+  "subtitle": "Apple iPhone 11",
+  "storages": [
+   "64GB",
+   "128GB",
+   "256GB"
+  ],
+  "ram": "4GB",
+  "colors": [
+   "أسود",
+   "أبيض",
+   "أحمر",
+   "أخضر",
+   "أصفر",
+   "بنفسجي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-11/1.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-11/2.webp",
+    "size": 830
+   },
+   {
+    "path": "catalog/apple/iphone-11/3.webp",
+    "size": 806
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2019",
+   "screen": "Liquid Retina IPS LCD بحجم 6.1 بوصة، سطوع 625 شمعة",
+   "cpu": "Apple A13 Bionic (7 nm+)",
+   "memory": "4 جيجابايت رام — التخزين: 64 / 128 / 256 جيجابايت",
+   "camera": "ثنائية: 12 ميجابكسل رئيسية OIS + 12 ميجابكسل واسعة جداً، فيديو 4K@60fps",
+   "front_camera": "12 ميجابكسل + مستشعر Face ID، فيديو 4K@60fps",
+   "battery": "3110 مللي أمبير — شحن سريع 18 واط + شحن لاسلكي Qi",
+   "build": "زجاج أمامي وخلفي مع إطار ألومنيوم — مقاومة الماء والغبار IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-11-pro",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 11 Pro",
+  "title": "آبل آيفون 11 برو",
+  "subtitle": "Apple iPhone 11 Pro",
+  "storages": [
+   "64GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "4GB",
+  "colors": [
+   "رمادي فلكي",
+   "فضي",
+   "ذهبي",
+   "أخضر ليلي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-11-pro/1.webp",
+    "size": 241
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2019",
+   "screen": "Super Retina XDR OLED بحجم 5.8 بوصة، HDR10، Dolby Vision",
+   "cpu": "Apple A13 Bionic (7 nm+)",
+   "memory": "4 جيجابايت رام — التخزين: 64 / 256 / 512 جيجابايت",
+   "camera": "ثلاثية: 12 ميجابكسل رئيسية OIS + 12 ميجابكسل تيليفوتو 2x OIS + 12 ميجابكسل واسعة جداً، فيديو 4K@60fps",
+   "front_camera": "12 ميجابكسل + مستشعر Face ID، فيديو 4K@60fps",
+   "battery": "3046 مللي أمبير — شحن سريع 18 واط + شحن لاسلكي Qi",
+   "build": "زجاج مطفي مع إطار ستانلس ستيل — مقاومة الماء والغبار IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-11-pro-max",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 11 Pro Max",
+  "title": "آبل آيفون 11 برو ماكس",
+  "subtitle": "Apple iPhone 11 Pro Max",
+  "storages": [
+   "64GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "4GB",
+  "colors": [
+   "رمادي فلكي",
+   "فضي",
+   "ذهبي",
+   "أخضر ليلي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-11-pro-max/1.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-11-pro-max/2.webp",
+    "size": 802
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2019",
+   "screen": "Super Retina XDR OLED بحجم 6.5 بوصة، HDR10، Dolby Vision",
+   "cpu": "Apple A13 Bionic (7 nm+)",
+   "memory": "4 جيجابايت رام — التخزين: 64 / 256 / 512 جيجابايت",
+   "camera": "ثلاثية: 12 ميجابكسل رئيسية OIS + 12 ميجابكسل تيليفوتو 2x OIS + 12 ميجابكسل واسعة جداً، فيديو 4K@60fps",
+   "front_camera": "12 ميجابكسل + Face ID، فيديو 4K@60fps",
+   "battery": "3969 مللي أمبير — شحن سريع 18 واط + شحن لاسلكي Qi",
+   "build": "زجاج مطفي مع إطار ستانلس ستيل — مقاومة الماء والغبار IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-12-mini",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 12 mini",
+  "title": "آبل آيفون 12 ميني",
+  "subtitle": "Apple iPhone 12 mini",
+  "storages": [
+   "64GB",
+   "128GB",
+   "256GB"
+  ],
+  "ram": "4GB",
+  "colors": [
+   "أسود",
+   "أبيض",
+   "أحمر",
+   "أخضر",
+   "أزرق",
+   "بنفسجي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-12-mini/1.webp",
+    "size": 807
+   }
+  ],
+  "specs": {
+   "release": "نوفمبر 2020",
+   "screen": "Super Retina XDR OLED بحجم 5.4 بوصة، Ceramic Shield، Dolby Vision",
+   "cpu": "Apple A14 Bionic (5 nm) مع دعم 5G",
+   "memory": "4 جيجابايت رام — التخزين: 64 / 128 / 256 جيجابايت",
+   "camera": "ثنائية: 12 ميجابكسل رئيسية OIS + 12 ميجابكسل واسعة جداً، فيديو 4K@60fps Dolby Vision",
+   "front_camera": "12 ميجابكسل + Face ID",
+   "battery": "2227 مللي أمبير — شحن سريع 20 واط + MagSafe 12 واط",
+   "build": "زجاج Ceramic Shield مع إطار ألومنيوم — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-12",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 12",
+  "title": "آبل آيفون 12",
+  "subtitle": "Apple iPhone 12",
+  "storages": [
+   "64GB",
+   "128GB",
+   "256GB"
+  ],
+  "ram": "4GB",
+  "colors": [
+   "أسود",
+   "أبيض",
+   "أحمر",
+   "أخضر",
+   "أزرق",
+   "بنفسجي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-12/1.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-12/2.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-12/3.webp",
+    "size": 700
+   }
+  ],
+  "specs": {
+   "release": "أكتوبر 2020",
+   "screen": "Super Retina XDR OLED بحجم 6.1 بوصة، Ceramic Shield، Dolby Vision",
+   "cpu": "Apple A14 Bionic (5 nm) مع دعم 5G",
+   "memory": "4 جيجابايت رام — التخزين: 64 / 128 / 256 جيجابايت",
+   "camera": "ثنائية: 12 ميجابكسل رئيسية OIS + 12 ميجابكسل واسعة جداً، فيديو 4K@60fps",
+   "front_camera": "12 ميجابكسل + Face ID",
+   "battery": "2815 مللي أمبير — شحن سريع 20 واط + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ألومنيوم — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-12-pro",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 12 Pro",
+  "title": "آبل آيفون 12 برو",
+  "subtitle": "Apple iPhone 12 Pro",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "6GB",
+  "colors": [
+   "جرافيت",
+   "فضي",
+   "ذهبي",
+   "أزرق باسيفيك"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-12-pro/1.webp",
+    "size": 735
+   }
+  ],
+  "specs": {
+   "release": "أكتوبر 2020",
+   "screen": "Super Retina XDR OLED بحجم 6.1 بوصة، Ceramic Shield، Dolby Vision",
+   "cpu": "Apple A14 Bionic (5 nm) مع دعم 5G",
+   "memory": "6 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "ثلاثية + LiDAR: 12 ميجابكسل رئيسية OIS + 12 ميجابكسل تيليفوتو 2x OIS + 12 ميجابكسل واسعة جداً + ماسح LiDAR",
+   "front_camera": "12 ميجابكسل + Face ID",
+   "battery": "2815 مللي أمبير — شحن سريع 20 واط + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ستانلس ستيل — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-12-pro-max",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 12 Pro Max",
+  "title": "آبل آيفون 12 برو ماكس",
+  "subtitle": "Apple iPhone 12 Pro Max",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "6GB",
+  "colors": [
+   "جرافيت",
+   "فضي",
+   "ذهبي",
+   "أزرق باسيفيك"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-12-pro-max/1.webp",
+    "size": 739
+   },
+   {
+    "path": "catalog/apple/iphone-12-pro-max/2.webp",
+    "size": 738
+   },
+   {
+    "path": "catalog/apple/iphone-12-pro-max/3.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-12-pro-max/4.webp",
+    "size": 765
+   },
+   {
+    "path": "catalog/apple/iphone-12-pro-max/5.webp",
+    "size": 807
+   }
+  ],
+  "specs": {
+   "release": "نوفمبر 2020",
+   "screen": "Super Retina XDR OLED بحجم 6.7 بوصة، Ceramic Shield، Dolby Vision",
+   "cpu": "Apple A14 Bionic (5 nm) مع دعم 5G",
+   "memory": "6 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "ثلاثية + LiDAR: 12 ميجابكسل رئيسية Sensor-Shift OIS + 12 ميجابكسل تيليفوتو 2.5x OIS + 12 ميجابكسل واسعة جداً + LiDAR",
+   "front_camera": "12 ميجابكسل + Face ID",
+   "battery": "3687 مللي أمبير — شحن سريع 20 واط + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ستانلس ستيل — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-13-mini",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 13 mini",
+  "title": "آبل آيفون 13 ميني",
+  "subtitle": "Apple iPhone 13 mini",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "4GB",
+  "colors": [
+   "ميدنايت",
+   "ستارلايت",
+   "أزرق",
+   "وردي",
+   "أحمر",
+   "أخضر"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-13-mini/1.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-13-mini/2.webp",
+    "size": 673
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2021",
+   "screen": "Super Retina XDR OLED بحجم 5.4 بوصة، سطوع 1200 شمعة، Ceramic Shield",
+   "cpu": "Apple A15 Bionic (5 nm)",
+   "memory": "4 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "ثنائية: 12 ميجابكسل رئيسية Sensor-Shift OIS + 12 ميجابكسل واسعة جداً، وضع السينمائي Cinematic",
+   "front_camera": "12 ميجابكسل + Face ID",
+   "battery": "2438 مللي أمبير — شحن سريع + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ألومنيوم — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-13",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 13",
+  "title": "آبل آيفون 13",
+  "subtitle": "Apple iPhone 13",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "4GB",
+  "colors": [
+   "ميدنايت",
+   "ستارلايت",
+   "أزرق",
+   "وردي",
+   "أحمر",
+   "أخضر"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-13/1.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-13/2.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-13/3.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-13/4.webp",
+    "size": 680
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2021",
+   "screen": "Super Retina XDR OLED بحجم 6.1 بوصة، سطوع 1200 شمعة، Ceramic Shield",
+   "cpu": "Apple A15 Bionic (5 nm)",
+   "memory": "4 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "ثنائية: 12 ميجابكسل رئيسية Sensor-Shift OIS + 12 ميجابكسل واسعة جداً، فيديو 4K Dolby Vision",
+   "front_camera": "12 ميجابكسل + Face ID",
+   "battery": "3240 مللي أمبير — شحن سريع + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ألومنيوم — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-13-pro",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 13 Pro",
+  "title": "آبل آيفون 13 برو",
+  "subtitle": "Apple iPhone 13 Pro",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "6GB",
+  "colors": [
+   "جرافيت",
+   "ذهبي",
+   "فضي",
+   "أزرق سييرا",
+   "أخضر ألبي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-13-pro/1.webp",
+    "size": 777
+   },
+   {
+    "path": "catalog/apple/iphone-13-pro/2.webp",
+    "size": 680
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2021",
+   "screen": "Super Retina XDR OLED بحجم 6.1 بوصة، تردد ProMotion 120Hz، سطوع 1200 شمعة",
+   "cpu": "Apple A15 Bionic (5 nm) مع معالج رسوميات 5 أنوية",
+   "memory": "6 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "ثلاثية + LiDAR: 12 ميجابكسل رئيسية + 12 ميجابكسل تيليفوتو 3x OIS + 12 ميجابكسل واسعة جداً ماكرو + LiDAR، دعم ProRes",
+   "front_camera": "12 ميجابكسل + Face ID",
+   "battery": "3095 مللي أمبير — شحن سريع + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ستانلس ستيل — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-13-pro-max",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 13 Pro Max",
+  "title": "آبل آيفون 13 برو ماكس",
+  "subtitle": "Apple iPhone 13 Pro Max",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "6GB",
+  "colors": [
+   "جرافيت",
+   "ذهبي",
+   "فضي",
+   "أزرق سييرا",
+   "أخضر ألبي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-13-pro-max/1.webp",
+    "size": 800
+   },
+   {
+    "path": "catalog/apple/iphone-13-pro-max/2.webp",
+    "size": 742
+   },
+   {
+    "path": "catalog/apple/iphone-13-pro-max/3.webp",
+    "size": 801
+   },
+   {
+    "path": "catalog/apple/iphone-13-pro-max/4.webp",
+    "size": 802
+   },
+   {
+    "path": "catalog/apple/iphone-13-pro-max/5.webp",
+    "size": 680
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2021",
+   "screen": "Super Retina XDR OLED بحجم 6.7 بوصة، تردد ProMotion 120Hz، سطوع 1200 شمعة",
+   "cpu": "Apple A15 Bionic (5 nm) مع معالج رسوميات 5 أنوية",
+   "memory": "6 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "ثلاثية + LiDAR: 12 ميجابكسل رئيسية + 12 ميجابكسل تيليفوتو 3x OIS + 12 ميجابكسل واسعة جداً ماكرو + LiDAR، دعم ProRes",
+   "front_camera": "12 ميجابكسل + Face ID",
+   "battery": "4352 مللي أمبير — شحن سريع + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ستانلس ستيل — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-14",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 14",
+  "title": "آبل آيفون 14",
+  "subtitle": "Apple iPhone 14",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "6GB",
+  "colors": [
+   "ميدنايت",
+   "ستارلايت",
+   "أزرق",
+   "بنفسجي",
+   "أحمر",
+   "أصفر"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-14/1.webp",
+    "size": 735
+   },
+   {
+    "path": "catalog/apple/iphone-14/2.webp",
+    "size": 802
+   },
+   {
+    "path": "catalog/apple/iphone-14/3.webp",
+    "size": 735
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2022",
+   "screen": "Super Retina XDR OLED بحجم 6.1 بوصة، سطوع 1200 شمعة، Ceramic Shield",
+   "cpu": "Apple A15 Bionic (5 nm) مع معالج رسوميات 5 أنوية",
+   "memory": "6 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "ثنائية: 12 ميجابكسل رئيسية Sensor-Shift OIS + 12 ميجابكسل واسعة جداً، Action Mode",
+   "front_camera": "12 ميجابكسل مع تركيز تلقائي + Face ID",
+   "battery": "3279 مللي أمبير — شحن سريع + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ألومنيوم — مقاومة الماء IP68 + اكتشاف الحوادث"
+  }
+ },
+ {
+  "handle": "apple-iphone-14-plus",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 14 Plus",
+  "title": "آبل آيفون 14 بلس",
+  "subtitle": "Apple iPhone 14 Plus",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "6GB",
+  "colors": [
+   "ميدنايت",
+   "ستارلايت",
+   "أزرق",
+   "بنفسجي",
+   "أحمر",
+   "أصفر"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-14-plus/1.webp",
+    "size": 736
+   },
+   {
+    "path": "catalog/apple/iphone-14-plus/2.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-14-plus/3.webp",
+    "size": 736
+   },
+   {
+    "path": "catalog/apple/iphone-14-plus/4.webp",
+    "size": 802
+   },
+   {
+    "path": "catalog/apple/iphone-14-plus/5.webp",
+    "size": 806
+   }
+  ],
+  "specs": {
+   "release": "أكتوبر 2022",
+   "screen": "Super Retina XDR OLED بحجم 6.7 بوصة، سطوع 1200 شمعة، Ceramic Shield",
+   "cpu": "Apple A15 Bionic (5 nm)",
+   "memory": "6 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "ثنائية: 12 ميجابكسل رئيسية Sensor-Shift OIS + 12 ميجابكسل واسعة جداً",
+   "front_camera": "12 ميجابكسل مع تركيز تلقائي + Face ID",
+   "battery": "4323 مللي أمبير — شحن سريع + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ألومنيوم — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-14-pro",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 14 Pro",
+  "title": "آبل آيفون 14 برو",
+  "subtitle": "Apple iPhone 14 Pro",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "6GB",
+  "colors": [
+   "أسود فلكي",
+   "فضي",
+   "ذهبي",
+   "بنفسجي داكن"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-14-pro/1.webp",
+    "size": 735
+   },
+   {
+    "path": "catalog/apple/iphone-14-pro/2.webp",
+    "size": 735
+   },
+   {
+    "path": "catalog/apple/iphone-14-pro/3.webp",
+    "size": 803
+   },
+   {
+    "path": "catalog/apple/iphone-14-pro/4.webp",
+    "size": 803
+   },
+   {
+    "path": "catalog/apple/iphone-14-pro/5.webp",
+    "size": 742
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2022",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.1 بوصة، Dynamic Island، 120Hz، سطوع 2000 شمعة",
+   "cpu": "Apple A16 Bionic (4 nm)",
+   "memory": "6 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "ثلاثية + LiDAR: 48 ميجابكسل رئيسية + 12 ميجابكسل تيليفوتو 3x OIS + 12 ميجابكسل واسعة جداً + LiDAR",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "3200 مللي أمبير — شحن سريع + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ستانلس ستيل — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-14-pro-max",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 14 Pro Max",
+  "title": "آبل آيفون 14 برو ماكس",
+  "subtitle": "Apple iPhone 14 Pro Max",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "6GB",
+  "colors": [
+   "أسود فلكي",
+   "فضي",
+   "ذهبي",
+   "بنفسجي داكن"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-14-pro-max/1.webp",
+    "size": 735
+   },
+   {
+    "path": "catalog/apple/iphone-14-pro-max/2.webp",
+    "size": 735
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2022",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.7 بوصة، Dynamic Island، 120Hz، سطوع 2000 شمعة",
+   "cpu": "Apple A16 Bionic (4 nm)",
+   "memory": "6 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "ثلاثية + LiDAR: 48 ميجابكسل رئيسية + 12 ميجابكسل تيليفوتو 3x OIS + 12 ميجابكسل واسعة جداً + LiDAR",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "4323 مللي أمبير — شحن سريع + MagSafe 15 واط",
+   "build": "زجاج Ceramic Shield مع إطار ستانلس ستيل — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-15",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 15",
+  "title": "آبل آيفون 15",
+  "subtitle": "Apple iPhone 15",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "6GB",
+  "colors": [
+   "أسود",
+   "أزرق",
+   "أخضر",
+   "أصفر",
+   "وردي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-15/1.webp",
+    "size": 732
+   },
+   {
+    "path": "catalog/apple/iphone-15/2.webp",
+    "size": 801
+   },
+   {
+    "path": "catalog/apple/iphone-15/3.webp",
+    "size": 801
+   },
+   {
+    "path": "catalog/apple/iphone-15/4.webp",
+    "size": 682
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2023",
+   "screen": "Super Retina XDR OLED بحجم 6.1 بوصة، Dynamic Island، سطوع 2000 شمعة",
+   "cpu": "Apple A16 Bionic (4 nm)",
+   "memory": "6 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "ثنائية: 48 ميجابكسل رئيسية Sensor-Shift OIS + 12 ميجابكسل واسعة جداً، تقريب بصري 2x",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "3349 مللي أمبير — منفذ USB-C + MagSafe 15 واط + Qi2",
+   "build": "زجاج خلفي مطفي ملون مع إطار ألومنيوم — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-15-plus",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 15 Plus",
+  "title": "آبل آيفون 15 بلس",
+  "subtitle": "Apple iPhone 15 Plus",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "6GB",
+  "colors": [
+   "أسود",
+   "أزرق",
+   "أخضر",
+   "أصفر",
+   "وردي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-15-plus/1.webp",
+    "size": 735
+   },
+   {
+    "path": "catalog/apple/iphone-15-plus/2.webp",
+    "size": 803
+   },
+   {
+    "path": "catalog/apple/iphone-15-plus/3.webp",
+    "size": 803
+   },
+   {
+    "path": "catalog/apple/iphone-15-plus/4.webp",
+    "size": 690
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2023",
+   "screen": "Super Retina XDR OLED بحجم 6.7 بوصة، Dynamic Island، سطوع 2000 شمعة",
+   "cpu": "Apple A16 Bionic (4 nm)",
+   "memory": "6 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "ثنائية: 48 ميجابكسل رئيسية + 12 ميجابكسل واسعة جداً، تقريب 2x",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "4383 مللي أمبير — منفذ USB-C + MagSafe 15 واط",
+   "build": "زجاج خلفي مطفي مع إطار ألومنيوم — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-15-pro",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 15 Pro",
+  "title": "آبل آيفون 15 برو",
+  "subtitle": "Apple iPhone 15 Pro",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "8GB",
+  "colors": [
+   "تيتانيوم طبيعي",
+   "تيتانيوم أزرق",
+   "تيتانيوم أبيض",
+   "تيتانيوم أسود"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-15-pro/1.webp",
+    "size": 735
+   },
+   {
+    "path": "catalog/apple/iphone-15-pro/2.webp",
+    "size": 802
+   },
+   {
+    "path": "catalog/apple/iphone-15-pro/3.webp",
+    "size": 802
+   },
+   {
+    "path": "catalog/apple/iphone-15-pro/4.webp",
+    "size": 678
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2023",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.1 بوصة، 120Hz، Dynamic Island، سطوع 2000 شمعة",
+   "cpu": "Apple A17 Pro (3 nm)",
+   "memory": "8 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "ثلاثية + LiDAR: 48 ميجابكسل رئيسية + 12 ميجابكسل تيليفوتو 3x OIS + 12 ميجابكسل واسعة جداً + LiDAR",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "3274 مللي أمبير — منفذ USB-C 3.2 Gen 2 + MagSafe 15 واط",
+   "build": "هيكل من التيتانيوم Grade 5 مع زر الإجراءات Action Button — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-15-pro-max",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 15 Pro Max",
+  "title": "آبل آيفون 15 برو ماكس",
+  "subtitle": "Apple iPhone 15 Pro Max",
+  "storages": [
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "8GB",
+  "colors": [
+   "تيتانيوم طبيعي",
+   "تيتانيوم أزرق",
+   "تيتانيوم أبيض",
+   "تيتانيوم أسود"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-15-pro-max/1.webp",
+    "size": 735
+   },
+   {
+    "path": "catalog/apple/iphone-15-pro-max/2.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-15-pro-max/3.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-15-pro-max/4.webp",
+    "size": 689
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2023",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.7 بوصة، 120Hz، Dynamic Island، سطوع 2000 شمعة",
+   "cpu": "Apple A17 Pro (3 nm)",
+   "memory": "8 جيجابايت رام — التخزين: 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "ثلاثية + LiDAR: 48 ميجابكسل رئيسية + 12 ميجابكسل بيريسكوب تقريب بصري 5x OIS + 12 ميجابكسل واسعة جداً + LiDAR",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "4441 مللي أمبير — منفذ USB-C 3.2 Gen 2 + MagSafe 15 واط",
+   "build": "هيكل من التيتانيوم Grade 5 مع Action Button — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-16e",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 16e",
+  "title": "آبل آيفون 16e",
+  "subtitle": "Apple iPhone 16e",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "8GB",
+  "colors": [
+   "أسود",
+   "أبيض"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-16e/1.webp",
+    "size": 733
+   },
+   {
+    "path": "catalog/apple/iphone-16e/2.webp",
+    "size": 735
+   },
+   {
+    "path": "catalog/apple/iphone-16e/3.webp",
+    "size": 802
+   },
+   {
+    "path": "catalog/apple/iphone-16e/4.webp",
+    "size": 568
+   }
+  ],
+  "specs": {
+   "release": "فبراير 2025",
+   "screen": "Super Retina XDR OLED بحجم 6.1 بوصة، Ceramic Shield",
+   "cpu": "Apple A18 (3 nm) مع مودم Apple C1 ودعم Apple Intelligence",
+   "memory": "8 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "48 ميجابكسل Fusion OIS مع تقريب بصري 2x، فيديو 4K@60fps Dolby Vision",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "4005 مللي أمبير — منفذ USB-C + شحن لاسلكي Qi",
+   "build": "زجاج Ceramic Shield مع إطار ألومنيوم وAction Button — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-16",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 16",
+  "title": "آبل آيفون 16",
+  "subtitle": "Apple iPhone 16",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "8GB",
+  "colors": [
+   "أسود",
+   "أبيض",
+   "وردي",
+   "أخضر مزرق",
+   "أزرق ألترامارين"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-16/1.webp",
+    "size": 736
+   },
+   {
+    "path": "catalog/apple/iphone-16/2.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-16/3.webp",
+    "size": 623
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2024",
+   "screen": "Super Retina XDR OLED بحجم 6.1 بوصة، Dynamic Island، سطوع 2000 شمعة",
+   "cpu": "Apple A18 (3 nm) مع دعم Apple Intelligence",
+   "memory": "8 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "ثنائية: 48 ميجابكسل Fusion OIS + 12 ميجابكسل واسعة جداً ماكرو + زر Camera Control",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "3561 مللي أمبير — USB-C + شحن MagSafe 25 واط",
+   "build": "زجاج Ceramic Shield الجيل الجديد مع إطار ألومنيوم — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-16-plus",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 16 Plus",
+  "title": "آبل آيفون 16 بلس",
+  "subtitle": "Apple iPhone 16 Plus",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "8GB",
+  "colors": [
+   "أسود",
+   "أبيض",
+   "وردي",
+   "أخضر مزرق",
+   "أزرق ألترامارين"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-16-plus/1.webp",
+    "size": 734
+   },
+   {
+    "path": "catalog/apple/iphone-16-plus/2.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-16-plus/3.webp",
+    "size": 623
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2024",
+   "screen": "Super Retina XDR OLED بحجم 6.7 بوصة، Dynamic Island، سطوع 2000 شمعة",
+   "cpu": "Apple A18 (3 nm) مع دعم Apple Intelligence",
+   "memory": "8 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "ثنائية: 48 ميجابكسل Fusion OIS + 12 ميجابكسل واسعة جداً ماكرو + زر Camera Control",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "4674 مللي أمبير — USB-C + MagSafe 25 واط",
+   "build": "زجاج Ceramic Shield الجيل الجديد مع إطار ألومنيوم — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-16-pro",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 16 Pro",
+  "title": "آبل آيفون 16 برو",
+  "subtitle": "Apple iPhone 16 Pro",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "8GB",
+  "colors": [
+   "تيتانيوم أسود",
+   "تيتانيوم أبيض",
+   "تيتانيوم طبيعي",
+   "تيتانيوم صحراوي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-16-pro/1.webp",
+    "size": 734
+   },
+   {
+    "path": "catalog/apple/iphone-16-pro/2.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-16-pro/3.webp",
+    "size": 624
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2024",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.3 بوصة، 120Hz، Dynamic Island، سطوع 2000 شمعة",
+   "cpu": "Apple A18 Pro (3 nm) مع Apple Intelligence",
+   "memory": "8 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "ثلاثية + LiDAR: 48 ميجابكسل Fusion + 12 ميجابكسل بيريسكوب 5x OIS + 48 ميجابكسل واسعة جداً + زر Camera Control، فيديو 4K@120fps",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "3582 مللي أمبير — USB-C 3.2 Gen 2 + MagSafe 25 واط",
+   "build": "إطار من التيتانيوم Grade 5 مع Ceramic Shield — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-16-pro-max",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 16 Pro Max",
+  "title": "آبل آيفون 16 برو ماكس",
+  "subtitle": "Apple iPhone 16 Pro Max",
+  "storages": [
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "8GB",
+  "colors": [
+   "تيتانيوم أسود",
+   "تيتانيوم أبيض",
+   "تيتانيوم طبيعي",
+   "تيتانيوم صحراوي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-16-pro-max/1.webp",
+    "size": 735
+   },
+   {
+    "path": "catalog/apple/iphone-16-pro-max/2.webp",
+    "size": 806
+   },
+   {
+    "path": "catalog/apple/iphone-16-pro-max/3.webp",
+    "size": 640
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2024",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.9 بوصة، 120Hz، Dynamic Island، سطوع 2000 شمعة",
+   "cpu": "Apple A18 Pro (3 nm) مع Apple Intelligence",
+   "memory": "8 جيجابايت رام — التخزين: 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "ثلاثية + LiDAR: 48 ميجابكسل Fusion + 12 ميجابكسل بيريسكوب 5x OIS + 48 ميجابكسل واسعة جداً + Camera Control، فيديو 4K@120fps",
+   "front_camera": "12 ميجابكسل AF + Face ID",
+   "battery": "4685 مللي أمبير — USB-C 3.2 Gen 2 + MagSafe 25 واط",
+   "build": "إطار من التيتانيوم Grade 5 مع Ceramic Shield — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-17",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 17",
+  "title": "آبل آيفون 17",
+  "subtitle": "Apple iPhone 17",
+  "storages": [
+   "256GB",
+   "512GB"
+  ],
+  "ram": "8GB",
+  "colors": [
+   "أسود",
+   "أبيض",
+   "أزرق ضبابي",
+   "لافندر",
+   "أخضر سيج"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-17/1.webp",
+    "size": 739
+   },
+   {
+    "path": "catalog/apple/iphone-17/2.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-17/3.webp",
+    "size": 625
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2025",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.3 بوصة، تردد ProMotion 120Hz، Ceramic Shield 2",
+   "cpu": "Apple A19 (3 nm) مع دعم Apple Intelligence",
+   "memory": "8 جيجابايت رام — التخزين: 256 / 512 جيجابايت",
+   "camera": "ثنائية Fusion: 48 ميجابكسل رئيسية OIS + 48 ميجابكسل واسعة جداً ماكرو + Camera Control",
+   "front_camera": "18 ميجابكسل Center Stage مع تركيز تلقائي + Face ID",
+   "battery": "بطارية عالية الكفاءة — شحن سريع + MagSafe 25 واط + Qi2",
+   "build": "زجاج Ceramic Shield 2 مع إطار ألومنيوم — مقاومة الماء والغبار IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-air",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone Air",
+  "title": "آبل آيفون إير",
+  "subtitle": "Apple iPhone Air",
+  "storages": [
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "12GB",
+  "colors": [
+   "أسود فضائي",
+   "أبيض سحابي",
+   "ذهبي فاتح",
+   "أزرق سماوي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-air/1.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-air/2.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-air/3.webp",
+    "size": 625
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2025",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.5 بوصة، تردد ProMotion 120Hz، سطوع 3000 شمعة",
+   "cpu": "Apple A19 Pro (3 nm) مع مودم Apple C1X",
+   "memory": "12 جيجابايت رام — التخزين: 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "48 ميجابكسل Fusion OIS مع تقريب بصري 2x + زر Camera Control",
+   "front_camera": "18 ميجابكسل Center Stage + Face ID",
+   "battery": "تصميم فائق النحافة بسماكة 5.6 ملم — شحن سريع + MagSafe",
+   "build": "هيكل تيتانيوم فائق النحافة مع Ceramic Shield 2 — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-17-pro",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 17 Pro",
+  "title": "آبل آيفون 17 برو",
+  "subtitle": "Apple iPhone 17 Pro",
+  "storages": [
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "12GB",
+  "colors": [
+   "فضي",
+   "برتقالي كوني",
+   "أزرق داكن"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-17-pro/1.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-17-pro/2.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-17-pro/3.webp",
+    "size": 625
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2025",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.3 بوصة، 120Hz، سطوع 3000 شمعة، مضاد للانعكاس",
+   "cpu": "Apple A19 Pro (3 nm) مع تبريد بغرفة بخار Vapor Chamber",
+   "memory": "12 جيجابايت رام — التخزين: 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "ثلاثية 48 ميجابكسل + LiDAR: 48MP رئيسية + 48MP بيريسكوب تيليفوتو تقريب حتى 8x + 48MP واسعة جداً، فيديو ProRes RAW",
+   "front_camera": "18 ميجابكسل Center Stage + Face ID",
+   "battery": "بطارية مطورة مع شحن سريع 40 واط + MagSafe 25 واط",
+   "build": "تصميم Unibody ألومنيوم مقوى مع Ceramic Shield 2 — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-17-pro-max",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 17 Pro Max",
+  "title": "آبل آيفون 17 برو ماكس",
+  "subtitle": "Apple iPhone 17 Pro Max",
+  "storages": [
+   "256GB",
+   "512GB",
+   "1TB",
+   "2TB"
+  ],
+  "ram": "12GB",
+  "colors": [
+   "فضي",
+   "برتقالي كوني",
+   "أزرق داكن"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-17-pro-max/1.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-17-pro-max/2.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-17-pro-max/3.webp",
+    "size": 625
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2025",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.9 بوصة، 120Hz، سطوع 3000 شمعة، مضاد للانعكاس",
+   "cpu": "Apple A19 Pro (3 nm) مع تبريد Vapor Chamber",
+   "memory": "12 جيجابايت رام — التخزين: 256 / 512 جيجابايت / 1 تيرابايت / 2 تيرابايت",
+   "camera": "ثلاثية 48 ميجابكسل + LiDAR: 48MP رئيسية + 48MP بيريسكوب تيليفوتو + 48MP واسعة جداً + Camera Control، فيديو 4K@120fps",
+   "front_camera": "18 ميجابكسل Center Stage + Face ID",
+   "battery": "أكبر بطارية في آيفون (~5000 مللي أمبير) — شحن سريع 40 واط + MagSafe 25 واط",
+   "build": "تصميم Unibody مقوى مع Ceramic Shield 2 — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-17e",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 17e",
+  "title": "آبل آيفون 17e",
+  "subtitle": "Apple iPhone 17e",
+  "storages": [
+   "128GB",
+   "256GB",
+   "512GB"
+  ],
+  "ram": "8GB",
+  "colors": [
+   "أسود",
+   "أبيض",
+   "وردي فاتح"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-17e/1.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-17e/2.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-17e/3.webp",
+    "size": 625
+   }
+  ],
+  "specs": {
+   "release": "2026",
+   "screen": "Super Retina XDR OLED بحجم 6.1 بوصة، Ceramic Shield",
+   "cpu": "Apple A19 (3 nm) مع دعم Apple Intelligence",
+   "memory": "8 جيجابايت رام — التخزين: 128 / 256 / 512 جيجابايت",
+   "camera": "48 ميجابكسل Fusion OIS مع تقريب بصري 2x",
+   "front_camera": "12/18 ميجابكسل + Face ID",
+   "battery": "بطارية طويلة العمر — USB-C + شحن لاسلكي",
+   "build": "زجاج مقوى مع إطار ألومنيوم — مقاومة الماء IP68"
+  }
+ },
+ {
+  "handle": "apple-iphone-18-pro",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 18 Pro",
+  "title": "آبل آيفون 18 برو",
+  "subtitle": "Apple iPhone 18 Pro",
+  "storages": [
+   "256GB",
+   "512GB",
+   "1TB",
+   "2TB"
+  ],
+  "ram": "12GB",
+  "colors": [
+   "عنابي",
+   "فضي",
+   "أزرق جليدي",
+   "أسود"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-18-pro/1.webp",
+    "size": 806
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro/2.webp",
+    "size": 694
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro/3.webp",
+    "size": 693
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro/4.webp",
+    "size": 693
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro/5.webp",
+    "size": 694
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro/6.webp",
+    "size": 1800
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro/7.webp",
+    "size": 1800
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro/8.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro/9.webp",
+    "size": 625
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2026",
+   "screen": "Super Retina XDR OLED بحجم 6.3 بوصة (2622×1206 بكسل، 460ppi)، تردد ProMotion 120Hz، Always-On، Dynamic Island، سطوع 3000 شمعة",
+   "cpu": "Apple A20 Pro سداسي النواة مع معالج رسوميات يدعم تتبع الأشعة ومحرك عصبي مزدوج 16 نواة لـ Apple Intelligence",
+   "memory": "12 جيجابايت رام LPDDR5X — التخزين: 256 / 512 جيجابايت / 1 تيرابايت / 2 تيرابايت",
+   "camera": "ثلاثية Pro Fusion: 48 ميجابكسل رئيسية بفتحة عدسة متغيرة (f/1.48 - f/4.0) + عدسة تيليفوتو 48 ميجابكسل + عدسة واسعة جداً 48 ميجابكسل + LiDAR",
+   "front_camera": "18 ميجابكسل Center Stage مع تركيز تلقائي والتقاط مزدوج + Face ID",
+   "battery": "شحن سلكي فائق السرعة (50% خلال 15 دقيقة بشاحن 60 واط+) + MagSafe + Qi2",
+   "build": "هيكل ألومنيوم Unibody مع زجاج خلفي متناسق الألوان وCeramic Shield 2 — مقاومة الماء والغبار IP68",
+   "os": "نظام iOS 27 — Wi-Fi 7، بلوتوث 6، 5G / 5G-A، دعم eSIM، منفذ USB-C"
+  }
+ },
+ {
+  "handle": "apple-iphone-18-pro-max",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone 18 Pro Max",
+  "title": "آبل آيفون 18 برو ماكس",
+  "subtitle": "Apple iPhone 18 Pro Max",
+  "storages": [
+   "256GB",
+   "512GB",
+   "1TB",
+   "2TB"
+  ],
+  "ram": "12GB",
+  "colors": [
+   "عنابي",
+   "فضي",
+   "أزرق جليدي",
+   "أسود"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-18-pro-max/1.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro-max/2.webp",
+    "size": 697
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro-max/3.webp",
+    "size": 697
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro-max/4.webp",
+    "size": 697
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro-max/5.webp",
+    "size": 697
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro-max/6.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro-max/7.webp",
+    "size": 625
+   },
+   {
+    "path": "catalog/apple/iphone-18-pro-max/8.webp",
+    "size": 807
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2026",
+   "screen": "Super Retina XDR OLED بحجم 6.9 بوصة (2868×1320 بكسل، 460ppi)، تردد ProMotion 120Hz، Always-On، Dynamic Island، سطوع 3000 شمعة",
+   "cpu": "Apple A20 Pro سداسي النواة مع معالج رسوميات بتتبع الأشعة ومحرك عصبي مزدوج 16 نواة لـ Apple Intelligence",
+   "memory": "12 جيجابايت رام LPDDR5X — التخزين: 256 / 512 جيجابايت / 1 تيرابايت / 2 تيرابايت",
+   "camera": "ثلاثية Pro Fusion: 48 ميجابكسل رئيسية بفتحة عدسة متغيرة (f/1.48 - f/4.0) + عدسة بيريسكوب تيليفوتو + عدسة واسعة جداً 48 ميجابكسل + LiDAR",
+   "front_camera": "18 ميجابكسل Center Stage مع تركيز تلقائي والتقاط مزدوج + Face ID",
+   "battery": "أطول عمر بطارية في آيفون (حتى 29 ساعة استخدام عام) — شحن سريع 60 واط+ (50% في 15 دقيقة) + MagSafe + Qi2",
+   "build": "هيكل ألومنيوم Unibody مع زجاج Ceramic Shield 2 أمامي مقاوم للخدش — مقاومة الماء والغبار IP68",
+   "os": "نظام iOS 27 — Wi-Fi 7، بلوتوث 6، 5G / 5G-A، دعم eSIM، منفذ USB-C"
+  }
+ },
+ {
+  "handle": "apple-iphone-duo-fold",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone Duo Fold",
+  "title": "آبل آيفون دو فولد",
+  "subtitle": "Apple iPhone Duo Fold",
+  "storages": [
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "12GB",
+  "colors": [
+   "أبيض النجوم",
+   "سماء الليل"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-duo-fold/1.webp",
+    "size": 1225
+   },
+   {
+    "path": "catalog/apple/iphone-duo-fold/2.webp",
+    "size": 1225
+   },
+   {
+    "path": "catalog/apple/iphone-duo-fold/3.webp",
+    "size": 1800
+   },
+   {
+    "path": "catalog/apple/iphone-duo-fold/4.webp",
+    "size": 1800
+   },
+   {
+    "path": "catalog/apple/iphone-duo-fold/5.webp",
+    "size": 1800
+   },
+   {
+    "path": "catalog/apple/iphone-duo-fold/6.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-duo-fold/7.webp",
+    "size": 805
+   },
+   {
+    "path": "catalog/apple/iphone-duo-fold/8.webp",
+    "size": 807
+   },
+   {
+    "path": "catalog/apple/iphone-duo-fold/9.webp",
+    "size": 803
+   },
+   {
+    "path": "catalog/apple/iphone-duo-fold/10.webp",
+    "size": 720
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2026",
+   "screen": "شاشة داخلية قابلة للطي Super Retina XDR OLED + شاشة خارجية مع تردد ProMotion 120Hz",
+   "cpu": "Apple A20 Pro مع دعم Apple Intelligence وتعدد المهام المتقدم",
+   "memory": "12 جيجابايت رام LPDDR5X — التخزين: 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "نظام كاميرا مزدوج/احترافي 48 ميجابكسل Fusion OIS + واسعة جداً 48 ميجابكسل",
+   "front_camera": "كاميرا Center Stage أمامية مزدوجة للوضعين المطوي والمفتوح",
+   "battery": "بطارية ثنائية الخلايا عالية السعة مع شحن سريع سلكي + MagSafe + Qi2",
+   "build": "مفصل هندسي فائق المتانة وتصميم نحيف عند الطي والفتح — مقاومة الماء",
+   "os": "نظام iOS 27 بواجهة مخصصة للشاشات القابلة للطي — Wi-Fi 7، بلوتوث 6، 5G، USB-C"
+  }
+ },
+ {
+  "handle": "apple-iphone-air-2",
+  "brand": "Apple",
+  "category": [
+   "جوالات",
+   "آبل"
+  ],
+  "model": "iPhone Air 2",
+  "title": "آبل آيفون إير 2",
+  "subtitle": "Apple iPhone Air 2",
+  "storages": [
+   "256GB",
+   "512GB",
+   "1TB"
+  ],
+  "ram": "12GB",
+  "colors": [],
+  "images": [
+   {
+    "path": "catalog/apple/iphone-air-2/1.webp",
+    "size": 807
+   }
+  ],
+  "specs": {
+   "release": "2026",
+   "screen": "LTPO Super Retina XDR OLED بحجم 6.5 بوصة، تردد ProMotion 120Hz، سطوع 3000 شمعة، Ceramic Shield 2",
+   "cpu": "معالج Apple A20 عالي الكفاءة مع دعم Apple Intelligence",
+   "memory": "12 جيجابايت رام — التخزين: 256 / 512 جيجابايت / 1 تيرابايت",
+   "camera": "كاميرا 48 ميجابكسل Fusion OIS مع تقريب بصري 2x",
+   "front_camera": "18 ميجابكسل Center Stage + Face ID",
+   "battery": "تصميم فائق النحافة والخفة — شحن سريع + MagSafe + Qi2",
+   "build": "هيكل تيتانيوم فائق النحافة مع زجاج Ceramic Shield 2 — مقاومة الماء والغبار IP68",
+   "os": "نظام iOS 27 — Wi-Fi 7، بلوتوث 6، 5G، eSIM، USB-C"
+  }
+ },
+ {
+  "handle": "apple-airpods-4",
+  "brand": "Apple",
+  "category": [
+   "سماعات",
+   "آبل"
+  ],
+  "model": "AirPods 4",
+  "title": "آبل إيربودز 4 بعزل الضوضاء",
+  "subtitle": "Apple AirPods 4 (ANC)",
+  "storages": [],
+  "ram": "",
+  "colors": [],
+  "images": [
+   {
+    "path": "catalog/apple/airpods-4/1.webp",
+    "size": 567
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2024",
+   "type": "سماعات لاسلكية مفتوحة الأذن مع عزل ضوضاء نشط ANC",
+   "chip": "شريحة Apple H2",
+   "features": "عزل الضوضاء النشط ANC، وضع الشفافية، الصوت المكاني التفاعلي، علبة شحن USB-C مع مكبر صوت للعثور عليها وشحن لاسلكي",
+   "battery": "حتى 5 ساعات استماع متواصل — حتى 30 ساعة مع علبة الشحن",
+   "resistance": "مقاومة الغبار والعرق والماء بمعيار IP54"
+  }
+ },
+ {
+  "handle": "apple-airpods-pro-2",
+  "brand": "Apple",
+  "category": [
+   "سماعات",
+   "آبل"
+  ],
+  "model": "AirPods Pro 2",
+  "title": "آبل إيربودز برو 2 (USB-C)",
+  "subtitle": "Apple AirPods Pro 2 (USB-C)",
+  "storages": [],
+  "ram": "",
+  "colors": [],
+  "images": [
+   {
+    "path": "catalog/apple/airpods-pro-2/1.webp",
+    "size": 761
+   }
+  ],
+  "specs": {
+   "release": "2023 / 2024",
+   "type": "سماعات لاسلكية احترافية داخل الأذن مع عزل ضوضاء فائق",
+   "chip": "شريحة Apple H2 + شريحة U1 في علبة MagSafe",
+   "features": "عزل ضوضاء نشط مضاعف 2x، الصوت التكيفي Adaptive Audio، ميزات صحة السمع، تحكم باللمس لرفع وخفض الصوت",
+   "battery": "حتى 6 ساعات استماع — حتى 30 ساعة مع علبة الشحن MagSafe USB-C",
+   "resistance": "مقاومة الغبار والعرق والماء بمعيار IP54"
+  }
+ },
+ {
+  "handle": "apple-airpods-pro-3",
+  "brand": "Apple",
+  "category": [
+   "سماعات",
+   "آبل"
+  ],
+  "model": "AirPods Pro 3",
+  "title": "آبل إيربودز برو 3",
+  "subtitle": "Apple AirPods Pro 3",
+  "storages": [],
+  "ram": "",
+  "colors": [],
+  "images": [
+   {
+    "path": "catalog/apple/airpods-pro-3/1.webp",
+    "size": 761
+   }
+  ],
+  "specs": {
+   "release": "2025",
+   "type": "الجيل الثالث من سماعات AirPods Pro الاحترافية",
+   "chip": "شريحة Apple H3 مطورة",
+   "features": "عزل ضوضاء نشط فائق التطور، مستشعر قياس نبضات القلب داخل الأذن، ترجمة فورية بالذكاء الاصطناعي، علبة شحن MagSafe USB-C",
+   "battery": "عمر بطارية محسن حتى 8 ساعات استماع متواصل",
+   "resistance": "مقاومة الغبار والعرق والماء بمعيار IP57"
+  }
+ },
+ {
+  "handle": "apple-airpods-max-usb-c",
+  "brand": "Apple",
+  "category": [
+   "سماعات",
+   "آبل"
+  ],
+  "model": "AirPods Max",
+  "title": "آبل إيربودز ماكس (USB-C)",
+  "subtitle": "Apple AirPods Max (USB-C)",
+  "storages": [],
+  "ram": "",
+  "colors": [
+   "ميدنايت",
+   "ستارلايت",
+   "أزرق",
+   "بنفسجي",
+   "برتقالي"
+  ],
+  "images": [
+   {
+    "path": "catalog/apple/airpods-max-usb-c/1.webp",
+    "size": 618
+   }
+  ],
+  "specs": {
+   "release": "سبتمبر 2024",
+   "type": "سماعات رأس احترافية Over-Ear بصوت استوديو عالي الدقة",
+   "chip": "شريحتا Apple H1 (واحدة في كل جهة)",
+   "features": "عزل ضوضاء نشط احترافي، صوت Lossless عبر كابل USB-C، تاج رقمي Digital Crown، هيكل ألومنيوم أنيق مع وسائد Memory Foam",
+   "battery": "حتى 20 ساعة استماع متواصل مع تفعيل ANC والصوت المكاني",
+   "resistance": "تصميم فاخر مع حافظة Smart Case ذكية"
+  }
+ },
+ {
+  "handle": "apple-watch-series-10-and-11",
+  "brand": "Apple",
+  "category": [
+   "إكسسوارات",
+   "آبل"
+  ],
+  "model": "Apple Watch Series 10/11",
+  "title": "ساعة آبل الإصدار 10 / 11",
+  "subtitle": "Apple Watch Series 10 / 11",
+  "storages": [],
+  "ram": "",
+  "colors": [],
+  "images": [
+   {
+    "path": "catalog/apple/watch-series-10-and-11/1.webp",
+    "size": 911
+   }
+  ],
+  "specs": {
+   "release": "2024 / 2025",
+   "type": "ساعة أبل الذكية الأنحف بشاشة واسعة الزاوية Wide-Angle OLED",
+   "chip": "شريحة Apple S10 / S11 SiP ثنائية النواة",
+   "features": "شاشة Always-On سطوع 2000 شمعة، تخطيط قلب ECG، قياس الأكسجين والحرارة، كشف انقطاع النفس أثناء النوم، شحن سريع 80% في 30 دقيقة",
+   "battery": "حتى 18-24 ساعة (وحتى 36 ساعة بوضع الطاقة المنخفضة)",
+   "resistance": "مقاومة الماء حتى عمق 50 متر (WR50) ومقاومة الغبار IP6X"
+  }
+ },
+ {
+  "handle": "apple-watch-ultra-2-and-3",
+  "brand": "Apple",
+  "category": [
+   "إكسسوارات",
+   "آبل"
+  ],
+  "model": "Apple Watch Ultra 2/3",
+  "title": "ساعة آبل ألترا 2 / 3",
+  "subtitle": "Apple Watch Ultra 2 / 3",
+  "storages": [],
+  "ram": "",
+  "colors": [],
+  "images": [
+   {
+    "path": "catalog/apple/watch-ultra-2-and-3/1.webp",
+    "size": 911
+   }
+  ],
+  "specs": {
+   "release": "2024 / 2025",
+   "type": "ساعة أبل للمغامرات والغوص بهيكل تيتانيوم مقاس 49 ملم",
+   "chip": "شريحة Apple S9 / S10 / S11 مع دعم 5G والأقمار الصناعية",
+   "features": "شاشة OLED فائقة السطوع 3000 شمعة بزجاج ياقوتي Sapphire، زر Action Button برتقالي، نظام GPS مزدوج التردد عالي الدقة، عمق غوص 40 متر",
+   "battery": "حتى 36-42 ساعة استخدام عادي (وحتى 72 ساعة بوضع الطاقة المنخفضة)",
+   "resistance": "معيار عسكري MIL-STD 810H ومقاومة ماء 100 متر (EN13319)"
+  }
+ },
+ {
+  "handle": "apple-magsafe-charger-and-accessories",
+  "brand": "Apple",
+  "category": [
+   "إكسسوارات",
+   "آبل"
+  ],
+  "model": "MagSafe Charger",
+  "title": "شاحن آبل MagSafe اللاسلكي",
+  "subtitle": "Apple MagSafe Charger & Power Accessories",
+  "storages": [],
+  "ram": "",
+  "colors": [],
+  "images": [],
+  "specs": {
+   "release": "2024 / 2025",
+   "type": "شاحن MagSafe اللاسلكي السريع (25 واط) وإكسسوارات الطاقة المغناطيسية",
+   "chip": "توافق كامل مع معيار Qi2 ومغناطيس محاذاة دقيق",
+   "features": "شحن لاسلكي فائق السرعة حتى 25 واط لسلسلة iPhone 16 و17 و18، متوفر بطول 1 متر و2 متر مع كابل USB-C مضفر عالي المتانة",
+   "battery": "يدعم شحن 50% من بطارية الآيفون خلال 30 دقيقة مع محول 30 واط",
+   "resistance": "تصميم ألومنيوم أنيق متوافق مع جميع حافظات MagSafe"
+  }
+ },
+ {
+  "handle": "apple-airtag",
+  "brand": "Apple",
+  "category": [
+   "إكسسوارات",
+   "آبل"
+  ],
+  "model": "AirTag",
+  "title": "آبل إيرتاغ لتتبع الأغراض",
+  "subtitle": "Apple AirTag",
+  "storages": [],
+  "ram": "",
+  "colors": [],
+  "images": [
+   {
+    "path": "catalog/apple/airtag/1.webp",
+    "size": 527
+   }
+  ],
+  "specs": {
+   "release": "أحدث إصدار",
+   "type": "جهاز التتبع الذكي للأغراض والمفاتيح والحقائب عبر شبكة Find My",
+   "chip": "شريحة Ultra Wideband (U1 / U2) للعثور الدقيق Precision Finding",
+   "features": "مكبر صوت مدمج، إقران فوري بلمسة واحدة مع الآيفون، حماية كاملة للخصوصية والتشفير",
+   "battery": "بطارية CR2032 قابلة للاستبدال تدوم لأكثر من عام كامل",
+   "resistance": "مقاومة الماء والغبار بمعيار IP67"
+  }
+ }
+]

@@ -1,20 +1,20 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
-// شريط العروض الرئيسي (نصوص ثابتة؛ لاحقاً يمكن ربطه بمجموعة "عروض" من اللوحة)
+// يظهر فقط إن لم تُضف «عروض الأسبوع» من لوحة التحكم (واجهة المتجر ← + إضافة عرض)
 const Hero = () => {
   return (
-    <section className="w-full bg-brand-navy text-white">
-      <div className="content-container flex flex-col items-start gap-5 py-16 small:py-24">
-        <span className="rounded-full bg-brand-orange/20 text-brand-orange px-3 py-1 text-small-semi">عروض الأسبوع</span>
-        <h1 className="text-3xl small:text-5xl font-bold leading-tight">جوالات أصلية بأسعار تنافسية</h1>
-        <p className="text-base-regular text-white/80 max-w-xl">
-          جديد ومستعمل ومجدّد، مع إكسسوارات أصلية. الدفع عند الاستلام والتوصيل داخل المدينة أو الاستلام من المحل.
+    <section className="w-full border-b border-gray-100 bg-white text-brand-navy">
+      <div className="content-container flex flex-col items-start gap-5 py-14 small:py-20">
+        <span className="rounded-full bg-brand-orange/10 px-3 py-1 text-small-semi text-brand-orange">لمسة فون</span>
+        <h1 className="text-3xl font-bold leading-tight small:text-5xl">عروض الأسبوع</h1>
+        <p className="max-w-xl text-base-regular text-gray-600">
+          أفضل الأسعار على الجوالات والسماعات والإكسسوارات الأصلية. الدفع عند الاستلام والتوصيل داخل المدينة أو الاستلام من المحل.
         </p>
         <div className="flex gap-3">
           <LocalizedClientLink href="/store" className="rounded-lg bg-brand-orange px-6 py-3 font-bold text-white hover:opacity-90">
             تسوّق الآن
           </LocalizedClientLink>
-          <LocalizedClientLink href="/categories/جوالات" className="rounded-lg border border-white/40 px-6 py-3 text-white hover:bg-white/10">
+          <LocalizedClientLink href="/categories/جوالات" className="rounded-lg border border-gray-300 px-6 py-3 text-brand-navy hover:bg-gray-50">
             الجوالات
           </LocalizedClientLink>
         </div>

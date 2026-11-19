@@ -9,7 +9,7 @@ import PostPreview from "../../components/quick-add-post-preview"
 import type { FitMode } from "../../lib/quick-add-geometry"
 import type { MetaPublic } from "../../components/quick-add-meta-connect"
 import QuickAddProducts from "../../components/quick-add-products"
-import { CATALOG, CatalogModel, STORE_ORIGIN, describe as describeModel, imageUrls } from "../../lib/samsung-catalog"
+import { BRANDS, CATALOG, CatalogModel, STORE_ORIGIN, describe as describeModel, imageUrls } from "../../lib/samsung-catalog"
 import { SPEC_FIELDS, Specs, cleanSpecs } from "../../lib/product-specs"
 import { buildOptions, optionMode, titleWith } from "../../lib/product-options"
 
@@ -50,7 +50,19 @@ const storeOrigin = () => {
     return STORE_ORIGIN
   }
 }
-const SAMSUNG = /سامسونج|samsung/i
+// مطابقة أسماء الأقسام الموجودة بمرونة (همزات، "ال"، العربي والإنجليزي) حتى لا نكرر قسماً موجوداً
+const norm = (x: string) => x.replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/\s+/g, "").toLowerCase()
+const ALIASES: Record<string, string[]> = {
+  جوالات: ["جوال", "هواتف", "phone"],
+  سماعات: ["سماع", "headphone", "earbud", "audio"],
+  إكسسوارات: ["اكسسوار", "accessor"],
+  سامسونج: ["سامسونج", "samsung"],
+  آبل: ["ابل", "apple", "ايفون", "iphone"],
+}
+const nameMatches = (name: string, want: string) => {
+  const n = norm(name).replace(/^ال/, "")
+  return [want, ...(ALIASES[want] || [])].some((a) => n.includes(norm(a).replace(/^ال/, "")))
+}
 
 const QuickAddPage = () => {
   const [ctx, setCtx] = useState<Ctx | null>(null)
@@ -147,6 +159,8 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
   // موديل من الكتالوج (اختياري) والمواصفات (نفس خانة "المواصفات" في صفحة المنتج)
   const [model, setModel] = useState<CatalogModel | null>(null)
   const [modelQ, setModelQ] = useState("")
+  const [brandTab, setBrandTab] = useState(BRANDS[0].key)
+  const brandModels = CATALOG.filter((m) => m.brand === brandTab)
   const [specs, setSpecs] = useState<Specs>({})
   const [detailsOpen, setDetailsOpen] = useState(false)
   // ميتا (للمنشور فقط)
@@ -197,24 +211,44 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
     setToIg(false)
     setToCatalog(false)
     try {
-      setCategoryId(await samsungCategory())
+      setCategoryId(await ensureCategory(m.category))
     } catch (e: any) {
-      toast.warning(`اختر القسم يدوياً: ${e?.message || "تعذّر إنشاء قسم سامسونج"}`)
+      toast.warning(`اختر القسم يدوياً: ${e?.message || "تعذّر إنشاء القسم"}`)
     }
   }
-  const samsungCategory = async () => {
-    const phones = cats.find((c) => c.names.length === 1 && c.names[0] === "جوالات")
-    const found =
-      cats.find((c) => SAMSUNG.test(c.names[c.names.length - 1]) && c.names[0] === "جوالات") || cats.find((c) => SAMSUNG.test(c.names[c.names.length - 1]))
-    if (found) return found.id
-    const { product_category } = await sdk.admin.productCategory.create({
-      name: "سامسونج",
-      is_active: true,
-      is_internal: false,
-      ...(phones ? { parent_category_id: phones.id } : {}),
-    } as any)
-    await reloadCtx()
-    return product_category.id
+  // يجد القسم (مثل جوالات › آبل) أو يُنشئ الناقص منه، ويعيد معرّفات المسار كاملاً (الرئيسي ثم الفرعي)
+  const madeCats = useRef<{ id: string; name: string; parent_id: string | null }[]>([])
+  const ensurePath = async (path: string[]) => {
+    const list = [...ctx.categories.map((c) => ({ id: c.id, name: c.name, parent_id: c.parent_id || null })), ...madeCats.current]
+    const ids: string[] = []
+    let parent: string | null = null
+    for (const name of path) {
+      const found = list.find((c) => (c.parent_id || null) === parent && nameMatches(c.name, name))
+      if (found) {
+        parent = found.id
+      } else {
+        // الرابط (handle) فريد في كل المتجر: "آبل" تحت الجوالات وتحت السماعات يحتاجان رابطين مختلفين
+        const { product_category } = await sdk.admin.productCategory.create({
+          name,
+          handle: path.slice(0, ids.length + 1).join("-").replace(/\s+/g, "-"),
+          is_active: true,
+          is_internal: false,
+          ...(parent ? { parent_category_id: parent } : {}),
+        } as any)
+        const c = { id: product_category.id, name, parent_id: parent }
+        list.push(c)
+        madeCats.current.push(c)
+        parent = c.id
+      }
+      ids.push(parent as string)
+    }
+    return ids
+  }
+  const ensureCategory = async (path: string[]) => {
+    const n = madeCats.current.length
+    const ids = await ensurePath(path)
+    if (madeCats.current.length > n) await reloadCtx()
+    return ids[ids.length - 1]
   }
 
   // الموديلات المضافة سابقاً (لتمييزها في البطاقات) والإضافة الجماعية لعدة موديلات دفعة واحدة
@@ -238,14 +272,19 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
     if (!list.length) return
     setBulkLog([])
     try {
-      setBusy("قسم سامسونج…")
-      const catId = await samsungCategory()
-      const catIds: string[] = []
-      for (let c = ctx.categories.find((x) => x.id === catId); c; c = ctx.categories.find((x) => x.id === c!.parent_id)) catIds.unshift(c.id)
+      setBusy("تجهيز الأقسام…")
+      // كل نوع في قسمه: جوالات › سامسونج، جوالات › آبل، سماعات › آبل، إكسسوارات › آبل
+      const paths: Record<string, string[]> = {}
+      for (const m of list) {
+        const key = m.category.join("›")
+        if (!paths[key]) paths[key] = await ensurePath(m.category)
+      }
+      reloadCtx()
       const origin = storeOrigin()
       let ok = 0
       for (const m of list) {
-        setBusy(`إضافة ${m.model}…`)
+        setBusy(`إضافة ${m.title}…`)
+        const catIds = paths[m.category.join("›")]
         try {
           const urls = imageUrls(m, origin)
           // كل السعات والألوان يختار منها العميل، وبلا سعر (السعر عبر واتساب) حتى تضيفه
@@ -256,10 +295,10 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
             description: describeModel(m),
             status: "published",
             ...(urls.length ? { thumbnail: urls[0], images: urls.map((url) => ({ url })) } : {}),
-            categories: (catIds.length ? catIds : [catId]).map((id) => ({ id })),
+            categories: catIds.map((id) => ({ id })),
             sales_channels: ctx.default_sales_channel_id ? [{ id: ctx.default_sales_channel_id }] : undefined,
             shipping_profile_id: ctx.shipping_profile_id || undefined,
-            metadata: { condition, specs: cleanSpecs(m.specs), model: m.model, brand: "Samsung", added_by: "quick-add" },
+            metadata: { condition: m.brand === "Samsung" ? condition : "new", specs: cleanSpecs(m.specs), model: m.model, brand: m.brand, added_by: "quick-add" },
             options: built.options,
             variants: built.variants.map((v) => ({ ...v, manage_inventory: false, allow_backorder: false })),
           }
@@ -452,7 +491,7 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
           ...(storages.length === 1 ? { storage: storages[0] } : {}),
           ...(colors.length === 1 ? { color: colors[0] } : {}),
           ...(Object.keys(cleanS).length ? { specs: cleanS } : {}),
-          ...(model ? { model: model.model, brand: "Samsung" } : {}),
+          ...(model ? { model: model.model, brand: model.brand } : {}),
           meta_images: metaUrls,
           ...(videoMeta.length ? { videos: videoMeta } : {}),
           added_by: "quick-add",
@@ -526,7 +565,7 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
         {/* 0. موديل جاهز من الكتالوج (اختياري) */}
         <section className="flex flex-col gap-2 rounded-lg border bg-ui-bg-subtle p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label>موديل سامسونج جاهز (اختياري)</Label>
+            <Label>موديل جاهز من الكتالوج (اختياري)</Label>
             {model && (
               <button type="button" className="text-xs text-ui-fg-error underline" onClick={() => (setModel(null), setImages((xs) => xs.filter((x) => !x.url)))}>
                 إلغاء الموديل
@@ -539,15 +578,39 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
             </Text>
           ) : (
             <>
+              <div className="flex flex-wrap gap-1.5" role="tablist">
+                {BRANDS.map((b) => {
+                  const n = CATALOG.filter((m) => m.brand === b.key).length
+                  const on = brandTab === b.key
+                  return (
+                    <button
+                      key={b.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      onClick={() => (setBrandTab(b.key), setBulkSel(new Set()), setModelQ(""))}
+                      className={`rounded-full border px-4 py-1.5 text-sm font-medium transition ${on ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "bg-ui-bg-base hover:bg-ui-bg-subtle-hover"}`}
+                    >
+                      {b.label} <span className="opacity-70">({n})</span>
+                    </button>
+                  )
+                })}
+              </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Input className="min-w-0 flex-1" dir="auto" value={modelQ} onChange={(e) => setModelQ(e.target.value)} placeholder="ابحث: S24 ألترا، S23، S10…" />
+                <Input
+                  className="min-w-0 flex-1"
+                  dir="auto"
+                  value={modelQ}
+                  onChange={(e) => setModelQ(e.target.value)}
+                  placeholder={brandTab === "Apple" ? "ابحث: 15 برو ماكس، إيربودز، ساعة…" : "ابحث: S24 ألترا، S23، S10…"}
+                />
                 {bulkSel.size > 0 ? (
                   <>
                     <Button size="small" isLoading={Boolean(busy)} onClick={addBulk}>إضافة المحدد للمتجر ({bulkSel.size})</Button>
                     <Button size="small" variant="secondary" onClick={() => setBulkSel(new Set())}>إلغاء التحديد</Button>
                   </>
                 ) : (
-                  <Button size="small" variant="secondary" onClick={() => setBulkSel(new Set(CATALOG.filter((m) => m.images.length && !added[m.model]).map((m) => m.handle)))}>
+                  <Button size="small" variant="secondary" onClick={() => setBulkSel(new Set(brandModels.filter((m) => m.images.length && !added[m.model]).map((m) => m.handle)))}>
                     تحديد كل غير المضاف
                   </Button>
                 )}
@@ -558,7 +621,7 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
               {busy && bulkSel.size > 0 && <Text size="small">{busy}</Text>}
               {bulkLog.length > 0 && <pre className="max-h-32 overflow-auto rounded bg-ui-bg-base p-2 text-xs">{bulkLog.join("\n")}</pre>}
               <div className="grid max-h-[560px] grid-cols-2 gap-3 overflow-y-auto p-0.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-                {CATALOG.filter((m) => {
+                {brandModels.filter((m) => {
                   const q = modelQ.trim().toLowerCase()
                   return !q || m.title.toLowerCase().includes(q) || m.model.toLowerCase().includes(q)
                 }).map((m) => {

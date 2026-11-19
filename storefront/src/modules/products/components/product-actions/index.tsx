@@ -126,7 +126,7 @@ export default function ProductActions({
   }, [product, selectedVariant])
   const chosen = (product.options || [])
     .map((o) => options[o.id])
-    .filter((v): v is string => !!v)
+    .filter((v): v is string => !!v && v !== "افتراضي")
 
   const actionsRef = useRef<HTMLDivElement>(null)
 

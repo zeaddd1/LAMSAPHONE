@@ -175,29 +175,12 @@ const StorefrontHomePage = () => {
       </Container>
 
       <Container className="flex flex-col gap-3 px-6 py-4">
-        <Heading level="h2">المنتجات المميزة</Heading>
-        <Text size="small" className="text-ui-fg-subtle">تظهر بعد الإعلانات بالترتيب الذي تختاره (حتى 24 منتجاً).</Text>
-        <Input value={cfg.featured_title} onChange={(e) => update((c) => ({ ...c, featured_title: e.target.value }))} placeholder="عنوان القسم (افتراضي: منتجات مميزة)" />
-        <ProductPicker
-          placeholder="أضف منتجاً مميزاً (ابحث بالاسم)…"
-          onPick={(p) => {
-            setFeaturedInfo((m) => ({ ...m, [p.id]: p }))
-            update((c) => (c.featured.includes(p.id) || c.featured.length >= 24 ? c : { ...c, featured: [...c.featured, p.id] }))
-          }}
-        />
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-          {featured.map((p, i) => (
-            <div key={p.id} className="flex flex-col gap-1 rounded-md border p-2">
-              {p.thumbnail ? <img src={p.thumbnail} alt="" className="aspect-square w-full rounded bg-white object-contain" /> : <div className="aspect-square w-full rounded bg-ui-bg-subtle" />}
-              <Text size="xsmall" className="line-clamp-2">{p.title}</Text>
-              <div className="flex justify-between text-xs">
-                <button type="button" onClick={() => update((c) => ({ ...c, featured: move(c.featured, i, -1) }))}>→</button>
-                <button type="button" onClick={() => update((c) => ({ ...c, featured: move(c.featured, i, 1) }))}>←</button>
-                <button type="button" className="text-ui-fg-error" onClick={() => update((c) => ({ ...c, featured: c.featured.filter((x) => x !== p.id) }))}>✕</button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <Heading level="h2">العروض والمنتجات المميزة</Heading>
+        <Text size="small" className="text-ui-fg-subtle">
+          تظهر بعد الإعلانات: أول 8 منتجات في «ترتيب العرض» (1، 2، 3…) من «إضافة سريعة ← المنتجات». نفس الترتيب يجعلها أول ما يظهر في المتجر وفي أقسامها.
+        </Text>
+        <Input value={cfg.featured_title} onChange={(e) => update((c) => ({ ...c, featured_title: e.target.value }))} placeholder="عنوان القسم (افتراضي: عروض ومنتجات مميزة)" />
+        <a href="/app/quick-add#list" className="self-start text-sm text-ui-fg-interactive underline">إدارة ترتيب العرض ←</a>
       </Container>
     </div>
   )

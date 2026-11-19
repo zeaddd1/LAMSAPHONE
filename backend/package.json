@@ -23,12 +23,15 @@
     "setup": "medusa exec ./src/scripts/setup-lamsaphone.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@medusajs/admin-sdk": "2.22.6",
     "@medusajs/cli": "2.22.6",
     "@medusajs/framework": "2.22.6",
-    "@medusajs/medusa": "2.22.6",
-    "@medusajs/js-sdk": "2.22.6",
     "@medusajs/icons": "2.22.6",
+    "@medusajs/js-sdk": "2.22.6",
+    "@medusajs/medusa": "2.22.6",
     "@medusajs/ui": "4.2.13"
   },
   "devDependencies": {

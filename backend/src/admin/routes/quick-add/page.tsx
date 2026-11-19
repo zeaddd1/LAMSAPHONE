@@ -1,6 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Plus } from "@medusajs/icons"
-import { Badge, Button, Container, Heading, Input, Label, Select, Switch, Text, Textarea, toast } from "@medusajs/ui"
+import { Badge, Button, Checkbox, Container, Heading, Input, Label, Select, Switch, Text, Textarea, toast } from "@medusajs/ui"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { sdk } from "../../lib/sdk"
 import { ProcessedImage, kb, processImage } from "../../lib/quick-add-image"
@@ -9,6 +9,9 @@ import PostPreview from "../../components/quick-add-post-preview"
 import type { FitMode } from "../../lib/quick-add-geometry"
 import type { MetaPublic } from "../../components/quick-add-meta-connect"
 import QuickAddProducts from "../../components/quick-add-products"
+import { CATALOG, CatalogModel, STORE_ORIGIN, describe as describeModel, imageUrls } from "../../lib/samsung-catalog"
+import { SPEC_FIELDS, Specs, cleanSpecs } from "../../lib/product-specs"
+import { buildOptions, optionMode, titleWith } from "../../lib/product-options"
 
 // صفحة "إضافة سريعة": منتج كامل في المتجر + نشره على ميتا من مكان واحد.
 // تستخدم واجهات Medusa الرسمية فقط (upload / products / inventory) ولا تعدّل كود Medusa.
@@ -21,6 +24,8 @@ type Ctx = {
   currency_code: string
   meta: MetaPublic
 }
+// صورة مجهزة من الجهاز، أو صورة جاهزة من كتالوج الموديلات (رابط ثابت في المتجر)
+type Img = Omit<ProcessedImage, "webp" | "jpeg"> & { webp?: File; jpeg?: File; url?: string }
 type PublishResult = { ok: boolean; url?: string; error?: string; skipped?: boolean; comment_error?: string }
 type Done = { id: string; handle: string; title: string; link?: string; results?: Record<string, PublishResult> }
 
@@ -37,6 +42,15 @@ const STORAGES = ["64GB", "128GB", "256GB", "512GB", "1TB"]
 const COLORS = ["أسود", "أبيض", "رمادي", "فضي", "أزرق", "أخضر", "بنفسجي", "ذهبي", "وردي", "كريمي", "تيتانيوم"]
 // سامسونج الأمريكي غالباً مستخدم شبه جديد، والصيني والماركات الأخرى جديدة: نقترح الحالة من القسم ويمكن تغييرها
 const suggestCondition = (categoryLabel: string) => (/سامسونج|samsung/i.test(categoryLabel) ? "used" : "new")
+// رابط المتجر لصور الكتالوج (يمكن تغييره للتجربة المحلية من localStorage)
+const storeOrigin = () => {
+  try {
+    return window.localStorage.getItem("lp-store-origin") || STORE_ORIGIN
+  } catch {
+    return STORE_ORIGIN
+  }
+}
+const SAMSUNG = /سامسونج|samsung/i
 
 const QuickAddPage = () => {
   const [ctx, setCtx] = useState<Ctx | null>(null)
@@ -79,7 +93,7 @@ const QuickAddPage = () => {
       {!ctx ? (
         <Text className="p-6">جارٍ التحميل…</Text>
       ) : view === "add" ? (
-        <AddForm ctx={ctx} goMeta={() => (window.location.href = "/app/meta-connect")} />
+        <AddForm ctx={ctx} reloadCtx={loadCtx} goMeta={() => (window.location.href = "/app/meta-connect")} />
       ) : (
         <QuickAddProducts meta={ctx.meta} currency={ctx.currency_code} />
       )}
@@ -104,14 +118,14 @@ function useCategoryOptions(ctx: Ctx) {
   }, [ctx.categories])
 }
 
-function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
+function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; reloadCtx: () => Promise<unknown> }) {
   const cats = useCategoryOptions(ctx)
   const metaReady = ctx.meta.has_token
   // الحقول الأساسية أولاً
   const [title, setTitle] = useState("")
   const [categoryId, setCategoryId] = useState("")
   const [price, setPrice] = useState("")
-  const [images, setImages] = useState<ProcessedImage[]>([])
+  const [images, setImages] = useState<Img[]>([])
   const [processing, setProcessing] = useState(0)
   const [mode, setMode] = useState<FitMode>("contain")
   const [autoTrim, setAutoTrim] = useState(true)
@@ -127,8 +141,14 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   const [qty, setQty] = useState("")
   const [condition, setCondition] = useState("new")
   const [conditionTouched, setConditionTouched] = useState(false)
-  const [storage, setStorage] = useState("")
-  const [color, setColor] = useState("")
+  // السعة واللون: لا شيء = بدون، قيمة واحدة = ثابتة، أكثر = يختار العميل
+  const [storages, setStorages] = useState<string[]>([])
+  const [colors, setColors] = useState<string[]>([])
+  // موديل من الكتالوج (اختياري) والمواصفات (نفس خانة "المواصفات" في صفحة المنتج)
+  const [model, setModel] = useState<CatalogModel | null>(null)
+  const [modelQ, setModelQ] = useState("")
+  const [specs, setSpecs] = useState<Specs>({})
+  const [detailsOpen, setDetailsOpen] = useState(false)
   // ميتا (للمنشور فقط)
   const [toFb, setToFb] = useState(metaReady && Boolean(ctx.meta.page_id))
   const [toIg, setToIg] = useState(metaReady && Boolean(ctx.meta.page_id))
@@ -147,9 +167,123 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   useEffect(() => {
     if (cat && !conditionTouched) setCondition(suggestCondition(cat.label))
   }, [categoryId])
-  // الاسم النهائي: الاسم + السعة (إن لم تكن مكتوبة فيه)
-  const fullTitle = storage && !title.toLowerCase().includes(storage.toLowerCase()) ? `${title.trim()} ${storage}` : title.trim()
-  const missing = [!title.trim() && "الاسم", !categoryId && "القسم", !images.length && !video && "صورة أو فيديو", !(priceNum > 0) && "السعر"].filter(Boolean) as string[]
+  // الاسم النهائي: الاسم + السعة/اللون الثابتين (إن لم تكن مكتوبة فيه)
+  const fixedValues = [storages.length === 1 ? storages[0] : "", colors.length === 1 ? colors[0] : ""]
+  const fullTitle = titleWith(title, fixedValues)
+  const variantCount = Math.max(1, (storages.length > 1 ? storages.length : 1) * (colors.length > 1 ? colors.length : 1))
+  // السعر اختياري: بدون سعر يظهر في المتجر "السعر عبر واتساب"
+  const missing = [!title.trim() && "الاسم", !categoryId && "القسم", !images.length && !video && "صورة أو فيديو"].filter(Boolean) as string[]
+  const storageList = model ? model.storages : STORAGES
+  const colorList = model && model.colors.length ? model.colors : COLORS
+  const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
+
+  // اختيار موديل من الكتالوج: يعبّئ الاسم والوصف والمواصفات والصور، ويختار القسم جوالات › سامسونج (ويُنشئه إن لم يوجد)
+  const pickModel = async (m: CatalogModel | null) => {
+    setModel(m)
+    setStorages([])
+    setColors([])
+    if (!m) return
+    setTitle(m.title)
+    setDescription(describeModel(m))
+    setSpecs({ ...m.specs })
+    setDetailsOpen(true)
+    const origin = storeOrigin()
+    setImages((xs) => [
+      ...imageUrls(m, origin).map((url, k) => ({ name: `${m.handle}-${k + 1}`, url, preview: url, postPreview: url, originalBytes: (m.images[k]?.size || 0) * 1024 })),
+      ...xs.filter((x) => !x.url),
+    ].slice(0, MAX_IMAGES))
+    // موديلات الكتالوج للمتجر فقط افتراضياً (يمكن تفعيل ميتا يدوياً)
+    setToFb(false)
+    setToIg(false)
+    setToCatalog(false)
+    try {
+      setCategoryId(await samsungCategory())
+    } catch (e: any) {
+      toast.warning(`اختر القسم يدوياً: ${e?.message || "تعذّر إنشاء قسم سامسونج"}`)
+    }
+  }
+  const samsungCategory = async () => {
+    const phones = cats.find((c) => c.names.length === 1 && c.names[0] === "جوالات")
+    const found =
+      cats.find((c) => SAMSUNG.test(c.names[c.names.length - 1]) && c.names[0] === "جوالات") || cats.find((c) => SAMSUNG.test(c.names[c.names.length - 1]))
+    if (found) return found.id
+    const { product_category } = await sdk.admin.productCategory.create({
+      name: "سامسونج",
+      is_active: true,
+      is_internal: false,
+      ...(phones ? { parent_category_id: phones.id } : {}),
+    } as any)
+    await reloadCtx()
+    return product_category.id
+  }
+
+  // الموديلات المضافة سابقاً (لتمييزها في البطاقات) والإضافة الجماعية لعدة موديلات دفعة واحدة
+  const [added, setAdded] = useState<Record<string, number>>({})
+  const [bulkSel, setBulkSel] = useState<Set<string>>(new Set())
+  const [bulkLog, setBulkLog] = useState<string[]>([])
+  const loadAdded = () =>
+    sdk.admin.product
+      .list({ limit: 500, fields: "id,metadata" } as any)
+      .then((r: any) => {
+        const m: Record<string, number> = {}
+        for (const x of r.products) if (x.metadata?.model) m[x.metadata.model] = (m[x.metadata.model] || 0) + 1
+        setAdded(m)
+      })
+      .catch(() => {})
+  useEffect(() => {
+    loadAdded()
+  }, [])
+  const addBulk = async () => {
+    const list = CATALOG.filter((m) => bulkSel.has(m.handle))
+    if (!list.length) return
+    setBulkLog([])
+    try {
+      setBusy("قسم سامسونج…")
+      const catId = await samsungCategory()
+      const catIds: string[] = []
+      for (let c = ctx.categories.find((x) => x.id === catId); c; c = ctx.categories.find((x) => x.id === c!.parent_id)) catIds.unshift(c.id)
+      const origin = storeOrigin()
+      let ok = 0
+      for (const m of list) {
+        setBusy(`إضافة ${m.model}…`)
+        try {
+          const urls = imageUrls(m, origin)
+          // كل السعات والألوان يختار منها العميل، وبلا سعر (السعر عبر واتساب) حتى تضيفه
+          const built = buildOptions(m.storages, m.colors, null, ctx.currency_code || "usd")
+          const body: any = {
+            title: m.title,
+            subtitle: m.subtitle,
+            description: describeModel(m),
+            status: "published",
+            ...(urls.length ? { thumbnail: urls[0], images: urls.map((url) => ({ url })) } : {}),
+            categories: (catIds.length ? catIds : [catId]).map((id) => ({ id })),
+            sales_channels: ctx.default_sales_channel_id ? [{ id: ctx.default_sales_channel_id }] : undefined,
+            shipping_profile_id: ctx.shipping_profile_id || undefined,
+            metadata: { condition, specs: cleanSpecs(m.specs), model: m.model, brand: "Samsung", added_by: "quick-add" },
+            options: built.options,
+            variants: built.variants.map((v) => ({ ...v, manage_inventory: false, allow_backorder: false })),
+          }
+          try {
+            await sdk.admin.product.create({ ...body, handle: m.handle })
+          } catch (e: any) {
+            if (!/exist|handle/i.test(String(e?.message))) throw e
+            await sdk.admin.product.create({ ...body, handle: `${m.handle}-${Date.now().toString(36).slice(-4)}` })
+          }
+          ok++
+          setBulkLog((l) => [...l, `✓ ${m.title}`])
+        } catch (e: any) {
+          setBulkLog((l) => [...l, `✗ ${m.title}: ${e?.message || e}`])
+        }
+      }
+      toast.success(`أُضيف ${ok} موديل للمتجر`)
+      setBulkSel(new Set())
+      loadAdded()
+    } catch (e: any) {
+      toast.error(e?.message || "تعذّرت الإضافة")
+    } finally {
+      setBusy("")
+    }
+  }
 
   // معاينة نص المنشور واقتراح الهاشتاقات (بعد توقف الكتابة قليلاً)
   useEffect(() => {
@@ -190,7 +324,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     for (const f of files.slice(0, room)) {
       try {
         const img = await processImage(f, { mode, autoTrim, background: "auto", brand, storeBrand })
-        setImages((xs) => [...xs, img])
+        setImages((xs) => [...xs, img].slice(0, MAX_IMAGES))
       } catch {
         toast.error(`تعذّر قراءة الصورة ${f.name} (جرّب JPG أو PNG)`)
       } finally {
@@ -239,8 +373,10 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
     setQty("")
     setPostText("")
     setHashtags("")
-    setStorage("")
-    setColor("")
+    setStorages([])
+    setColors([])
+    setModel(null)
+    setSpecs({})
     setConditionTouched(false)
     setDone(null)
   }
@@ -273,34 +409,66 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
         posterUrl = pu
         setBusy("رفع الصور…")
       }
-      const urls = images.length ? await upload(images.map((i) => i.webp)) : [posterUrl]
-      // نسخ JPEG لميتا (إنستغرام لا يقبل webp)، لا تظهر في المتجر
-      const metaUrls = images.length ? await upload(images.map((i) => i.jpeg)).catch(() => [] as string[]) : [posterUrl]
+      // صور الكتالوج روابط ثابتة لا تُرفع، وصور الجهاز تُرفع واحدة واحدة
+      const urls: string[] = []
+      for (const i of images) urls.push(i.url || (await upload([i.webp!]))[0])
+      if (!urls.length) urls.push(posterUrl)
+      // نسخ JPEG لميتا (إنستغرام لا يقبل webp)، لا تظهر في المتجر. صور الكتالوج تُحوَّل فقط عند النشر على ميتا
+      const metaUrls: string[] = []
+      if (!images.length) metaUrls.push(posterUrl)
+      for (const i of images) {
+        try {
+          if (i.jpeg) metaUrls.push((await upload([i.jpeg]))[0])
+          else if (publish && i.url) {
+            const r = await fetch(`/admin/quick-add/image-proxy?url=${encodeURIComponent(i.url)}`, { credentials: "include" })
+            const blob = await r.blob()
+            const p = await processImage(new File([blob], `${i.name}.webp`, { type: blob.type }), { mode: "contain", autoTrim: false, background: "auto", brand, storeBrand })
+            metaUrls.push((await upload([p.jpeg]))[0])
+          }
+        } catch {}
+      }
 
       setBusy("إنشاء المنتج…")
-      const track = qty.trim() !== "" && Number(qty) >= 0
-      const { product } = await sdk.admin.product.create({
+      const built = buildOptions(storages, colors, priceNum > 0 ? priceNum : null, ctx.currency_code || "usd")
+      // الكمية تُتابع فقط لمنتج بخيار واحد
+      const track = built.variants.length === 1 && qty.trim() !== "" && Number(qty) >= 0
+      // القسم وأقسامه الأعلى (مثلاً جوالات + سامسونج) حتى يظهر في الاثنين
+      const catIds: string[] = []
+      for (let c = ctx.categories.find((x) => x.id === categoryId); c; c = ctx.categories.find((x) => x.id === c!.parent_id)) catIds.unshift(c.id)
+      const cleanS = cleanSpecs(specs)
+      const body: any = {
         title: fullTitle,
+        ...(model ? { subtitle: model.subtitle } : {}),
         description: description.trim() || undefined,
         status: "published",
         thumbnail: urls[0],
         images: urls.map((url) => ({ url })),
-        categories: [{ id: categoryId }],
+        categories: (catIds.length ? catIds : [categoryId]).map((id) => ({ id })),
         sales_channels: ctx.default_sales_channel_id ? [{ id: ctx.default_sales_channel_id }] : undefined,
         shipping_profile_id: ctx.shipping_profile_id || undefined,
         // الحالة للكتالوج فقط (ميتا تشترطها صحيحة)، ولا تظهر في المنشور ولا في اسم المنتج
-        metadata: { condition, ...(storage ? { storage } : {}), ...(color ? { color } : {}), meta_images: metaUrls, ...(videoMeta.length ? { videos: videoMeta } : {}), added_by: "quick-add" },
-        options: [{ title: "الخيار", values: ["افتراضي"] }],
-        variants: [
-          {
-            title: "افتراضي",
-            options: { الخيار: "افتراضي" },
-            prices: [{ currency_code: ctx.currency_code || "usd", amount: priceNum }],
-            manage_inventory: track,
-            allow_backorder: false,
-          },
-        ],
-      } as any)
+        metadata: {
+          condition,
+          ...(storages.length === 1 ? { storage: storages[0] } : {}),
+          ...(colors.length === 1 ? { color: colors[0] } : {}),
+          ...(Object.keys(cleanS).length ? { specs: cleanS } : {}),
+          ...(model ? { model: model.model, brand: "Samsung" } : {}),
+          meta_images: metaUrls,
+          ...(videoMeta.length ? { videos: videoMeta } : {}),
+          added_by: "quick-add",
+        },
+        options: built.options,
+        variants: built.variants.map((v) => ({ ...v, manage_inventory: track, allow_backorder: false })),
+      }
+      // رابط إنجليزي واضح لموديلات الكتالوج، وإن كان مستخدماً نضيف لاحقة قصيرة
+      const slug = model ? [model.handle, ...fixedValues.filter((v) => /^[\w]+$/.test(v)).map((v) => v.toLowerCase())].join("-") : ""
+      let product: any
+      try {
+        product = (await sdk.admin.product.create({ ...body, ...(slug ? { handle: slug } : {}) })).product
+      } catch (e: any) {
+        if (!slug || !/exist|handle/i.test(String(e?.message))) throw e
+        product = (await sdk.admin.product.create({ ...body, handle: `${slug}-${Date.now().toString(36).slice(-4)}` })).product
+      }
 
       if (track && ctx.stock_locations[0]) {
         setBusy("ضبط الكمية…")
@@ -355,6 +523,84 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
   return (
     <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1fr_360px]">
       <div className="flex flex-col gap-5">
+        {/* 0. موديل جاهز من الكتالوج (اختياري) */}
+        <section className="flex flex-col gap-2 rounded-lg border bg-ui-bg-subtle p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label>موديل سامسونج جاهز (اختياري)</Label>
+            {model && (
+              <button type="button" className="text-xs text-ui-fg-error underline" onClick={() => (setModel(null), setImages((xs) => xs.filter((x) => !x.url)))}>
+                إلغاء الموديل
+              </button>
+            )}
+          </div>
+          {model ? (
+            <Text size="small">
+              ✓ {model.title}: عُبّئ الاسم والوصف والمواصفات و{model.images.length} صور. اختر السعة واللون والسعر ثم أضف.
+            </Text>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input className="min-w-0 flex-1" dir="auto" value={modelQ} onChange={(e) => setModelQ(e.target.value)} placeholder="ابحث: S24 ألترا، S23، S10…" />
+                {bulkSel.size > 0 ? (
+                  <>
+                    <Button size="small" isLoading={Boolean(busy)} onClick={addBulk}>إضافة المحدد للمتجر ({bulkSel.size})</Button>
+                    <Button size="small" variant="secondary" onClick={() => setBulkSel(new Set())}>إلغاء التحديد</Button>
+                  </>
+                ) : (
+                  <Button size="small" variant="secondary" onClick={() => setBulkSel(new Set(CATALOG.filter((m) => m.images.length && !added[m.model]).map((m) => m.handle)))}>
+                    تحديد كل غير المضاف
+                  </Button>
+                )}
+              </div>
+              <Text size="xsmall" className="text-ui-fg-subtle">
+                اضغط البطاقة لتعبئة النموذج وتختار السعة واللون والسعر بنفسك، أو حدّد عدة موديلات بالمربع وأضفها دفعة واحدة (كل السعات والألوان يختار منها العميل، والسعر عبر واتساب، وللمتجر فقط).
+              </Text>
+              {busy && bulkSel.size > 0 && <Text size="small">{busy}</Text>}
+              {bulkLog.length > 0 && <pre className="max-h-32 overflow-auto rounded bg-ui-bg-base p-2 text-xs">{bulkLog.join("\n")}</pre>}
+              <div className="grid max-h-[560px] grid-cols-2 gap-3 overflow-y-auto p-0.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                {CATALOG.filter((m) => {
+                  const q = modelQ.trim().toLowerCase()
+                  return !q || m.title.toLowerCase().includes(q) || m.model.toLowerCase().includes(q)
+                }).map((m) => {
+                  const img = m.images[0] ? `${storeOrigin().replace(/\/$/, "")}/${m.images[0].path}` : ""
+                  const on = bulkSel.has(m.handle)
+                  return (
+                    <div key={m.handle} className={`group flex flex-col gap-1.5 rounded-xl border bg-ui-bg-base p-2 shadow-sm transition hover:shadow-md ${on ? "ring-2 ring-ui-fg-interactive" : ""}`}>
+                      <div className="flex items-center justify-between">
+                        <Checkbox
+                          checked={on}
+                          disabled={!m.images.length}
+                          onCheckedChange={() => setBulkSel((s) => (s.has(m.handle) ? (s.delete(m.handle), new Set(s)) : new Set(s.add(m.handle))))}
+                        />
+                        {added[m.model] ? <Badge size="2xsmall" color="green">مضاف {added[m.model] > 1 ? `×${added[m.model]}` : ""}</Badge> : <Badge size="2xsmall">جديد</Badge>}
+                      </div>
+                      <button type="button" className="flex flex-col gap-1 text-start" onClick={() => pickModel(m)} title="تعبئة النموذج بهذا الموديل">
+                        {img ? (
+                          <span className="block overflow-hidden rounded-lg bg-white">
+                            <img src={img} alt="" loading="lazy" className="aspect-square w-full object-contain transition group-hover:scale-105" />
+                          </span>
+                        ) : (
+                          <div className="flex aspect-square w-full items-center justify-center rounded bg-ui-bg-subtle text-xs text-ui-fg-muted">بلا صور بعد</div>
+                        )}
+                        <Text size="xsmall" weight="plus" className="line-clamp-2">{m.title}</Text>
+                        <span className="flex flex-wrap gap-1">
+                          {m.storages.map((x) => (
+                            <span key={x} className="rounded-full bg-ui-bg-subtle px-1.5 py-0.5 text-[10px]">{x}</span>
+                          ))}
+                        </span>
+                        <Text size="xsmall" className="text-ui-fg-subtle">
+                          {m.colors.length ? `${m.colors.length} ألوان` : "الألوان لاحقاً"} · {m.images.length} صور
+                        </Text>
+                        <span className="mt-0.5 rounded-md bg-ui-bg-subtle py-1 text-center text-[11px] font-medium text-ui-fg-interactive opacity-0 transition group-hover:opacity-100">تعبئة النموذج ←</span>
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </section>
+
         {/* 1. الأساسيات */}
         <section className="grid gap-4 md:grid-cols-2">
           {/* الحالة: تبويبان واضحان. تُحفظ للكتالوج (شرط ميتا)، ولا تُكتب في المنشور ولا في اسم المنتج */}
@@ -398,24 +644,48 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
             </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="qa-price">السعر بالدولار *</Label>
-            <Input id="qa-price" type="number" min="0" step="0.01" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="700" />
+            <Label htmlFor="qa-price">السعر بالدولار (اختياري)</Label>
+            <Input id="qa-price" type="number" min="0" step="0.01" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="فارغ = السعر عبر واتساب" />
+            {variantCount > 1 && <Text size="xsmall" className="text-ui-fg-subtle">نفس السعر لكل الخيارات ({variantCount})، ويمكن تعديل سعر كل خيار من صفحة المنتج.</Text>}
           </div>
-          <div className="flex flex-col gap-1 md:col-span-2">
-            <Label>السعة (تُضاف لاسم المنتج)</Label>
-            <div className="flex flex-wrap gap-2">
-              {STORAGES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStorage(storage === s ? "" : s)}
-                  className={`rounded-full border px-3 py-1 text-xs ${storage === s ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* السعة واللون: اضغط قيمة واحدة لتثبيتها، أو عدة قيم ليختار العميل، أو اتركها فارغة */}
+          {([
+            ["السعة", storageList, storages, setStorages],
+            ["اللون", colorList, colors, setColors],
+          ] as const).map(([label, list, val, set]) => {
+            const m = optionMode(val as string[])
+            return (
+              <div key={label} className="flex flex-col gap-1 md:col-span-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Label>{label}</Label>
+                  <Badge size="2xsmall" color={m === "none" ? "grey" : m === "fixed" ? "blue" : "green"}>
+                    {m === "none" ? "بدون" : m === "fixed" ? `ثابت: ${val[0]} (يُضاف للاسم ولا يظهر كاختيار)` : `يختار العميل من ${val.length}`}
+                  </Badge>
+                  {val.length > 0 && (
+                    <button type="button" className="text-xs underline" onClick={() => (set as any)([])}>مسح</button>
+                  )}
+                  {val.length < list.length && (
+                    <button type="button" className="text-xs underline" onClick={() => (set as any)([...list])}>الكل</button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {list.map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => (set as any)(toggle(val as string[], v))}
+                      className={`rounded-full border px-3 py-1 text-xs ${(val as string[]).includes(v) ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+          <Text size="xsmall" className="text-ui-fg-subtle md:col-span-2">
+            لا شيء = بدون. قيمة واحدة = ثابتة في المنتج. أكثر من قيمة = يختار العميل في المتجر{variantCount > 1 ? ` (${variantCount} خيار)` : ""}.
+          </Text>
         </section>
 
         {/* 2. الصور */}
@@ -486,7 +756,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
                   <img src={img.preview} alt="" className="aspect-square w-full bg-white object-contain" />
                   {i === 0 && <Badge size="2xsmall" color="blue" className="absolute top-1 right-1">الرئيسية</Badge>}
                   <div className="flex items-center justify-between bg-ui-bg-subtle px-1 py-0.5 text-[11px]">
-                    <span title="الحجم قبل وبعد">{kb(img.originalBytes)} ← {kb(img.webp.size)}</span>
+                    <span title="الحجم">{img.url ? `كتالوج · ${kb(img.originalBytes)}` : `${kb(img.originalBytes)} ← ${kb(img.webp!.size)}`}</span>
                     <span className="flex gap-1">
                       {i > 0 && (
                         <button type="button" title="اجعلها الصورة الرئيسية" onClick={() => makeMain(i)} aria-label="اجعلها الرئيسية">★</button>
@@ -503,7 +773,7 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
         </section>
 
         {/* 3. اختياري */}
-        <details className="rounded-lg border p-4">
+        <details className="rounded-lg border p-4" open={detailsOpen} onToggle={(e) => setDetailsOpen((e.target as HTMLDetailsElement).open)}>
           <summary className="cursor-pointer font-medium">تفاصيل إضافية (اختياري)</summary>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-1 md:col-span-2">
@@ -512,20 +782,19 @@ function AddForm({ ctx, goMeta }: { ctx: Ctx; goMeta: () => void }) {
             </div>
             <div className="flex flex-col gap-1">
               <Label>الكمية المتوفرة</Label>
-              <Input type="number" min="0" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="فارغ = متوفر دائماً" />
+              <Input type="number" min="0" value={qty} disabled={variantCount > 1} onChange={(e) => setQty(e.target.value)} placeholder={variantCount > 1 ? "تُضبط لكل خيار من صفحة المنتج" : "فارغ = متوفر دائماً"} />
             </div>
-            <div className="flex flex-col gap-1">
-              <Label>اللون</Label>
-              <Select value={color} onValueChange={setColor}>
-                <Select.Trigger>
-                  <Select.Value placeholder="بدون" />
-                </Select.Trigger>
-                <Select.Content>
-                  {COLORS.map((c) => (
-                    <Select.Item key={c} value={c}>{c}</Select.Item>
-                  ))}
-                </Select.Content>
-              </Select>
+            {/* المواصفات: نفس خانة "المواصفات" في صفحة المنتج، وتظهر جدولاً في المتجر */}
+            <div className="flex flex-col gap-2 md:col-span-2">
+              <Label>المواصفات ({Object.keys(cleanSpecs(specs)).length})</Label>
+              <div className="grid gap-2 md:grid-cols-2">
+                {SPEC_FIELDS.map((f) => (
+                  <div key={f.key} className="flex flex-col gap-0.5">
+                    <Label size="xsmall" className="text-ui-fg-subtle">{f.label}</Label>
+                    <Textarea dir="auto" rows={2} value={specs[f.key] || ""} onChange={(e) => setSpecs({ ...specs, [f.key]: e.target.value })} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </details>

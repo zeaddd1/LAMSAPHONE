@@ -9,7 +9,7 @@ export default async function LatestProducts({ region }: { region: HttpTypes.Sto
     response: { products },
   } = await listProducts({
     regionId: region.id,
-    queryParams: { limit: 8, order: "-created_at", fields: "*variants.calculated_price" } as any,
+    queryParams: { limit: 8, order: "-created_at" } as any,
   })
   if (!products.length) return null
   return (

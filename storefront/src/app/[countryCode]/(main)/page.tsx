@@ -28,7 +28,7 @@ export default async function Home(props: { params: Promise<{ countryCode: strin
     <>
       {/* الإعلانات من "واجهة المتجر" في اللوحة، وإن لم توجد يظهر الشريط الافتراضي */}
       {home.banners.length ? <BannerCarousel banners={home.banners} /> : <Hero />}
-      <FeaturedPicks ids={home.featured} title={home.featured_title} region={region} />
+      <FeaturedPicks title={home.featured_title} region={region} />
       <LatestProducts region={region} />
       {collections?.length ? (
         <div className="py-12">

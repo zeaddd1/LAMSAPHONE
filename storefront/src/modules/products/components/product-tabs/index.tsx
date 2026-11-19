@@ -13,11 +13,8 @@ type ProductTabsProps = {
 }
 
 const ProductTabs = ({ product }: ProductTabsProps) => {
-  const specs = ((product.metadata as any)?.specs || {}) as Record<string, string>
+  // المواصفات تظهر في قسم واحد تحت الصور (ProductSpecs)، لا هنا
   const tabs = [
-    ...(Object.values(specs).some(Boolean)
-      ? [{ label: t("Specifications"), component: <SpecsTab specs={specs} /> }]
-      : []),
     {
       label: t("Product Information"),
       component: <ProductInfoTab product={product} />,
@@ -118,21 +115,5 @@ const ShippingInfoTab = () => {
     </div>
   )
 }
-
-const SPEC_LABELS: Record<string, string> = { screen: "الشاشة", cpu: "المعالج", camera: "الكاميرا", battery: "البطارية" }
-
-// مواصفات الجوال السريعة المُدخلة من لوحة التحكم (metadata.specs)
-const SpecsTab = ({ specs }: { specs: Record<string, string> }) => (
-  <dl className="text-small-regular py-8 grid grid-cols-2 gap-y-3">
-    {Object.entries(SPEC_LABELS).map(([k, label]) =>
-      specs[k] ? (
-        <div key={k} className="contents">
-          <dt className="font-semibold">{label}</dt>
-          <dd>{specs[k]}</dd>
-        </div>
-      ) : null
-    )}
-  </dl>
-)
 
 export default ProductTabs

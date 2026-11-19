@@ -39,7 +39,7 @@ export function sortProducts(
   }
 
   if (sortBy === "created_at") {
-    // الترتيب اليدوي من لوحة التحكم (metadata.rank، الأصغر أولاً)، ثم الأحدث
+    // ترتيب العرض من لوحة التحكم: المنتجات المرقّمة 1، 2، 3… أولاً (metadata.rank)، ثم الباقي الأحدث أولاً
     const rank = (p: HttpTypes.StoreProduct) => {
       const r = Number((p.metadata as any)?.rank)
       return Number.isFinite(r) && (p.metadata as any)?.rank !== null && (p.metadata as any)?.rank !== "" ? r : Infinity

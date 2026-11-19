@@ -1,39 +1,57 @@
-import { CATALOG, buildVariants, describe as describeModel, productPayload, refreshPayload } from "../../../admin/lib/samsung-catalog"
+import { CATALOG, describe as describeModel, imageUrls } from "../../../admin/lib/samsung-catalog"
+import { SPEC_FIELDS, cleanSpecs } from "../../../admin/lib/product-specs"
+import { buildOptions, optionMode, titleWith } from "../../../admin/lib/product-options"
 import { cleanHomeConfig } from "../../home-config"
 
 describe("samsung catalog", () => {
-  it("covers S9 to S26 in order, with Arabic names and unique handles", () => {
+  it("covers S9 to S26 in order, with Arabic names, colors and keyed specs", () => {
     expect(CATALOG[0].model).toBe("Galaxy S9")
     expect(CATALOG[CATALOG.length - 1].model).toMatch(/S26/)
     expect(new Set(CATALOG.map((m) => m.handle)).size).toBe(CATALOG.length)
+    const keys = SPEC_FIELDS.map((f) => f.key) as string[]
     for (const m of CATALOG) {
       expect(m.title).toMatch(/^سامسونج جالاكسي S\d/)
       expect(m.storages.length).toBeGreaterThan(0)
-      expect(m.specs.length).toBeGreaterThanOrEqual(8)
+      expect(Object.keys(m.specs).length).toBeGreaterThanOrEqual(8)
+      expect(Object.keys(m.specs).every((k) => keys.includes(k))).toBe(true)
+      for (const c of m.colors) expect(c).toMatch(/[\u0600-\u06FF]/)
     }
   })
   it("short Arabic description", () => {
     for (const m of CATALOG) {
       const d = describeModel(m)
-      expect(d.length).toBeLessThan(330)
+      expect(d.length).toBeLessThan(300)
       expect(d).toContain(m.title)
     }
   })
-  it("variants: storage x color, no prices, no inventory tracking", () => {
-    const m = CATALOG.find((x) => x.model === "Galaxy S24 Ultra")!
-    const { options, variants } = buildVariants(m)
-    expect(options.map((o) => o.title)).toEqual(["السعة", "اللون"])
-    expect(variants.length).toBe(m.storages.length * m.colors.length)
-    expect(variants.every((v) => v.prices.length === 0 && v.manage_inventory === false)).toBe(true)
-  })
-  it("payload uses static store images and keeps prices untouched on refresh", () => {
+  it("static image urls", () => {
     const m = CATALOG.find((x) => x.images.length)!
-    const p = productPayload(m, { category_id: "pcat_1" }, "https://shop.test")
-    expect(p.thumbnail).toBe(`https://shop.test/${m.images[0].path}`)
-    expect(p.status).toBe("published")
-    const r: any = refreshPayload(m, { condition: "new", meta_images: ["x"] })
-    expect(r.variants).toBeUndefined()
-    expect(r.metadata.meta_images).toEqual(["x"])
+    expect(imageUrls(m, "https://shop.test/")[0]).toBe(`https://shop.test/${m.images[0].path}`)
+  })
+})
+
+describe("product options", () => {
+  it("none / fixed / customer choice", () => {
+    expect(optionMode([])).toBe("none")
+    expect(optionMode(["256GB"])).toBe("fixed")
+    expect(optionMode(["256GB", "512GB"])).toBe("choice")
+    const a = buildOptions([], [], null)
+    expect(a.variants).toHaveLength(1)
+    expect(a.variants[0].prices).toEqual([])
+    const b = buildOptions(["256GB"], ["أسود"], 500)
+    expect(b.options[0].title).toBe("الخيار")
+    expect(b.variants[0].prices).toEqual([{ currency_code: "usd", amount: 500 }])
+    const c = buildOptions(["256GB", "512GB"], ["أسود", "أبيض", "أزرق"], null)
+    expect(c.options.map((o) => o.title)).toEqual(["السعة", "اللون"])
+    expect(c.variants).toHaveLength(6)
+    expect(c.variants[5].options).toEqual({ السعة: "512GB", اللون: "أزرق" })
+    const d = buildOptions(["256GB"], ["أسود", "أبيض"], null)
+    expect(d.options.map((o) => o.title)).toEqual(["اللون"])
+    expect(titleWith("سامسونج S24", ["256GB", "أسود", ""])).toBe("سامسونج S24 256GB أسود")
+    expect(titleWith("S24 256GB", ["256gb"])).toBe("S24 256GB")
+  })
+  it("cleanSpecs keeps known non-empty fields only", () => {
+    expect(cleanSpecs({ screen: " 6.8 ", cpu: "", hack: "x" } as any)).toEqual({ screen: "6.8" })
   })
 })
 

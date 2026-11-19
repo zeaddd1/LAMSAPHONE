@@ -28,11 +28,18 @@ export default async function ProductPreview({
     product,
   })
 
+  // شارة العرض من لوحة التحكم (مثل: عرض خاص، الأكثر طلباً)
+  const badge = String((product.metadata as any)?.badge || "").trim().slice(0, 24)
   const isSamsungPhone = /samsung|galaxy|سامسونج|جالكسي|s\d{2}|note/i.test(product.title || "") && !/شاحن|كيبل|وصل|كفر|سماع|charger|cable|case/i.test(product.title || "")
 
   return (
     <LocalizedClientLink href={`/products/${product.handle}`} className="group">
-      <div data-testid="product-wrapper">
+      <div data-testid="product-wrapper" className="relative">
+        {badge && (
+          <span className="absolute right-2 top-2 z-10 rounded-full bg-[#FF6000] px-2.5 py-1 text-[11px] font-bold text-white shadow-md">
+            {badge}
+          </span>
+        )}
         <Thumbnail
           thumbnail={product.thumbnail}
           images={product.images}

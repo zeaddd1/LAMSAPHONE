@@ -23,27 +23,6 @@ const Field = ({ label, hint, value, onChange, placeholder, ok, help }: { label:
   </div>
 )
 
-type ExtLink = { text: string; href: string }
-
-// شرح الربط وروابط فتح الأرقام في مواقع جوجل ومايكروسوفت نفسها (تفتح في نافذة جديدة)
-const Guide = ({ title, steps, links }: { title: string; steps: string[]; links: ExtLink[] }) => (
-  <div className="flex flex-col gap-3 rounded-lg border p-4">
-    <Text weight="plus">{title}</Text>
-    <ol className="list-decimal flex flex-col gap-1 pr-5">
-      {steps.map((s) => (
-        <li key={s}><Text size="small" className="text-ui-fg-subtle">{s}</Text></li>
-      ))}
-    </ol>
-    <div className="flex flex-wrap gap-2">
-      {links.map((l) => (
-        <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer">
-          <Button size="small" variant="secondary" type="button">{l.text} ↗</Button>
-        </a>
-      ))}
-    </div>
-  </div>
-)
-
 const AnalyticsPage = () => {
   const [saved, setSaved] = useState<Settings>({ gtm_id: "", clarity_id: "" })
   const [gtm, setGtm] = useState("")
@@ -115,35 +94,36 @@ const AnalyticsPage = () => {
         />
       </Container>
 
-      <Container className="grid gap-4 px-6 py-4 md:grid-cols-2">
-        <Guide
-          title="كيف أربط جوجل، وأين أشاهد الأرقام"
-          steps={[
-            "افتح موقع Google Tag Manager وسجّل بحساب جوجل، ثم أنشئ حساباً وحاوية (Container) نوعها Web باسم المتجر.",
-            "انسخ معرّف الحاوية الذي يبدأ بـ GTM- (يظهر أعلى الصفحة) والصقه في الخانة أعلاه ثم اضغط حفظ.",
-            "افتح Google Analytics وأنشئ Property للمتجر، ومنها Data Stream نوع Web، وانسخ Measurement ID الذي يبدأ بـ G-.",
-            "ارجع إلى Tag Manager: Tags ← New ← Google Tag، والصق G-، واختر Trigger: All Pages، ثم Submit ← Publish.",
-            "بعد دقائق تظهر الزيارات في Google Analytics ← Reports ← Realtime.",
-          ]}
-          links={[
-            { text: "فتح Google Tag Manager", href: "https://tagmanager.google.com/" },
-            { text: "فتح Google Analytics (الأرقام)", href: "https://analytics.google.com/" },
-          ]}
-        />
-        <Guide
-          title="كيف أربط مايكروسوفت كلاريتي، وأين أشاهد التسجيلات"
-          steps={[
-            "افتح موقع Microsoft Clarity وسجّل بحساب مايكروسوفت أو جوجل.",
-            "اضغط New project، واكتب اسم المتجر ورابطه https://lamsaphone.yemenbay.com.",
-            "من Settings ← Overview انسخ Project ID (حروف وأرقام صغيرة) والصقه في الخانة أعلاه ثم اضغط حفظ.",
-            "خلال ساعة تقريباً تظهر الجلسات في Dashboard وRecordings وHeatmaps داخل موقع Clarity.",
-          ]}
-          links={[
-            saved.clarity_id
-              ? { text: "فتح لوحة Clarity للمتجر", href: `https://clarity.microsoft.com/projects/view/${saved.clarity_id}/dashboard` }
-              : { text: "فتح Microsoft Clarity", href: "https://clarity.microsoft.com/projects" },
-          ]}
-        />
+      <Container className="flex flex-col gap-4 px-6 py-4">
+        <div>
+          <Heading level="h2">كيف تشاهد الزوار؟</Heading>
+          <Text size="small" className="text-ui-fg-subtle">بعد الحفظ بدقائق، تظهر الزيارات في الموقعين التاليين. لا تحتاج أي إعداد آخر منهما.</Text>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-2 rounded-lg border p-4">
+            <Text weight="plus">Google Analytics</Text>
+            <Text size="small" className="text-ui-fg-subtle">يُظهر من أين جاء الزائر، ومن أي دولة، وماذا شاهد.</Text>
+            <ol className="flex list-decimal flex-col gap-1 ps-5 text-sm">
+              <li>افتح analytics.google.com وادخل بحسابك.</li>
+              <li>اختر موقع «لمسة فون».</li>
+              <li>من القائمة اليمنى: «التقارير» ثم «في الوقت الفعلي» لترى الزوار الآن.</li>
+              <li>«اكتساب» ثم «اكتساب حركة المرور» لترى المصادر.</li>
+            </ol>
+            <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="self-start text-sm text-ui-fg-interactive underline">فتح Google Analytics ↗</a>
+          </div>
+          <div className="flex flex-col gap-2 rounded-lg border p-4">
+            <Text weight="plus">Microsoft Clarity</Text>
+            <Text size="small" className="text-ui-fg-subtle">يعرض تسجيلات فيديو لما يفعله كل زائر في المتجر.</Text>
+            <ol className="flex list-decimal flex-col gap-1 ps-5 text-sm">
+              <li>افتح مشروع المتجر مباشرة من الزر أدناه.</li>
+              <li>«Dashboard» لترى عدد الزيارات والجلسات.</li>
+              <li>«Recordings» لتشاهد تسجيلات الزوار واحداً واحداً.</li>
+              <li>«Heatmaps» لترى الأماكن التي يضغط عليها الزبائن أكثر.</li>
+            </ol>
+            <a href="https://clarity.microsoft.com/projects/view/zgdomw1kza" target="_blank" rel="noopener noreferrer" className="self-start text-sm text-ui-fg-interactive underline">فتح مشروع Clarity ↗</a>
+          </div>
+        </div>
+        <Text size="xsmall" className="text-ui-fg-subtle">لكي تظهر أرقام Google Analytics، يجب إضافة وسم GA4 داخل حاوية Google Tag Manager المربوطة أعلاه ونشرها.</Text>
       </Container>
 
       <Container className="flex flex-wrap items-center justify-end gap-2 px-6 py-4">

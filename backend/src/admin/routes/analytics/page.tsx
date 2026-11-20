@@ -23,6 +23,27 @@ const Field = ({ label, hint, value, onChange, placeholder, ok, help }: { label:
   </div>
 )
 
+type ExtLink = { text: string; href: string }
+
+// شرح الربط وروابط فتح الأرقام في مواقع جوجل ومايكروسوفت نفسها (تفتح في نافذة جديدة)
+const Guide = ({ title, steps, links }: { title: string; steps: string[]; links: ExtLink[] }) => (
+  <div className="flex flex-col gap-3 rounded-lg border p-4">
+    <Text weight="plus">{title}</Text>
+    <ol className="list-decimal flex flex-col gap-1 pr-5">
+      {steps.map((s) => (
+        <li key={s}><Text size="small" className="text-ui-fg-subtle">{s}</Text></li>
+      ))}
+    </ol>
+    <div className="flex flex-wrap gap-2">
+      {links.map((l) => (
+        <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer">
+          <Button size="small" variant="secondary" type="button">{l.text} ↗</Button>
+        </a>
+      ))}
+    </div>
+  </div>
+)
+
 const AnalyticsPage = () => {
   const [saved, setSaved] = useState<Settings>({ gtm_id: "", clarity_id: "" })
   const [gtm, setGtm] = useState("")
@@ -91,6 +112,37 @@ const AnalyticsPage = () => {
           placeholder="مثل: zgdomw1kza"
           ok={clarityOk}
           help="يُضاف تلقائياً إلى كل صفحات المتجر بعد الحفظ."
+        />
+      </Container>
+
+      <Container className="grid gap-4 px-6 py-4 md:grid-cols-2">
+        <Guide
+          title="كيف أربط جوجل، وأين أشاهد الأرقام"
+          steps={[
+            "افتح موقع Google Tag Manager وسجّل بحساب جوجل، ثم أنشئ حساباً وحاوية (Container) نوعها Web باسم المتجر.",
+            "انسخ معرّف الحاوية الذي يبدأ بـ GTM- (يظهر أعلى الصفحة) والصقه في الخانة أعلاه ثم اضغط حفظ.",
+            "افتح Google Analytics وأنشئ Property للمتجر، ومنها Data Stream نوع Web، وانسخ Measurement ID الذي يبدأ بـ G-.",
+            "ارجع إلى Tag Manager: Tags ← New ← Google Tag، والصق G-، واختر Trigger: All Pages، ثم Submit ← Publish.",
+            "بعد دقائق تظهر الزيارات في Google Analytics ← Reports ← Realtime.",
+          ]}
+          links={[
+            { text: "فتح Google Tag Manager", href: "https://tagmanager.google.com/" },
+            { text: "فتح Google Analytics (الأرقام)", href: "https://analytics.google.com/" },
+          ]}
+        />
+        <Guide
+          title="كيف أربط مايكروسوفت كلاريتي، وأين أشاهد التسجيلات"
+          steps={[
+            "افتح موقع Microsoft Clarity وسجّل بحساب مايكروسوفت أو جوجل.",
+            "اضغط New project، واكتب اسم المتجر ورابطه https://lamsaphone.yemenbay.com.",
+            "من Settings ← Overview انسخ Project ID (حروف وأرقام صغيرة) والصقه في الخانة أعلاه ثم اضغط حفظ.",
+            "خلال ساعة تقريباً تظهر الجلسات في Dashboard وRecordings وHeatmaps داخل موقع Clarity.",
+          ]}
+          links={[
+            saved.clarity_id
+              ? { text: "فتح لوحة Clarity للمتجر", href: `https://clarity.microsoft.com/projects/view/${saved.clarity_id}/dashboard` }
+              : { text: "فتح Microsoft Clarity", href: "https://clarity.microsoft.com/projects" },
+          ]}
         />
       </Container>
 

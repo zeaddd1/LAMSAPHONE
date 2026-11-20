@@ -3,6 +3,7 @@ import { CurrencyProvider } from "@lib/currency/context"
 import { getBaseURL } from "@lib/util/env"
 import { STORE } from "@lib/store-info"
 import WhatsAppButton from "@modules/common/components/whatsapp-button"
+import GoogleAnalytics from "@modules/common/components/google-analytics"
 import { Metadata } from "next"
 import { Tajawal } from "next/font/google"
 import "styles/globals.css"
@@ -42,6 +43,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
     <html lang="ar" dir="rtl" data-mode="light" className={tajawal.variable}>
       <body className={tajawal.className}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd).replace(/</g, "\\u003c") }} />
+        <GoogleAnalytics />
         <CurrencyProvider rates={rates}>
           <main className="relative">{props.children}</main>
           <WhatsAppButton />

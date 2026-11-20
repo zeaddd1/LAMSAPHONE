@@ -2,6 +2,7 @@ import Image from "next/image"
 import { t } from "@lib/i18n/ar"
 import { listCategories } from "@lib/data/categories"
 import { listCollections } from "@lib/data/collections"
+import { getSiteTexts } from "@lib/data/site-texts"
 import { Text, clx } from "@medusajs/ui"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -11,6 +12,8 @@ export default async function Footer() {
     fields: "*products",
   })
   const productCategories = await listCategories()
+  // نصوص الفوتر من لوحة التحكم ← نصوص المتجر
+  const tx = await getSiteTexts()
 
   return (
     <footer className="border-t border-ui-border-base w-full">

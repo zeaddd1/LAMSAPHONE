@@ -40,8 +40,8 @@ export function describe(m: CatalogModel): string {
     s.camera && `كاميرا ${first(s.camera)}`,
     s.battery && `بطارية ${first(s.battery)}`,
   ].filter(Boolean)
-  if (!s.screen && !s.cpu && s.type) return `${m.title} أصلي: ${first(s.type)}${s.features ? `، ${first(s.features)}` : ""}. الدفع عند الاستلام.`
-  return `${m.title} أصلي: ${bits.join("، ")}. الدفع عند الاستلام.`
+  if (!s.screen && !s.cpu && s.type) return `${m.title} أصلي: ${first(s.type)}${s.features ? `، ${first(s.features)}` : ""}.`
+  return `${m.title} أصلي: ${bits.join("، ")}.`
 }
 
 export const imageUrls = (m: CatalogModel, origin = STORE_ORIGIN) => m.images.map((i) => `${origin.replace(/\/$/, "")}/${i.path}`)

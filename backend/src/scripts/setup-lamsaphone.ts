@@ -78,7 +78,7 @@ export default async function setupLamsaPhone({ container }: ExecArgs) {
             name: REGION_NAME,
             currency_code: "usd",
             countries: COUNTRIES,
-            payment_providers: ["pp_system_default"], // الدفع عند الاستلام
+            payment_providers: ["pp_system_default"], // دفع يدوي
           },
         ],
       },

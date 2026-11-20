@@ -146,7 +146,7 @@ export async function getMetaFeedXml(scope: { resolve: (key: string) => any }): 
       xml: itemsToRss(items, {
         title: "لمسة فون",
         link: storeUrl(),
-        description: "جوالات وإكسسوارات لمسة فون، الدفع عند الاستلام",
+        description: "جوالات وإكسسوارات لمسة فون الأصلية في صنعاء",
       }),
     }
   }

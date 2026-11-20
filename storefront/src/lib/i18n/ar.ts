@@ -168,7 +168,7 @@ export const ar: Record<string, string> = {
   "Your order was placed successfully.": "تم استلام طلبك بنجاح.",
   "Your shopping bag is empty.": "سلتك فارغة.",
   "Your test order was successfully created! 🎉": "",
-  "Manual Payment": "الدفع عند الاستلام",
+  "Manual Payment": "الدفع نقداً",
   "Latest Arrivals": "أحدث الجوالات",
   "Price: Low -> High": "السعر: من الأقل",
   "Price: High -> Low": "السعر: من الأعلى",

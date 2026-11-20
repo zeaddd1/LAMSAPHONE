@@ -1,7 +1,7 @@
 import React from "react"
 import { HttpTypes } from "@medusajs/types"
 
-// بدون Stripe حالياً: الدفع عند الاستلام فقط. أبقينا الغلاف لإضافة مزودات دفع محلية لاحقاً.
+// بدون Stripe حالياً: دفع يدوي فقط. أبقينا الغلاف لإضافة مزودات دفع محلية لاحقاً.
 type PaymentWrapperProps = {
   cart: HttpTypes.StoreCart
   children: React.ReactNode

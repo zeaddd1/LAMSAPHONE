@@ -1,3 +1,4 @@
+import { getSiteTexts, paragraphs } from "@lib/data/site-texts"
 import { STORE, whatsappLink } from "@lib/store-info"
 import StaticPage from "@modules/common/components/static-page"
 import { Metadata } from "next"
@@ -6,12 +7,14 @@ export const metadata: Metadata = {
   title: "تواصل معنا",
   description: `تواصل مع ${STORE.name}: ${STORE.address}. هاتف وواتساب ${STORE.phoneDisplay}.`,
 }
-export const revalidate = 86400
+// النصوص من لوحة التحكم ← نصوص المتجر
+export const revalidate = 60
 
-export default function Contact() {
+export default async function Contact() {
+  const t = await getSiteTexts()
   return (
-    <StaticPage title="تواصل معنا">
-      <p>يسعدنا تواصلك معنا لأي استفسار عن المنتجات أو الطلبات.</p>
+    <StaticPage title={t.contact_title}>
+      {paragraphs(t.contact_intro).map((p) => <p key={p}>{p}</p>)}
       <p>
         📲 هاتف وواتساب:{" "}
         <a className="text-brand-orange font-bold" href={whatsappLink()} target="_blank" rel="noopener noreferrer" dir="ltr">
@@ -25,7 +28,7 @@ export default function Contact() {
           {STORE.instagramHandle}
         </a>
       </p>
-      <p>🚚 نوصل داخل صنعاء وإلى المحافظات، والدفع عند الاستلام.</p>
+      {paragraphs(t.contact_note).map((p) => <p key={p}>{p}</p>)}
     </StaticPage>
   )
 }

@@ -107,7 +107,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const price = typeof amount === "number" ? ` بسعر ${amount}$` : ""
   const description =
     (product.description || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 150) ||
-    `${product.title}${price} من ${STORE.name} في ${STORE.city}: فحص شامل، توصيل والدفع عند الاستلام. اطلب عبر واتساب ${STORE.phoneDisplay}.`
+    `${product.title}${price} من ${STORE.name} في ${STORE.city}: فحص شامل وتوصيل سريع. اطلب عبر واتساب ${STORE.phoneDisplay}.`
   const url = `/${params.countryCode}/products/${product.handle}`
   return {
     title: `${product.title}${price ? ` | ${amount}$` : ""}`,

@@ -110,14 +110,14 @@ export default async function Footer() {
               </div>
             )}
             <div className="flex flex-col gap-y-2">
-              <span className="txt-small-plus txt-ui-fg-base">لمسة فون</span>
+              <span className="txt-small-plus txt-ui-fg-base">{tx.footer_title}</span>
               <ul className="grid grid-cols-1 gap-y-2 text-ui-fg-subtle txt-small">
-                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/about">من نحن</LocalizedClientLink></li>
-                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/contact">تواصل معنا</LocalizedClientLink></li>
-                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/returns">سياسة الاسترجاع</LocalizedClientLink></li>
-                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/faq">الأسئلة الشائعة</LocalizedClientLink></li>
-                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/privacy">سياسة الخصوصية</LocalizedClientLink></li>
-                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/track-order">تتبع الطلب</LocalizedClientLink></li>
+                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/about">{tx.footer_about}</LocalizedClientLink></li>
+                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/contact">{tx.footer_contact}</LocalizedClientLink></li>
+                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/returns">{tx.footer_returns}</LocalizedClientLink></li>
+                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/faq">{tx.footer_faq}</LocalizedClientLink></li>
+                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/privacy">{tx.footer_privacy}</LocalizedClientLink></li>
+                <li><LocalizedClientLink className="hover:text-ui-fg-base" href="/track-order">{tx.footer_track}</LocalizedClientLink></li>
               </ul>
             </div>
           </div>
@@ -135,7 +135,7 @@ export default async function Footer() {
                 Instagram @lamsaphone7
               </a>
             </span>
-            <span>© {new Date().getFullYear()} لمسة فون للهواتف الذكية. جميع الحقوق محفوظة.</span>
+            <span>© {new Date().getFullYear()} {tx.footer_copyright}</span>
           </div>
         </div>
       </div>

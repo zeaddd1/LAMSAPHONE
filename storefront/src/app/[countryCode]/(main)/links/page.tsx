@@ -1,5 +1,6 @@
 import { whatsappNumber } from "@lib/store-info"
 import { listProductsWithSort } from "@lib/data/products"
+import { getSiteTexts } from "@lib/data/site-texts"
 import { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
@@ -17,6 +18,7 @@ export default async function Links({ params }: { params: Promise<{ countryCode:
     response: { products },
   } = await listProductsWithSort({ page: 1, countryCode, sortBy: "created_at", queryParams: { limit: 60 } as any })
   const wa = whatsappNumber()
+  const texts = await getSiteTexts()
   const price = (p: any) => {
     const n = (p.variants || []).map((v: any) => v?.calculated_price?.calculated_amount).filter((x: any) => typeof x === "number").sort((a: number, b: number) => a - b)[0]
     return typeof n === "number" ? `${Number.isInteger(n) ? n : n.toFixed(2)}$` : ""
@@ -26,7 +28,7 @@ export default async function Links({ params }: { params: Promise<{ countryCode:
     <div className="mx-auto flex max-w-md flex-col gap-4 px-4 py-8" dir="rtl">
       <div className="flex flex-col items-center gap-2 text-center">
         <Image src="/logo-mark.png" alt="لمسة فون" width={120} height={93} priority />
-        <p className="text-sm text-ui-fg-subtle">جوالات وإكسسوارات أصلية في صنعاء · توصيل سريع · الدفع عند الاستلام</p>
+        <p className="text-sm text-ui-fg-subtle">{texts.links_tagline}</p>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {wa && (

@@ -123,7 +123,7 @@ describe("marketing replies", () => {
   })
   it("sales replies carry the store promise and a next step", () => {
     const r = reply("بكم سامسونج اس 25 الترا", ctx)
-    expect(r.text).toContain("الدفع عند الاستلام")
+    expect(r.text).toContain("توصيل صنعاء والمحافظات")
     expect(r.text).toContain("اطلب")
   })
 })

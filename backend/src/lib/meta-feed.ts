@@ -118,7 +118,7 @@ export function productToItems(
   const description = (
     stripHtml(product.description) ||
     stripHtml(product.subtitle) ||
-    `${product.title} من لمسة فون: أصلي ومفحوص، توصيل سريع في صنعاء والدفع عند الاستلام.`
+    `${product.title} من لمسة فون: أصلي ومفحوص، توصيل سريع في صنعاء.`
   ).slice(0, 9999)
   // صفحة الإضافة السريعة تحفظ نسخ JPEG في metadata.meta_images لأن ميتا لا تقبل webp دائماً
   const metaImages = Array.isArray(product.metadata?.meta_images)

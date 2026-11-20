@@ -43,7 +43,7 @@ const PaymentDetails = ({ order }: PaymentDetailsProps) => {
                 <Text data-testid="payment-amount">
                   {isStripeLike(payment.provider_id) && payment.data?.card_last4
                     ? `**** **** **** ${payment.data.card_last4}`
-                    : <>الدفع عند الاستلام: <Price usdOnly amount={payment.amount} /></>}
+                    : <>المبلغ المطلوب: <Price usdOnly amount={payment.amount} /></>}
                 </Text>
               </div>
             </div>

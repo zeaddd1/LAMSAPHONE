@@ -14,7 +14,7 @@ const tajawal = Tajawal({ subsets: ["arabic", "latin"], weight: ["400", "500", "
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
   title: { default: `${STORE.name} | جوالات سامسونج وارد أمريكا في صنعاء`, template: `%s | ${STORE.shortName}` },
-  description: `${STORE.name}: ${STORE.tagline}. ${STORE.address}. توصيل والدفع عند الاستلام. واتساب ${STORE.phoneDisplay}.`,
+  description: `${STORE.name}: ${STORE.tagline}. ${STORE.address}. فحص شامل وتوصيل سريع. واتساب ${STORE.phoneDisplay}.`,
   keywords: ["لمسة فون", "جوالات صنعاء", "جوالات سامسونج وارد أمريكا", "سامسونج صنعاء", "جوالات اليمن", "S24 Ultra صنعاء", "S23 Ultra اليمن", "إكسسوارات جوال صنعاء", "Lamsa Phone"],
   openGraph: { type: "website", siteName: STORE.shortName, locale: "ar_YE", url: "/" },
   twitter: { card: "summary_large_image" },

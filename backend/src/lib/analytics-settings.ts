@@ -4,10 +4,12 @@ import { z } from "@medusajs/framework/zod"
 // إعدادات الزوار تُحفظ في metadata المتجر: store.metadata.analytics
 // معرّفات عامة تظهر في كود الصفحات أصلاً (ليست أسراراً):
 //  - GTM-XXXXXXX: حاوية Google Tag Manager (تُدار منها أدوات جوجل مثل Analytics)
+//  - G-XXXXXXX: معرّف قياس Google Analytics مباشرة (بدون Tag Manager)
 //  - Clarity: معرّف مشروع Microsoft Clarity (تسجيلات وخرائط حرارية)
 
 const GTM = /^GTM-[A-Z0-9]{4,12}$/
 const CLARITY = /^[a-z0-9]{6,20}$/
+const GA = /^G-[A-Z0-9]{4,15}$/
 
 export const AnalyticsInput = z.object({
   gtm_id: z
@@ -16,6 +18,13 @@ export const AnalyticsInput = z.object({
     .max(20)
     .transform((v) => v.toUpperCase())
     .refine((v) => v === "" || GTM.test(v), "معرّف Google Tag Manager يبدأ بـ GTM- مثل GTM-ABC123")
+    .default(""),
+  ga_id: z
+    .string()
+    .trim()
+    .max(20)
+    .transform((v) => v.toUpperCase())
+    .refine((v) => v === "" || GA.test(v), "معرّف القياس في Google Analytics يبدأ بـ G- مثل G-ABC123XYZ")
     .default(""),
   clarity_id: z
     .string()
@@ -26,12 +35,13 @@ export const AnalyticsInput = z.object({
     .default(""),
 })
 export type AnalyticsInput = z.infer<typeof AnalyticsInput>
-export type AnalyticsSettings = { gtm_id: string; clarity_id: string }
+export type AnalyticsSettings = { gtm_id: string; ga_id: string; clarity_id: string }
 
 type Scope = { resolve: (key: string) => any }
 
 const clean = (s: any): AnalyticsSettings => ({
   gtm_id: typeof s?.gtm_id === "string" && GTM.test(s.gtm_id) ? s.gtm_id : "",
+  ga_id: typeof s?.ga_id === "string" && GA.test(s.ga_id) ? s.ga_id : "",
   clarity_id: typeof s?.clarity_id === "string" && CLARITY.test(s.clarity_id) ? s.clarity_id : "",
 })
 
@@ -44,7 +54,7 @@ export async function saveAnalyticsSettings(scope: Scope, input: AnalyticsInput)
   const storeService = scope.resolve(Modules.STORE)
   const [store] = await storeService.listStores({}, { take: 1, select: ["id", "metadata"] })
   if (!store) throw new Error("no store")
-  const next = { gtm_id: input.gtm_id, clarity_id: input.clarity_id }
+  const next = { gtm_id: input.gtm_id, ga_id: input.ga_id, clarity_id: input.clarity_id }
   await storeService.updateStores(store.id, { metadata: { ...(store.metadata || {}), analytics: next } })
   return next
 }

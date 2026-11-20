@@ -7,8 +7,9 @@ import { sdk } from "../../lib/sdk"
 // صفحة "زوار المتجر": ربط أدوات الزوار المجانية (Google Tag Manager وMicrosoft Clarity).
 // المعرّفات تُحفظ في إعدادات المتجر وتُضاف تلقائياً لكل صفحات المتجر. الأرقام تُعرض في Google Analytics وClarity.
 
-type Settings = { gtm_id: string; clarity_id: string }
+type Settings = { gtm_id: string; ga_id: string; clarity_id: string }
 const GTM_RE = /^GTM-[A-Z0-9]{4,12}$/i
+const GA_RE = /^G-[A-Z0-9]{4,15}$/i
 const CLARITY_RE = /^[a-z0-9]{6,20}$/i
 
 const Field = ({ label, hint, value, onChange, placeholder, ok, help }: { label: string; hint: string; value: string; onChange: (v: string) => void; placeholder: string; ok: boolean; help: string }) => (
@@ -45,8 +46,9 @@ const Guide = ({ title, steps, links }: { title: string; steps: string[]; links:
 )
 
 const AnalyticsPage = () => {
-  const [saved, setSaved] = useState<Settings>({ gtm_id: "", clarity_id: "" })
+  const [saved, setSaved] = useState<Settings>({ gtm_id: "", ga_id: "", clarity_id: "" })
   const [gtm, setGtm] = useState("")
+  const [ga, setGa] = useState("")
   const [clarity, setClarity] = useState("")
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -57,6 +59,7 @@ const AnalyticsPage = () => {
       .then((r) => {
         setSaved(r.settings)
         setGtm(r.settings.gtm_id)
+        setGa(r.settings.ga_id || "")
         setClarity(r.settings.clarity_id)
       })
       .catch((e) => toast.error(String(e?.message || e)))
@@ -64,17 +67,19 @@ const AnalyticsPage = () => {
   }, [])
 
   const gtmOk = gtm.trim() === "" || GTM_RE.test(gtm.trim())
+  const gaOk = ga.trim() === "" || GA_RE.test(ga.trim())
   const clarityOk = clarity.trim() === "" || CLARITY_RE.test(clarity.trim())
-  const dirty = gtm.trim() !== saved.gtm_id || clarity.trim() !== saved.clarity_id
-  const connected = Boolean(saved.gtm_id || saved.clarity_id)
+  const dirty = gtm.trim() !== saved.gtm_id || ga.trim() !== (saved.ga_id || "") || clarity.trim() !== saved.clarity_id
+  const connected = Boolean(saved.gtm_id || saved.ga_id || saved.clarity_id)
 
   const save = async (next?: Settings) => {
-    const body = next ?? { gtm_id: gtm.trim(), clarity_id: clarity.trim() }
+    const body = next ?? { gtm_id: gtm.trim(), ga_id: ga.trim(), clarity_id: clarity.trim() }
     setSaving(true)
     try {
       const r = await sdk.client.fetch<{ settings: Settings }>("/admin/analytics-settings", { method: "POST", body })
       setSaved(r.settings)
       setGtm(r.settings.gtm_id)
+      setGa(r.settings.ga_id || "")
       setClarity(r.settings.clarity_id)
       toast.success("تم الحفظ، وتبدأ الزيارات بالظهور خلال دقائق")
     } catch (e: any) {
@@ -94,9 +99,18 @@ const AnalyticsPage = () => {
         <Badge color={connected ? "green" : "grey"}>{loaded ? (connected ? "متصل" : "غير متصل") : "…"}</Badge>
       </Container>
 
-      <Container className="grid gap-4 px-6 py-4 md:grid-cols-2">
+      <Container className="grid gap-4 px-6 py-4 md:grid-cols-3">
         <Field
-          label="Google Tag Manager"
+          label="Google Analytics"
+          hint="أسهل طريقة: معرّف القياس من Google Analytics مباشرة، بدون Tag Manager."
+          value={ga.trim()}
+          onChange={setGa}
+          placeholder="G-XXXXXXXXXX"
+          ok={gaOk}
+          help="من Google Analytics: المشرف ← مصادر البيانات ← الموقع ← معرّف القياس."
+        />
+        <Field
+          label="Google Tag Manager (اختياري)"
           hint="يدير تحليلات جوجل (Google Analytics) للمتجر. ضع أدوات جوجل داخله."
           value={gtm.trim()}
           onChange={setGtm}
@@ -119,11 +133,10 @@ const AnalyticsPage = () => {
         <Guide
           title="كيف أربط جوجل، وأين أشاهد الأرقام"
           steps={[
-            "افتح موقع Google Tag Manager وسجّل بحساب جوجل، ثم أنشئ حساباً وحاوية (Container) نوعها Web باسم المتجر.",
-            "انسخ معرّف الحاوية الذي يبدأ بـ GTM- (يظهر أعلى الصفحة) والصقه في الخانة أعلاه ثم اضغط حفظ.",
-            "افتح Google Analytics وأنشئ Property للمتجر، ومنها Data Stream نوع Web، وانسخ Measurement ID الذي يبدأ بـ G-.",
-            "ارجع إلى Tag Manager: Tags ← New ← Google Tag، والصق G-، واختر Trigger: All Pages، ثم Submit ← Publish.",
-            "بعد دقائق تظهر الزيارات في Google Analytics ← Reports ← Realtime.",
+            "افتح Google Analytics وسجّل بحساب جوجل، وأنشئ Property للمتجر، ومنها مصدر بيانات (Data Stream) نوع Web برابط المتجر.",
+            "انسخ معرّف القياس الذي يبدأ بـ G- والصقه في خانة Google Analytics أعلاه ثم اضغط حفظ. هذا يكفي.",
+            "خلال دقائق تظهر الزيارات في Google Analytics ← التقارير ← الوقت الفعلي (Realtime). تنبيه «جمع البيانات غير نشط» يختفي خلال 48 ساعة.",
+            "Tag Manager اختياري للمتقدمين فقط: لا تضع فيه Google Analytics إن وضعت معرّف G- هنا حتى لا تُحسب الزيارة مرتين.",
           ]}
           links={[
             { text: "فتح Google Tag Manager", href: "https://tagmanager.google.com/" },
@@ -148,9 +161,9 @@ const AnalyticsPage = () => {
 
       <Container className="flex flex-wrap items-center justify-end gap-2 px-6 py-4">
         {connected && (
-          <Button variant="secondary" disabled={saving} onClick={() => save({ gtm_id: "", clarity_id: "" })}>فصل الكل</Button>
+          <Button variant="secondary" disabled={saving} onClick={() => save({ gtm_id: "", ga_id: "", clarity_id: "" })}>فصل الكل</Button>
         )}
-        <Button onClick={() => save()} isLoading={saving} disabled={!dirty || !gtmOk || !clarityOk}>حفظ</Button>
+        <Button onClick={() => save()} isLoading={saving} disabled={!dirty || !gtmOk || !gaOk || !clarityOk}>حفظ</Button>
       </Container>
     </div>
   )

@@ -3,9 +3,17 @@ import { getAnalytics } from "@lib/data/analytics"
 
 /** أدوات الزوار (Google Tag Manager وMicrosoft Clarity) في كل صفحات المتجر، من لوحة "زوار المتجر" */
 export default async function GoogleAnalytics() {
-  const { gtm_id, clarity_id } = await getAnalytics()
+  const { gtm_id, ga_id, clarity_id } = await getAnalytics()
   return (
     <>
+      {ga_id && (
+        <>
+          <Script id="gtag-src" src={`https://www.googletagmanager.com/gtag/js?id=${ga_id}`} strategy="afterInteractive" />
+          <Script id="gtag" strategy="afterInteractive">
+            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${ga_id}');`}
+          </Script>
+        </>
+      )}
       {gtm_id && (
         <>
           <Script id="gtm" strategy="afterInteractive">

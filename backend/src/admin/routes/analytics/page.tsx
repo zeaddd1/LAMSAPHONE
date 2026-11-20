@@ -111,7 +111,7 @@ const AnalyticsPage = () => {
         />
         <Field
           label="Google Tag Manager (اختياري)"
-          hint="يدير تحليلات جوجل (Google Analytics) للمتجر. ضع أدوات جوجل داخله."
+          hint="اختياري للمتقدمين. لا تضع Google Analytics داخله لأنه مربوط مباشرة في الخانة الأولى، حتى لا تُحسب الزيارة مرتين."
           value={gtm.trim()}
           onChange={setGtm}
           placeholder="GTM-XXXXXXX"

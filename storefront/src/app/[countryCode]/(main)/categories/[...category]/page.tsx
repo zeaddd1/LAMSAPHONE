@@ -54,6 +54,14 @@ export async function generateStaticParams() {
   }
 }
 
+const safeDecodeCat = (h: string) => {
+  try {
+    return decodeURIComponent(h)
+  } catch {
+    return h
+  }
+}
+
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params
   try {
@@ -61,14 +69,15 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
     const title = productCategory.name
 
-    const description = productCategory.description ?? `${title} من لمسة فون`
+    const description = productCategory.description || `${title} من لمسة فون في صنعاء: أصلية وفحص شامل، الدفع عند الاستلام، اطلب عبر واتساب.`
+    // الرابط الأساسي كامل (مع الدولة) حتى لا تتشتت نتائج البحث بين روابط مختلفة للقسم نفسه
+    const url = `/${params.countryCode}/categories/${params.category.map((c) => encodeURIComponent(safeDecodeCat(c))).join("/")}`
 
     return {
       title: `${title} | لمسة فون`,
       description,
-      alternates: {
-        canonical: `${params.category.join("/")}`,
-      },
+      alternates: { canonical: url },
+      openGraph: { type: "website", siteName: "لمسة فون", locale: "ar_YE", url, title: `${title} | لمسة فون`, description },
     }
   } catch (error) {
     notFound()

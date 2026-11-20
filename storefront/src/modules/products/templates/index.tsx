@@ -41,6 +41,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
     description: product.description || undefined,
     image: product.thumbnail ? [product.thumbnail] : undefined,
     sku: product.variants?.[0]?.sku || undefined,
+    brand: (product.metadata as any)?.brand ? { "@type": "Brand", name: String((product.metadata as any).brand) } : undefined,
     offers:
       cheapest !== undefined
         ? { "@type": "Offer", priceCurrency: "USD", price: cheapest, availability: "https://schema.org/InStock" }

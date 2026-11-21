@@ -33,6 +33,7 @@ import {
 } from "../../lib/image-studio"
 import { processImage } from "../../lib/quick-add-image"
 import { sdk } from "../../lib/sdk"
+import { NOW, When, WhenPicker, whenBody, whenLabel } from "../../components/quick-add-products"
 
 // استوديو الصور: معالج خطوة بخطوة لتوليد صور المنتج يدوياً عبر Gemini وCanva (بلا API ولا تكلفة).
 // انسخ البرومت ← تُفتح الأداة وينتقل للخطوة التالية ← نفّذ ما نسخته ← نزّل الصورة ← انسخ التالي.
@@ -359,10 +360,10 @@ const ImageStudioPage = () => {
 }
 
 // ---------- نشر حر على ميتا من الاستوديو: منشور أو قصة بلا إضافة منتج للمتجر ----------
-type MetaFlags = { has_token: boolean; page_id: string }
+type MetaFlags = { has_token: boolean; page_id: string; threads_has_token?: boolean }
 type PubImg = { post: File; story: File; preview: string }
 type PubResult = { ok: boolean; url?: string; error?: string; skipped?: boolean; comment_error?: string }
-const PUB_NAMES: Record<string, string> = { facebook: "فيسبوك", instagram: "إنستغرام", ig_story: "قصة إنستغرام", all: "ميتا" }
+const PUB_NAMES: Record<string, string> = { facebook: "فيسبوك", instagram: "إنستغرام", ig_story: "قصة إنستغرام", threads: "Threads", all: "ميتا" }
 
 // صورة القصة: كما هي (بلا قص) بصيغة JPEG أقل من 1MB (حد الرفع في السيرفر)
 async function toStoryJpeg(file: File): Promise<File> {
@@ -397,6 +398,8 @@ function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: F
   const [toFb, setToFb] = useState(true)
   const [toIg, setToIg] = useState(true)
   const [toStory, setToStory] = useState(false)
+  const [toThreads, setToThreads] = useState(false)
+  const [when, setWhen] = useState<When>(NOW)
   const [busy, setBusy] = useState("")
   const [results, setResults] = useState<Record<string, PubResult> | null>(null)
 
@@ -431,7 +434,8 @@ function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: F
   }
 
   const ready = Boolean(meta?.has_token && meta.page_id)
-  const any = toFb || toIg || toStory
+  const threadsReady = Boolean(meta?.threads_has_token)
+  const any = (ready && (toFb || toIg || toStory)) || (threadsReady && toThreads)
   const publish = async () => {
     if (!imgs.length) return toast.error("أضف صورة واحدة على الأقل")
     if (!title.trim()) return toast.error("اكتب عنوان المنشور")
@@ -440,14 +444,20 @@ function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: F
       setBusy("رفع الصور…")
       const upload = async (f: File) => ((await sdk.admin.upload.create({ files: [f] })).files[0] as any).url as string
       const images: string[] = []
-      if (toFb || toIg) for (const i of imgs) images.push(await upload(i.post))
+      if (toFb || toIg || toThreads) for (const i of imgs) images.push(await upload(i.post))
       const story_image = toStory ? await upload(imgs[0].story) : undefined
-      setBusy("النشر على ميتا…")
+      if (when.mode === "at" && !when.at) throw new Error("اختر وقت النشر")
+      setBusy(when.mode === "at" ? "الجدولة…" : "النشر على ميتا…")
       const n = Number(price)
-      const r = await sdk.client.fetch<{ results: Record<string, PubResult> }>("/admin/quick-add/publish", {
+      const r = await sdk.client.fetch<{ results?: Record<string, PubResult>; scheduled?: { at: string } }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { title: title.trim(), price: n > 0 ? n : undefined, text, hashtags: tags, images: images.length ? images : [story_image], story_image, facebook: toFb, instagram: toIg, ig_story: toStory, catalog: false, use_video: false },
+        body: { title: title.trim(), price: n > 0 ? n : undefined, text, hashtags: tags, images: images.length ? images : [story_image], story_image, facebook: ready && toFb, instagram: ready && toIg, ig_story: ready && toStory, threads: threadsReady && toThreads, catalog: false, use_video: false, ...whenBody(when) },
       })
+      if (r.scheduled) {
+        toast.success(`جُدول النشر: ${new Date(r.scheduled.at).toLocaleString("ar")}`)
+        return
+      }
+      if (!r.results) return
       setResults(r.results)
       const failed = Object.values(r.results).filter((x) => !x.ok && !x.skipped).length
       failed ? toast.warning("نُشر جزئياً، راجع النتائج") : toast.success("تم النشر على ميتا")
@@ -467,7 +477,7 @@ function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: F
         </div>
         <Button size="small" variant="transparent" onClick={fill}>تعبئة من بيانات الاستوديو</Button>
       </div>
-      {meta && !ready && (
+      {meta && !ready && !threadsReady && (
         <Text size="small" className="text-ui-fg-error">
           ميتا غير مربوطة. <a className="underline" href="/app/meta-connect">اربطها من صفحة ربط ميتا</a>.
         </Text>
@@ -514,16 +524,17 @@ function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: F
       </div>
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-3">
-        {([["فيسبوك (منشور)", toFb, setToFb], ["إنستغرام (منشور)", toIg, setToIg], ["قصة إنستغرام", toStory, setToStory]] as const).map(([l, v, set]) => (
+        {([["فيسبوك (منشور)", toFb, setToFb, ready], ["إنستغرام (منشور)", toIg, setToIg, ready], ["قصة إنستغرام", toStory, setToStory, ready], ["Threads", toThreads, setToThreads, threadsReady]] as const).map(([l, v, set, ok]) => (
           <label key={l} className="flex items-center gap-2 text-sm">
-            <Switch disabled={!ready} checked={v && ready} onCheckedChange={set} />
+            <Switch disabled={!ok} checked={v && ok} onCheckedChange={set} />
             {l}
           </label>
         ))}
-        <Button isLoading={Boolean(busy)} disabled={!ready || !any || adding > 0 || !imgs.length} onClick={publish}>
-          {busy || (toStory && !toFb && !toIg ? "نشر كقصة فقط" : "نشر الآن")}
+        <Button isLoading={Boolean(busy)} disabled={!any || adding > 0 || !imgs.length} onClick={publish}>
+          {busy || (when.mode === "at" ? whenLabel(when) : toStory && !toFb && !toIg && !toThreads ? "نشر كقصة فقط" : "نشر الآن")}
         </Button>
       </div>
+      <WhenPicker value={when} onChange={setWhen} />
       {toStory && (
         <Text size="xsmall" className="text-ui-fg-subtle">
           القصة تُنشر بالصورة الأولى كما هي (يفضّل 9:16 من خطوة «تصميم ستوري»)، بلا نص، وتبقى 24 ساعة. لتبقى دائماً: افتحها في تطبيق إنستغرام ← «تمييز» ← «أبرز القصص».

@@ -8,7 +8,7 @@ import { ProcessedVideo, VIDEO_MAX_SECONDS, processVideo } from "../../lib/quick
 import PostPreview from "../../components/quick-add-post-preview"
 import type { FitMode } from "../../lib/quick-add-geometry"
 import type { MetaPublic } from "../../components/quick-add-meta-connect"
-import QuickAddProducts from "../../components/quick-add-products"
+import QuickAddProducts, { NOW, When, WhenPicker, whenBody, whenLabel } from "../../components/quick-add-products"
 import { BRANDS, CATALOG, CatalogModel, STORE_ORIGIN, describe as describeModel, imageUrls } from "../../lib/samsung-catalog"
 import { SPEC_FIELDS, Specs, cleanSpecs } from "../../lib/product-specs"
 import { buildOptions, optionMode, titleWith } from "../../lib/product-options"
@@ -167,6 +167,10 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
   const [toFb, setToFb] = useState(metaReady && Boolean(ctx.meta.page_id))
   const [toIg, setToIg] = useState(metaReady && Boolean(ctx.meta.page_id))
   const [toCatalog, setToCatalog] = useState(metaReady && Boolean(ctx.meta.catalog_id))
+  const threadsReady = Boolean(ctx.meta.threads_has_token)
+  const [toThreads, setToThreads] = useState(threadsReady)
+  const [when, setWhen] = useState<When>(NOW)
+  const anyDest = (metaReady && (toFb || toIg || toCatalog)) || (threadsReady && toThreads)
   const [postText, setPostText] = useState("")
   // نص المنشور يُكتب تلقائياً من المواصفات والقسم حتى يكتب المدير نصه بنفسه
   const [autoText, setAutoText] = useState(true)
@@ -544,10 +548,14 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
     const prev = d.results
     const again = (k: string, on: boolean) => on && (!prev || (prev[k] && !prev[k].ok && !prev[k].skipped) || Boolean(prev.all))
     try {
-      const r = await sdk.client.fetch<{ link: string; results: Record<string, PublishResult> }>("/admin/quick-add/publish", {
+      const r = await sdk.client.fetch<{ link: string; results: Record<string, PublishResult>; scheduled?: { at: string }; autopost?: boolean }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { product_id: d.id, facebook: again("facebook", toFb), instagram: again("instagram", toIg), catalog: again("catalog", toCatalog), text: postText, hashtags, use_video: useVideo },
+        body: { product_id: d.id, facebook: again("facebook", toFb), instagram: again("instagram", toIg), threads: again("threads", toThreads), catalog: again("catalog", toCatalog), text: postText, hashtags, use_video: useVideo, ...whenBody(when) },
       })
+      if (r.scheduled || r.autopost) {
+        toast.success(r.scheduled ? `جُدول النشر: ${new Date(r.scheduled.at).toLocaleString("ar")}` : "أُضيف لأول قائمة النشر التلقائي")
+        return
+      }
       const merged = { ...(prev && !prev.all ? prev : {}) }
       for (const [k, v] of Object.entries(r.results)) if (!v.skipped) merged[k] = v
       setDone({ ...d, link: r.link, results: merged })
@@ -881,12 +889,14 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
           ["فيسبوك (منشور على الصفحة)", toFb, setToFb, Boolean(ctx.meta.page_id)],
           ["إنستغرام (منشور)", toIg, setToIg, Boolean(ctx.meta.page_id)],
           ["كتالوج ميتا + واتساب", toCatalog, setToCatalog, Boolean(ctx.meta.catalog_id)],
-        ].map(([label, val, set, ok]: any) => (
+          ["Threads", toThreads, setToThreads, threadsReady, true],
+        ].map(([label, val, set, ok, own]: any) => (
           <div key={label} className="flex items-center justify-between">
             <Label size="small">{label}</Label>
-            <Switch disabled={!metaReady || !ok} checked={val && metaReady && ok} onCheckedChange={set} />
+            <Switch disabled={(!metaReady && !own) || !ok} checked={val && (metaReady || own) && ok} onCheckedChange={set} />
           </div>
         ))}
+        {anyDest && <WhenPicker value={when} onChange={setWhen} allowAuto />}
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between gap-2">
             <Label size="small">نص المنشور (جاهز من المواصفات، عدّله إن شئت)</Label>
@@ -930,10 +940,10 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
       <div className="flex flex-col gap-3 lg:col-span-2">
         {!done ? (
           <div className="flex flex-wrap gap-2">
-            <Button size="large" isLoading={Boolean(busy)} disabled={processing > 0} onClick={() => save(metaReady && (toFb || toIg || toCatalog))}>
-              {metaReady && (toFb || toIg || toCatalog) ? "إضافة للمتجر ونشر على ميتا" : "إضافة للمتجر"}
+            <Button size="large" isLoading={Boolean(busy)} disabled={processing > 0} onClick={() => save(anyDest)}>
+              {anyDest ? (when.mode === "now" ? "إضافة للمتجر ونشر على ميتا" : `إضافة للمتجر و${whenLabel(when)}`) : "إضافة للمتجر"}
             </Button>
-            {metaReady && (toFb || toIg || toCatalog) && (
+            {anyDest && (
               <Button size="large" variant="secondary" isLoading={Boolean(busy)} disabled={processing > 0} onClick={() => save(false)}>
                 إضافة للمتجر فقط
               </Button>
@@ -960,7 +970,7 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
               )}
             <div className="flex flex-wrap gap-2">
               <Button onClick={reset}>إضافة منتج آخر</Button>
-              {metaReady && (toFb || toIg || toCatalog) && (!done.results || Object.values(done.results).some((r) => !r.ok && !r.skipped)) && (
+              {anyDest && (!done.results || Object.values(done.results).some((r) => !r.ok && !r.skipped)) && (
                 <Button variant="secondary" isLoading={Boolean(busy)} onClick={() => publishMeta(done)}>
                   {done.results ? "إعادة محاولة النشر" : "نشر على ميتا الآن"}
                 </Button>

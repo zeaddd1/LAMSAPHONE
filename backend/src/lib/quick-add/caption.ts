@@ -121,6 +121,20 @@ export function buildCaption(input: CaptionInput, maxLen = 2200): string {
   return caption
 }
 
+// نص Threads: 500 حرف كحد أقصى، والروابط تبقى كاملة دائماً (يُقصّ الوصف فقط)
+export function buildThreadsText(input: CaptionInput, maxLen = 500): string {
+  const head = [`📱 ${input.title.trim()}`]
+  const price = formatPrice(input.price ?? 0, input.currency)
+  if (price) head.push(`💰 السعر: ${price}`)
+  const tail = [`🛒 ${input.link}`]
+  if (input.waLink) tail.push(`💬 واتساب: ${input.waLink}`)
+  const fixed = head.join("\n").length + tail.join("\n").length + 4
+  let text = (input.text || "").trim()
+  const room = maxLen - fixed
+  if (text.length > room) text = room > 20 ? `${text.slice(0, room - 1).trim()}…` : ""
+  return [head.join("\n"), text, tail.join("\n")].filter(Boolean).join("\n\n").slice(0, maxLen)
+}
+
 // ---------- نص المنشور الجاهز من بيانات المنتج ----------
 // يُكتب تلقائياً لكل منتج من مواصفاته وشارته وقسمه، فلا يحتاج المدير أن يكتب شيئاً (ويستطيع تعديله قبل النشر).
 const SPEC_LABELS: Record<string, string> = {

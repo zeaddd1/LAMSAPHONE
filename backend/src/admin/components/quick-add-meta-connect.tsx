@@ -11,6 +11,9 @@ export type MetaPublic = {
   catalog_id: string
   ig_user_id: string
   graph_version: string
+  threads_has_token?: boolean
+  threads_token_hint?: string
+  threads_user_id?: string
   from_env: { token: boolean; page_id: boolean; catalog_id: boolean }
 }
 type Check = {
@@ -20,6 +23,7 @@ type Check = {
   facebook?: { ok: boolean; name?: string; error?: string }
   instagram?: { ok: boolean; username?: string; id?: string; error?: string }
   catalog?: { ok: boolean; name?: string; product_count?: number; error?: string }
+  threads?: { ok: boolean; username?: string; id?: string; error?: string }
 }
 
 const FEED = "https://cp.lamsaphone.yemenbay.com/feeds/meta.xml"
@@ -130,8 +134,10 @@ export default function MetaConnectTab({ onSaved }: { onSaved: () => void }) {
             <div className="flex items-center gap-2"><Text size="small">فيسبوك:</Text>{status(check.facebook, check.facebook?.name)}</div>
             <div className="flex items-center gap-2"><Text size="small">إنستغرام:</Text>{status(check.instagram, check.instagram?.username ? `@${check.instagram.username}` : undefined)}</div>
             <div className="flex items-center gap-2"><Text size="small">الكتالوج:</Text>{status(check.catalog, check.catalog?.name)}</div>
+            <div className="flex items-center gap-2"><Text size="small">Threads:</Text>{status(check.threads, check.threads?.username ? `@${check.threads.username}` : undefined)}</div>
           </div>
         )}
+        <ThreadsBox s={s} onSaved={(x) => (apply(x), runCheck())} />
         <div className="flex flex-col gap-1 rounded-lg border p-3">
           <Label size="small">رابط الكتالوج التلقائي (Data feed)</Label>
           <div className="flex gap-2">
@@ -174,6 +180,77 @@ export default function MetaConnectTab({ onSaved }: { onSaved: () => void }) {
           النشر يحتاج أن تكون الصور على رابط عام دائم.
         </Text>
       </section>
+    </div>
+  )
+}
+
+// ربط Threads: رمز منفصل عن رمز ميتا (Threads له واجهته الخاصة). يُجدَّد تلقائياً كل 30 يوماً.
+function ThreadsBox({ s, onSaved }: { s: MetaPublic | null; onSaved: (x: MetaPublic) => void }) {
+  const [token, setToken] = useState("")
+  const [userId, setUserId] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [help, setHelp] = useState(false)
+  const prompt = usePrompt()
+  useEffect(() => setUserId(s?.threads_user_id || ""), [s?.threads_user_id])
+
+  const save = async (clear = false) => {
+    if (!s) return
+    if (!clear && !token.trim() && userId.trim() === (s.threads_user_id || "")) return toast.info("لا توجد تغييرات للحفظ")
+    if (clear && !(await prompt({ title: "حذف رمز Threads؟", description: "سيتوقف النشر على Threads حتى تضع رمزاً جديداً.", confirmText: "نعم، احذف", cancelText: "إلغاء" }))) return
+    setSaving(true)
+    try {
+      // نرسل إعدادات ميتا الحالية كما هي حتى لا تتغير
+      const r = await sdk.client.fetch<{ settings: MetaPublic }>("/admin/quick-add/meta-settings", {
+        method: "POST",
+        body: { page_id: s.page_id, catalog_id: s.catalog_id, ig_user_id: s.ig_user_id, threads_token: token.trim() || undefined, threads_user_id: userId.trim() || undefined, clear_threads_token: clear || undefined },
+      })
+      setToken("")
+      toast.success(clear ? "حُذف رمز Threads" : "تم حفظ Threads")
+      onSaved(r.settings)
+    } catch (e: any) {
+      toast.error(e?.message || "تعذّر الحفظ")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-3">
+      <div className="flex items-center justify-between gap-2">
+        <Text weight="plus">🧵 Threads</Text>
+        {s?.threads_has_token ? <Badge size="2xsmall" color="green">مربوط</Badge> : <Badge size="2xsmall" color="grey">غير مربوط</Badge>}
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label size="small">رمز Threads (Access Token)</Label>
+        <Input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder={s?.threads_has_token ? `محفوظ (${s.threads_token_hint}) — اتركه فارغاً للإبقاء عليه` : "الصقه هنا"} />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label size="small">رقم حساب Threads (اختياري، يُكتشف من الرمز)</Label>
+        <Input dir="ltr" inputMode="numeric" value={userId} onChange={(e) => setUserId(e.target.value)} />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="small" isLoading={saving} onClick={() => save()}>حفظ Threads</Button>
+        {s?.threads_has_token && <Button size="small" variant="danger" onClick={() => save(true)}>حذف الرمز</Button>}
+        <Button size="small" variant="transparent" onClick={() => setHelp((x) => !x)}>{help ? "إخفاء الخطوات" : "كيف أحصل على الرمز؟"}</Button>
+      </div>
+      {help && (
+        <ol className="list-decimal ps-5 text-sm leading-7">
+          <li>
+            افتح <a className="underline" href="https://developers.facebook.com/apps" target="_blank" rel="noreferrer">مطوري ميتا</a> ← تطبيقك (أو أنشئ تطبيقاً) ← <b>إضافة حالة استخدام</b> ← <b>Access the Threads API</b>.
+          </li>
+          <li>
+            في إعدادات Threads فعّل الصلاحيات: <span dir="ltr" className="font-mono text-xs">threads_basic, threads_content_publish</span>.
+          </li>
+          <li>
+            من <b>الأدوار ← مختبرو Threads</b> أضف حساب Threads الخاص بالمتجر، ثم اقبل الدعوة من تطبيق Threads ← الإعدادات ← الحساب ← أذونات المواقع.
+          </li>
+          <li>
+            من <b>Use cases ← Threads ← Settings</b> اضغط <b>Generate access token</b> (أو من
+            <a className="underline" href="https://developers.facebook.com/tools/explorer" target="_blank" rel="noreferrer"> Graph Explorer</a> باختيار threads.net)، ثم حوّله لرمز طويل الأمد (60 يوماً).
+          </li>
+          <li>الصق الرمز هنا واضغط حفظ ثم «فحص الربط». النظام يجدّده تلقائياً كل 30 يوماً.</li>
+        </ol>
+      )}
     </div>
   )
 }

@@ -152,6 +152,72 @@ export async function postStoryToInstagram(cfg: GraphConfig, igUserId: string, t
   return { id: pub.id }
 }
 
+// ---------- Threads (تطبيق ميتا للنصوص): واجهة مستقلة graph.threads.net برمز مستخدم Threads ----------
+const THREADS = "https://graph.threads.net/v1.0"
+
+async function threadsCall(token: string, method: "GET" | "POST", path: string, params: Record<string, string> = {}, f: typeof fetch = fetch) {
+  const url = `${THREADS}/${path.replace(/^\//, "")}`
+  const res =
+    method === "GET"
+      ? await f(`${url}?${new URLSearchParams(params).toString()}`, { headers: { Authorization: `Bearer ${token}` } })
+      : await f(url, { method: "POST", body: new URLSearchParams({ ...params, access_token: token }), headers: { "Content-Type": "application/x-www-form-urlencoded" } })
+  const json: any = await res.json().catch(() => ({}))
+  if (!res.ok || json?.error) {
+    const e = json?.error || {}
+    throw new GraphError(e.error_user_msg || e.message || `Threads HTTP ${res.status}`, e.code)
+  }
+  return json
+}
+
+export async function getThreadsProfile(token: string, f?: typeof fetch): Promise<{ id: string; username?: string }> {
+  return threadsCall(token, "GET", "me", { fields: "id,username" }, f)
+}
+
+// الرمز الطويل صالح 60 يوماً، ويُجدَّد قبل انتهائه (مرة كل 24 ساعة على الأكثر بحسب ميتا)
+export async function refreshThreadsToken(token: string, f: typeof fetch = fetch): Promise<string> {
+  const res = await f(`https://graph.threads.net/refresh_access_token?${new URLSearchParams({ grant_type: "th_refresh_token", access_token: token })}`)
+  const j: any = await res.json().catch(() => ({}))
+  if (!res.ok || !j.access_token) throw new GraphError(j?.error?.message || "تعذّر تجديد رمز Threads")
+  return j.access_token
+}
+
+// منشور Threads: نص (500 حرف كحد أقصى) مع صورة أو ألبوم حتى 10 صور. الروابط داخل النص قابلة للضغط.
+export async function postToThreads(
+  token: string,
+  userId: string,
+  imageUrls: string[],
+  text: string,
+  opts: { fetchImpl?: typeof fetch; sleep?: (ms: number) => Promise<void> } = {}
+): Promise<{ id: string; url?: string }> {
+  const f = opts.fetchImpl || fetch
+  const sleep = opts.sleep || ((ms: number) => new Promise((r) => setTimeout(r, ms)))
+  const urls = imageUrls.slice(0, 10)
+  const waitReady = async (id: string) => {
+    for (let i = 0; i < 30; i++) {
+      const s = await threadsCall(token, "GET", id, { fields: "status,error_message" }, f)
+      if (s.status === "FINISHED") return
+      if (s.status === "ERROR" || s.status === "EXPIRED") throw new GraphError(s.error_message || "رفض Threads الصورة (JPEG برابط عام)")
+      await sleep(2000)
+    }
+    throw new GraphError("انتهت مهلة تجهيز منشور Threads")
+  }
+  let creation: string
+  if (!urls.length) {
+    creation = (await threadsCall(token, "POST", `${userId}/threads`, { media_type: "TEXT", text }, f)).id
+  } else if (urls.length === 1) {
+    creation = (await threadsCall(token, "POST", `${userId}/threads`, { media_type: "IMAGE", image_url: urls[0], text }, f)).id
+  } else {
+    const children: string[] = []
+    for (const image_url of urls) children.push((await threadsCall(token, "POST", `${userId}/threads`, { media_type: "IMAGE", image_url, is_carousel_item: "true" }, f)).id)
+    for (const c of children) await waitReady(c)
+    creation = (await threadsCall(token, "POST", `${userId}/threads`, { media_type: "CAROUSEL", children: children.join(","), text }, f)).id
+  }
+  await waitReady(creation)
+  const pub = await threadsCall(token, "POST", `${userId}/threads_publish`, { creation_id: creation }, f)
+  const info = await threadsCall(token, "GET", pub.id, { fields: "permalink" }, f).catch(() => ({}))
+  return { id: pub.id, url: (info as any).permalink }
+}
+
 // تحويل عنصر الكتالوج (بصيغة g:xxx من ملف الكتالوج) إلى صيغة items_batch (نفس أسماء حقول الملف، والسعر "700.00 USD")
 export function feedItemToBatch(item: Record<string, string>) {
   const data: Record<string, unknown> = {}

@@ -35,6 +35,10 @@ export const PublishBody = z.object({
   catalog: z.boolean().default(false),
   // قصة إنستغرام بأول صورة (أو الفيديو) للمنتج
   ig_story: z.boolean().default(false),
+  threads: z.boolean().default(false),
+  // متى: فارغ = الآن. وقت ISO = يُجدول. autopost = يدخل أول قائمة النشر التلقائي (منتج موجود فقط)
+  schedule_at: z.string().max(40).optional(),
+  autopost: z.boolean().optional(),
   // للمنشور فقط: لا يُحفظ في المنتج
   text: z.string().max(2000).optional(),
   hashtags: z.string().max(3000).optional(),

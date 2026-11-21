@@ -1,4 +1,4 @@
-import { autoPostText, buildCaption, hashtagComment, normalizeHashtags, productUrl, shortCode, shortLinks, suggestHashtags } from "../caption"
+import { autoPostText, buildCaption, buildThreadsText, hashtagComment, normalizeHashtags, productUrl, shortCode, shortLinks, suggestHashtags } from "../caption"
 import { addComment, feedItemToBatch, postToFacebook, postToInstagram, pushToCatalog } from "../meta-graph"
 import { POST_H, POST_MARGIN, POST_W, STORE_MARGIN, STORE_SIZE, fitBox, trimBox } from "../../../admin/lib/quick-add-geometry"
 
@@ -191,5 +191,28 @@ describe("autoPostText", () => {
   it("uses accessory fields when there are no phone specs, and is empty with no data", () => {
     expect(autoPostText({ specs: { type: "سماعة لاسلكية", features: "عزل ضوضاء" } })).toContain("▫️ النوع: سماعة لاسلكية")
     expect(autoPostText({})).toBe("")
+  })
+})
+
+import { cleanAutopost, yemenSlot } from "../publish"
+
+describe("threads and schedule", () => {
+  it("keeps Threads text within 500 chars and never cuts the links", () => {
+    const t = buildThreadsText({ title: "S24 Ultra", price: 700, text: "x".repeat(900), link: "lamsaphone.yemenbay.com/p/abc123", waLink: "lamsaphone.yemenbay.com/wa/abc123" })
+    expect(t.length).toBeLessThanOrEqual(500)
+    expect(t).toContain("lamsaphone.yemenbay.com/p/abc123")
+    expect(t).toContain("lamsaphone.yemenbay.com/wa/abc123")
+    expect(t).toContain("💰 السعر: 700$")
+  })
+  it("cleans autopost settings", () => {
+    const a = cleanAutopost({ enabled: true, hours: [25, 9, 9, "20", -1], per_run: 9, threads: true })
+    expect(a.hours).toEqual([9, 20])
+    expect(a.per_run).toBe(1)
+    expect(a.threads).toBe(true)
+    expect(a.facebook).toBe(true)
+  })
+  it("uses Sanaa time for the slot", () => {
+    expect(yemenSlot(new Date("2026-11-21T08:30:00Z"))).toEqual({ hour: 11, key: "2026-11-21-11" })
+    expect(yemenSlot(new Date("2026-11-21T22:10:00Z"))).toEqual({ hour: 1, key: "2026-11-22-1" })
   })
 })

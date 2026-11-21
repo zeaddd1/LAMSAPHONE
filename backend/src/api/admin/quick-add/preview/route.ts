@@ -13,12 +13,14 @@ export async function POST(req: MedusaRequest<PreviewBody>, res: MedusaResponse)
   let badge = b.badge
   let categoryNames = b.category_names || []
   let productId: string | undefined
+  let storage: string | undefined
+  let description: string | undefined
   // منتج موجود: نقرأ بياناته الحالية (بعد آخر تعديل للمواصفات والقوائم)
   if (b.product_id) {
     const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
     const { data } = await query.graph({
       entity: "product",
-      fields: ["id", "title", "metadata", "categories.name", "variants.prices.amount", "variants.prices.currency_code"],
+      fields: ["id", "title", "description", "metadata", "categories.name", "variants.prices.amount", "variants.prices.currency_code"],
       filters: { id: b.product_id },
     })
     const p = (data as any[])[0]
@@ -29,10 +31,12 @@ export async function POST(req: MedusaRequest<PreviewBody>, res: MedusaResponse)
       price = price ?? (usd.length ? Math.min(...usd) : undefined)
       specs = specs ?? p.metadata?.specs
       badge = badge ?? p.metadata?.badge
+      storage = p.metadata?.storage
+      description = p.description
       if (!categoryNames.length) categoryNames = (p.categories || []).map((c: any) => c.name).filter(Boolean)
     }
   }
-  const auto_text = autoPostText({ specs, badge, categoryNames })
+  const auto_text = autoPostText({ specs, badge, storage, description, categoryNames })
   // الروابط القصيرة تُعرف بعد إنشاء المنتج، فنعرض شكلها فقط في المعاينة
   const host = storeUrl().replace(/^https?:\/\//, "").replace(/\/$/, "")
   const links = productId ? shortLinks(productId, storeUrl()) : { shop: `${host}/p/…`, wa: `${host}/wa/…` }

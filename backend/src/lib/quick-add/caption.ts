@@ -151,7 +151,8 @@ const brief = (v: string, max = 70) => {
 }
 
 // الحالة (جديد/مستخدم) لا تُذكر في المنشور: سياسة المتجر أن تُذكر فقط إذا سأل العميل
-export type AutoTextInput = { specs?: Record<string, unknown> | null; badge?: string | null; categoryNames?: string[] }
+// منتج بلا مواصفات: نستخدم السعة (metadata.storage) وأول سطرين من وصف المنتج
+export type AutoTextInput = { specs?: Record<string, unknown> | null; badge?: string | null; categoryNames?: string[]; storage?: string | null; description?: string | null }
 
 export function autoPostText(input: AutoTextInput): string {
   const specs = (input.specs || {}) as Record<string, unknown>
@@ -161,9 +162,17 @@ export function autoPostText(input: AutoTextInput): string {
   const badge = (input.badge || "").trim()
   if (badge) lines.push(`🔥 ${badge}`)
   const specLines = order.filter(has).slice(0, 6).map((k) => `▫️ ${SPEC_LABELS[k]}: ${brief(specs[k] as string)}`)
+  const storage = (input.storage || "").trim()
+  if (storage && !has("memory")) specLines.unshift(`▫️ السعة: ${storage}`)
   if (specLines.length) {
     if (lines.length) lines.push("")
     lines.push("المواصفات:", ...specLines)
+  } else {
+    const desc = (input.description || "").split(/\n+/).map((l) => l.trim()).filter(Boolean).slice(0, 2).join("\n")
+    if (desc) {
+      if (lines.length) lines.push("")
+      lines.push(desc.length > 300 ? `${desc.slice(0, 299).trim()}…` : desc)
+    }
   }
   const cat = (input.categoryNames || []).find((c) => c && c.trim())
   if (cat) lines.push("", `📂 القسم: ${cat.trim()}`)

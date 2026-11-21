@@ -16,7 +16,7 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const { data } = await query.graph({
     entity: "product",
-    fields: ["id", "title", "handle", "thumbnail", "metadata", "categories.name", "images.url", "variants.prices.amount", "variants.prices.currency_code"],
+    fields: ["id", "title", "handle", "description", "thumbnail", "metadata", "categories.name", "images.url", "variants.prices.amount", "variants.prices.currency_code"],
     filters: { id: b.product_id },
   })
   const p = (data as any[])[0]
@@ -33,7 +33,7 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   // الهاشتاقات لا تدخل نص المنشور ولا المنتج: تُنشر كأول تعليق
   const short = shortLinks(p.id, storeUrl())
   // بلا نص من المدير: نص جاهز من مواصفات المنتج وشارته وقسمه
-  const text = b.text ?? autoPostText({ specs: p.metadata?.specs, badge: p.metadata?.badge, categoryNames: (p.categories || []).map((c: any) => c.name) })
+  const text = b.text ?? autoPostText({ specs: p.metadata?.specs, badge: p.metadata?.badge, storage: p.metadata?.storage, description: p.description, categoryNames: (p.categories || []).map((c: any) => c.name) })
   const caption = buildCaption({ title: p.title, price, text, link: short.shop, waLink: short.wa, network: "facebook" })
   const igCaption = buildCaption({ title: p.title, price, text, link: short.shop, waLink: short.wa, network: "instagram" })
   const comment = hashtagComment(b.hashtags)

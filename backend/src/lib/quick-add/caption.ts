@@ -57,6 +57,64 @@ export type CaptionInput = {
   waLink?: string // رابط واتساب قصير باسم المتجر (يفتح محادثة برسالة جاهزة عن المنتج)
   // إنستغرام لا يجعل الروابط قابلة للضغط داخل المنشور: نكتب «الرابط في البايو» بدلها
   network?: "facebook" | "instagram"
+  // بداية تشويقية تسبق الاسم (من أساليب المنشور)
+  hook?: string
+}
+
+// ---------- أساليب المنشور والبدايات التشويقية ----------
+// كلها متوافقة مع سياسات ميتا: لا طلب إعجاب أو مشاركة أو منشن مقابل شيء، لا وعود مضللة ولا استعجال كاذب،
+// لا مخاطبة لصفات شخصية للقارئ. {name} = اسم المنتج.
+export const POST_STYLES: { key: string; label: string; hooks: string[] }[] = [
+  { key: "offer", label: "🔥 عرض", hooks: ["🔥 عرض مميز على {name}", "💥 سعر خاص على {name} لدى لمسة فون", "🎯 فرصة جميلة تقتني {name}", "🔥 عرض هذا الأسبوع وصل"] },
+  { key: "new", label: "✨ وصل حديثاً", hooks: ["✨ وصل حديثاً إلى لمسة فون", "🆕 جديدنا هذا الأسبوع: {name}", "📦 وصلت دفعة جديدة من {name}", "✨ أحدث ما وصلنا"] },
+  { key: "best", label: "⭐ الأكثر طلباً", hooks: ["⭐ من الأكثر طلباً عند زبائننا", "🏆 خيار مفضّل عند زبائن لمسة فون", "⭐ ليش الكل يسأل عن {name}؟", "👌 جهاز يستاهل الاقتناء"] },
+  { key: "power", label: "🚀 أداء ومواصفات", hooks: ["🚀 أداء قوي في جيبك", "📸 كاميرا تلتقط أدق التفاصيل", "⚡ سرعة وسلاسة في كل استخدام", "🔋 قوة وتحمّل ليومك"] },
+  { key: "value", label: "💰 قيمة مقابل السعر", hooks: ["💰 قيمة ممتازة مقابل السعر", "💸 جودة عالية بسعر مناسب", "🤝 السعر المناسب للجهاز المناسب", "💰 جودة تثق فيها وسعر يرضيك"] },
+  { key: "classic", label: "📱 احترافي هادئ", hooks: ["لمسة فون تقدّم لك: {name}", "متوفر الآن لدى لمسة فون", "📱 اختيارك الذكي", "أصلي ومفحوص من لمسة فون"] },
+]
+
+const fillName = (h: string, name: string) => h.replace(/\{name\}/g, name.trim())
+
+// الأسلوب المناسب تلقائياً: من شارة المنتج أولاً، ثم وجود مواصفات جوال
+export function autoStyle(badge?: string | null, specs?: Record<string, unknown> | null): string {
+  const b = (badge || "").trim()
+  if (/عرض|خصم|تخفيض|sale/i.test(b)) return "offer"
+  if (/جديد|وصل|new/i.test(b)) return "new"
+  if (/الأكثر|مميز|best/i.test(b)) return "best"
+  const s = specs || {}
+  if (["screen", "cpu", "camera"].filter((k) => typeof (s as any)[k] === "string" && (s as any)[k].trim()).length >= 2) return "power"
+  return "classic"
+}
+
+export function hooksFor(style: string, name: string): string[] {
+  const st = POST_STYLES.find((x) => x.key === style) || POST_STYLES[POST_STYLES.length - 1]
+  return st.hooks.map((h) => fillName(h, name))
+}
+
+// بداية ثابتة لكل منتج (تختلف من منتج لآخر فلا تتكرر نفس البداية في الصفحة)
+export function pickHook(style: string, name: string, seed: string): string {
+  const list = hooksFor(style, name)
+  let n = 0
+  for (const ch of seed) n = (n * 31 + ch.charCodeAt(0)) >>> 0
+  return list[n % list.length]
+}
+
+// تنبيهات سياسات ميتا: عبارات «طُعم التفاعل» والوعود المضللة التي تقلل الوصول أو تُرفض
+const POLICY_RULES: [RegExp, string][] = [
+  [/(اعمل|سوي|سوّ|اضغط)\s*(لايك|إعجاب|اعجاب)|like\s*(and|&)?\s*share/i, "طلب الإعجاب يُعد «طُعم تفاعل» عند ميتا ويقلل الوصول"],
+  [/(شارك|انشر)\s*(المنشور|البوست)|share\s*this/i, "طلب مشاركة المنشور يُعد «طُعم تفاعل» عند ميتا"],
+  [/(منشن|تاق|تاغ|اذكر)\s*(صديق|صاحب|اصحاب|أصحاب|\d)|tag\s*a\s*friend/i, "طلب منشن الأصدقاء ممنوع في سياسات ميتا"],
+  [/(علّق|علق|اكتب)\s*(تم|نعم|أنا|انا|رقم|"|«)/i, "طلب تعليق كلمة محددة يُعد «طُعم تفاعل» عند ميتا"],
+  [/(اربح|ربح|هدية|جائزة).{0,20}(لايك|شارك|منشن|تعليق|متابعة)/i, "المسابقات يجب ألا تشترط الإعجاب أو المشاركة على الحساب الشخصي، وتحتاج شروطاً واضحة"],
+  [/(مضمون|ضمان)\s*100|أرخص\s*سعر\s*في\s*(العالم|اليمن)|الأرخص\s*على\s*الإطلاق/i, "تجنّب الادعاءات المطلقة غير المثبتة (مثل: الأرخص في العالم)"],
+  [/(آخر|اخر)\s*(فرصة|قطعة|ساعة)|ينتهي\s*(اليوم|الليلة)|خلال\s*\d+\s*(ساعة|دقيقة)/i, "الاستعجال يجب أن يكون صحيحاً فعلاً، وإلا يُعد مضللاً"],
+]
+export function policyWarnings(text: string): string[] {
+  const t = text || ""
+  const out = POLICY_RULES.filter(([re]) => re.test(t)).map(([, w]) => w)
+  const tags = (t.match(/#[\p{L}\p{N}_]+/gu) || []).length
+  if (tags > 30) out.push("إنستغرام يقبل 30 هاشتاقاً كحد أقصى")
+  return out
 }
 
 // رمز قصير للمنتج من آخر 6 أحرف في رقمه: يُستخدم في الروابط القصيرة /p/xxxxxx و /wa/xxxxxx
@@ -81,6 +139,8 @@ ${link}`)}`
 // نص المنشور: الاسم، السعر، الوصف، ثم "تسوق من متجرنا" مع الرابط، ثم الهاشتاقات
 export function buildCaption(input: CaptionInput, maxLen = 2200): string {
   const lines: string[] = []
+  const hook = (input.hook || "").trim()
+  if (hook) lines.push(hook, "")
   lines.push(`📱 ${input.title.trim()}`)
   const price = formatPrice(input.price ?? 0, input.currency)
   if (price) lines.push(`💰 السعر: ${price}`)
@@ -123,7 +183,7 @@ export function buildCaption(input: CaptionInput, maxLen = 2200): string {
 
 // نص Threads: 500 حرف كحد أقصى، والروابط تبقى كاملة دائماً (يُقصّ الوصف فقط)
 export function buildThreadsText(input: CaptionInput, maxLen = 500): string {
-  const head = [`📱 ${input.title.trim()}`]
+  const head = [...((input.hook || "").trim() ? [(input.hook || "").trim().slice(0, 80), ""] : []), `📱 ${input.title.trim()}`]
   const price = formatPrice(input.price ?? 0, input.currency)
   if (price) head.push(`💰 السعر: ${price}`)
   const tail = [`🛒 ${input.link}`]

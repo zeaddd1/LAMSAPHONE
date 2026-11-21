@@ -1,4 +1,4 @@
-import { autoPostText, buildCaption, buildThreadsText, hashtagComment, normalizeHashtags, productUrl, shortCode, shortLinks, suggestHashtags } from "../caption"
+import { autoPostText, autoStyle, buildCaption, buildThreadsText, hashtagComment, hooksFor, pickHook, policyWarnings, normalizeHashtags, productUrl, shortCode, shortLinks, suggestHashtags } from "../caption"
 import { addComment, feedItemToBatch, postToFacebook, postToInstagram, pushToCatalog } from "../meta-graph"
 import { POST_H, POST_MARGIN, POST_W, STORE_MARGIN, STORE_SIZE, fitBox, trimBox } from "../../../admin/lib/quick-add-geometry"
 
@@ -219,5 +219,29 @@ describe("threads and schedule", () => {
   it("uses Sanaa time for the slot", () => {
     expect(yemenSlot(new Date("2026-11-21T08:30:00Z"))).toEqual({ hour: 11, key: "2026-11-21-11", day: 6 })
     expect(yemenSlot(new Date("2026-11-21T22:10:00Z"))).toEqual({ hour: 1, key: "2026-11-22-1", day: 0 })
+  })
+})
+
+describe("post styles and Meta policy", () => {
+  it("picks a style from the badge or specs, and a stable hook per product", () => {
+    expect(autoStyle("عرض")).toBe("offer")
+    expect(autoStyle("وصل حديثاً")).toBe("new")
+    expect(autoStyle("", { screen: "6.8", cpu: "Snapdragon" })).toBe("power")
+    expect(autoStyle("", {})).toBe("classic")
+    const h = pickHook("offer", "S24 Ultra", "prod_1")
+    expect(hooksFor("offer", "S24 Ultra")).toContain(h)
+    expect(pickHook("offer", "S24 Ultra", "prod_1")).toBe(h)
+    expect(hooksFor("new", "S24").some((x) => x.includes("S24"))).toBe(true)
+  })
+  it("puts the hook above the title on every network", () => {
+    const c = buildCaption({ title: "S24", hook: "🔥 عرض مميز", link: "x/p/1", waLink: "x/wa/1" })
+    expect(c.startsWith("🔥 عرض مميز\n\n📱 S24")).toBe(true)
+    expect(buildThreadsText({ title: "S24", hook: "🔥 عرض مميز", link: "x/p/1" }).startsWith("🔥 عرض مميز")).toBe(true)
+  })
+  it("warns about engagement bait and misleading claims, and passes clean text", () => {
+    expect(policyWarnings("اعمل لايك وشارك المنشور ومنشن صديق").length).toBeGreaterThanOrEqual(3)
+    expect(policyWarnings("أرخص سعر في العالم").length).toBe(1)
+    expect(policyWarnings("✨ وصل حديثاً إلى لمسة فون\nشاشة 6.8 ومعالج قوي")).toEqual([])
+    for (const s of ["offer", "new", "best", "power", "value", "classic"]) expect(policyWarnings(hooksFor(s, "S24").join("\n"))).toEqual([])
   })
 })

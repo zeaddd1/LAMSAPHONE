@@ -8,7 +8,7 @@ import { ProcessedVideo, VIDEO_MAX_SECONDS, processVideo } from "../../lib/quick
 import PostPreview from "../../components/quick-add-post-preview"
 import type { FitMode } from "../../lib/quick-add-geometry"
 import type { MetaPublic } from "../../components/quick-add-meta-connect"
-import QuickAddProducts, { NOW, When, WhenPicker, whenBody, whenLabel } from "../../components/quick-add-products"
+import QuickAddProducts, { NOW, StyleInfo, StylePicker, When, WhenPicker, whenBody, whenLabel } from "../../components/quick-add-products"
 import { BRANDS, CATALOG, CatalogModel, STORE_ORIGIN, describe as describeModel, imageUrls } from "../../lib/samsung-catalog"
 import { SPEC_FIELDS, Specs, cleanSpecs } from "../../lib/product-specs"
 import { buildOptions, optionMode, titleWith } from "../../lib/product-options"
@@ -177,7 +177,10 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
   // نص المنشور يُكتب تلقائياً من المواصفات والقسم حتى يكتب المدير نصه بنفسه
   const [autoText, setAutoText] = useState(true)
   const [hashtags, setHashtags] = useState("")
-  const [preview, setPreview] = useState<{ caption: string; ig_caption?: string; comment: string; suggested: string[] } | null>(null)
+  const [preview, setPreview] = useState<({ caption: string; ig_caption?: string; comment: string; suggested: string[] } & StyleInfo) | null>(null)
+  // أسلوب المنشور وبدايته («» = تلقائي حسب المنتج)
+  const [postStyle, setPostStyle] = useState("")
+  const [hook, setHook] = useState<string | undefined>(undefined)
 
   const [busy, setBusy] = useState<string>("")
   const [done, setDone] = useState<Done | null>(null)
@@ -336,15 +339,15 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
   useEffect(() => {
     const t = setTimeout(() => {
       sdk.client
-        .fetch<{ caption: string; ig_caption?: string; comment: string; suggested: string[]; auto_text?: string }>("/admin/quick-add/preview", {
+        .fetch<{ caption: string; ig_caption?: string; comment: string; suggested: string[]; auto_text?: string } & StyleInfo>("/admin/quick-add/preview", {
           method: "POST",
-          body: { title: fullTitle, price: priceNum > 0 ? priceNum : undefined, text: autoText ? undefined : postText, hashtags, category_names: cat?.names || [], handle: done?.handle, specs: cleanSpecs(specs) },
+          body: { title: fullTitle, price: priceNum > 0 ? priceNum : undefined, text: autoText ? undefined : postText, hashtags, category_names: cat?.names || [], handle: done?.handle, specs: cleanSpecs(specs), style: postStyle || undefined, hook },
         })
         .then((r) => (setPreview(r), autoText && setPostText(r.auto_text || "")))
         .catch(() => {})
     }, 400)
     return () => clearTimeout(t)
-  }, [fullTitle, priceNum, postText, hashtags, categoryId, done?.handle, specs, autoText])
+  }, [fullTitle, priceNum, postText, hashtags, categoryId, done?.handle, specs, autoText, postStyle, hook])
 
   const addVideo = async (f: File) => {
     setVideoProgress(0)
@@ -420,6 +423,7 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
     setQty("")
     setPostText("")
     setAutoText(true)
+    setHook(undefined)
     setHashtags("")
     setStorages([])
     setColors([])
@@ -552,7 +556,7 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
     try {
       const r = await sdk.client.fetch<{ link: string; results: Record<string, PublishResult>; scheduled?: { at: string }; autopost?: boolean }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { product_id: d.id, facebook: again("facebook", toFb), instagram: again("instagram", toIg), threads: again("threads", toThreads), telegram: again("telegram", toTg), catalog: again("catalog", toCatalog), text: postText, hashtags, use_video: useVideo, ...whenBody(when) },
+        body: { product_id: d.id, facebook: again("facebook", toFb), instagram: again("instagram", toIg), threads: again("threads", toThreads), telegram: again("telegram", toTg), catalog: again("catalog", toCatalog), text: postText, hashtags, use_video: useVideo, style: preview?.style, hook: hook ?? preview?.hook, ...whenBody(when) },
       })
       if (r.scheduled || r.autopost) {
         toast.success(r.scheduled ? `جُدول النشر: ${new Date(r.scheduled.at).toLocaleString("ar")}` : "أُضيف لأول قائمة النشر التلقائي")
@@ -900,6 +904,7 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
           </div>
         ))}
         {anyDest && <WhenPicker value={when} onChange={setWhen} allowAuto />}
+        {anyDest && <StylePicker info={preview} hook={hook} onStyle={(s) => (setPostStyle(s), setHook(undefined))} onHook={setHook} />}
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between gap-2">
             <Label size="small">نص المنشور (جاهز من المواصفات، عدّله إن شئت)</Label>

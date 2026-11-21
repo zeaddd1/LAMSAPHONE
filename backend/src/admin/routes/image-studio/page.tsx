@@ -33,7 +33,7 @@ import {
 } from "../../lib/image-studio"
 import { processImage } from "../../lib/quick-add-image"
 import { sdk } from "../../lib/sdk"
-import { NOW, When, WhenPicker, whenBody, whenLabel } from "../../components/quick-add-products"
+import { NOW, StyleInfo, StylePicker, When, WhenPicker, whenBody, whenLabel } from "../../components/quick-add-products"
 
 // استوديو الصور: معالج خطوة بخطوة لتوليد صور المنتج يدوياً عبر Gemini وCanva (بلا API ولا تكلفة).
 // انسخ البرومت ← تُفتح الأداة وينتقل للخطوة التالية ← نفّذ ما نسخته ← نزّل الصورة ← انسخ التالي.
@@ -361,7 +361,8 @@ const ImageStudioPage = () => {
 
 // ---------- نشر حر على ميتا من الاستوديو: منشور أو قصة بلا إضافة منتج للمتجر ----------
 type MetaFlags = { has_token: boolean; page_id: string; threads_has_token?: boolean; telegram_ready?: boolean }
-type PubImg = { post: File; story: File; preview: string }
+// صورة جديدة من الجهاز (ملفات تُرفع عند النشر)، أو صورة محفوظة لمنتج من المتجر (رابط جاهز)
+type PubImg = { post?: File; story?: File; url?: string; preview: string }
 type PubResult = { ok: boolean; url?: string; error?: string; skipped?: boolean; comment_error?: string }
 const PUB_NAMES: Record<string, string> = { facebook: "فيسبوك", instagram: "إنستغرام", ig_story: "قصة إنستغرام", threads: "Threads", telegram: "تيليجرام", all: "ميتا" }
 
@@ -403,10 +404,44 @@ function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: F
   const [when, setWhen] = useState<When>(NOW)
   const [busy, setBusy] = useState("")
   const [results, setResults] = useState<Record<string, PubResult> | null>(null)
+  // منتج من المتجر فُتح من تبويب «النشر على ميتا» (?product=…): يُنشر باسمه ويُسجَّل في المنتج
+  const [product, setProduct] = useState<{ id: string; title: string } | null>(null)
+  const [postStyle, setPostStyle] = useState("")
+  const [hook, setHook] = useState<string | undefined>(undefined)
+  const [info, setInfo] = useState<(StyleInfo & { caption: string }) | null>(null)
 
   useEffect(() => {
     sdk.client.fetch<{ settings: MetaFlags }>("/admin/quick-add/meta-settings").then((r) => setMeta(r.settings)).catch(() => setMeta({ has_token: false, page_id: "" }))
+    const id = new URLSearchParams(window.location.search).get("product")
+    if (!id) return
+    sdk.admin.product
+      .retrieve(id, { fields: "id,title,thumbnail,metadata,images.url,variants.prices.amount,variants.prices.currency_code" } as any)
+      .then(({ product: p }: any) => {
+        setProduct({ id: p.id, title: p.title })
+        setTitle(p.title)
+        const usd = (p.variants || []).flatMap((v: any) => v.prices || []).filter((x: any) => x.currency_code === "usd").map((x: any) => Number(x.amount))
+        setPrice(usd.length ? String(Math.min(...usd)) : "")
+        const urls: string[] = Array.isArray(p.metadata?.meta_images) && p.metadata.meta_images.length ? p.metadata.meta_images : [p.thumbnail, ...(p.images || []).map((i: any) => i.url)].filter(Boolean)
+        setImgs(Array.from(new Set(urls)).slice(0, 10).map((u) => ({ url: u, preview: u })))
+        return sdk.client.fetch<{ auto_text: string; suggested: string[] }>("/admin/quick-add/preview", { method: "POST", body: { product_id: p.id } })
+      })
+      .then((r: any) => r && (setText(r.auto_text), setTags(r.suggested.join(" "))))
+      .catch(() => toast.error("تعذّر تحميل المنتج"))
   }, [])
+  // معاينة المنشور مع الأسلوب والبداية وتنبيهات سياسات ميتا
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const n = Number(price)
+      sdk.client
+        .fetch<StyleInfo & { caption: string }>("/admin/quick-add/preview", {
+          method: "POST",
+          body: { title: title || "منشور", price: n > 0 ? n : undefined, text, hashtags: tags, style: postStyle || undefined, hook, product_id: product?.id },
+        })
+        .then(setInfo)
+        .catch(() => {})
+    }, 400)
+    return () => clearTimeout(t)
+  }, [title, price, text, tags, postStyle, hook, product?.id])
   // يملأ العنوان والسعر والنص من بيانات المنتج في الاستوديو (ويمكن تعديلها)
   const fill = () => {
     setTitle([input.brand, input.name].map((x) => x.trim()).filter(Boolean).join(" "))
@@ -414,7 +449,7 @@ function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: F
     setText(studioText(input))
   }
   useEffect(() => {
-    if (!title && !text) fill()
+    if (!title && !text && !new URLSearchParams(window.location.search).get("product")) fill()
   }, [input.name])
 
   const add = async (files: File[]) => {
@@ -446,14 +481,14 @@ function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: F
       setBusy("رفع الصور…")
       const upload = async (f: File) => ((await sdk.admin.upload.create({ files: [f] })).files[0] as any).url as string
       const images: string[] = []
-      if (toFb || toIg || toThreads || toTg) for (const i of imgs) images.push(await upload(i.post))
-      const story_image = toStory ? await upload(imgs[0].story) : undefined
+      if (toFb || toIg || toThreads || toTg) for (const i of imgs) images.push(i.post ? await upload(i.post) : i.url!)
+      const story_image = toStory ? (imgs[0].story ? await upload(imgs[0].story) : imgs[0].url) : undefined
       if (when.mode === "at" && !when.at) throw new Error("اختر وقت النشر")
       setBusy(when.mode === "at" ? "الجدولة…" : "النشر على ميتا…")
       const n = Number(price)
       const r = await sdk.client.fetch<{ results?: Record<string, PubResult>; scheduled?: { at: string } }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { title: title.trim(), price: n > 0 ? n : undefined, text, hashtags: tags, images: images.length ? images : [story_image], story_image, facebook: ready && toFb, instagram: ready && toIg, ig_story: ready && toStory, threads: threadsReady && toThreads, telegram: tgReady && toTg, catalog: false, use_video: false, ...whenBody(when) },
+        body: { ...(product ? { product_id: product.id } : {}), title: title.trim(), price: n > 0 ? n : undefined, text, hashtags: tags, style: info?.style, hook: hook ?? info?.hook ?? "", images: images.length ? images : [story_image], story_image, facebook: ready && toFb, instagram: ready && toIg, ig_story: ready && toStory, threads: threadsReady && toThreads, telegram: tgReady && toTg, catalog: false, use_video: false, ...whenBody(when) },
       })
       if (r.scheduled) {
         toast.success(`جُدول النشر: ${new Date(r.scheduled.at).toLocaleString("ar")}`)
@@ -474,8 +509,19 @@ function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: F
     <div className="mx-6 mb-6 flex flex-col gap-3 rounded-lg border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <Text weight="plus">📣 نشر على ميتا بدون إضافة للمتجر</Text>
-          <Text size="xsmall" className="text-ui-fg-subtle">منشور أو قصة لعرض أو إعلان أو صنف لا تريد إضافته للمتجر. لا يُحفظ أي منتج.</Text>
+          <Text weight="plus">{product ? `📣 نشر «${product.title}»` : "📣 نشر على ميتا بدون إضافة للمتجر"}</Text>
+          <Text size="xsmall" className="text-ui-fg-subtle">
+            {product
+              ? "منتج من المتجر: صمّم صوره هنا (أو استبدلها) ثم انشره، ويُسجَّل النشر في المنتج."
+              : "منشور أو قصة لعرض أو إعلان أو صنف لا تريد إضافته للمتجر. لا يُحفظ أي منتج."}
+            {product && (
+              <>
+                {" "}
+                <a className="text-ui-fg-interactive underline" href="/app/quick-add">رجوع للمنتجات</a> ·{" "}
+                <a className="text-ui-fg-interactive underline" href="/app/image-studio">منشور حر جديد</a>
+              </>
+            )}
+          </Text>
         </div>
         <Button size="small" variant="transparent" onClick={fill}>تعبئة من بيانات الاستوديو</Button>
       </div>
@@ -496,6 +542,13 @@ function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: F
             <Textarea dir="auto" rows={5} value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب العرض أو التفاصيل…" />
           </div>
           <Field label="هاشتاقات (تُنشر كأول تعليق)" value={tags} onChange={setTags} placeholder="#لمسة_فون #صنعاء #عروض" />
+          <StylePicker info={info} hook={hook} onStyle={(s) => (setPostStyle(s), setHook(undefined))} onHook={setHook} />
+          {info?.caption && (
+            <details className="rounded-lg border p-2">
+              <summary className="cursor-pointer text-sm font-medium">معاينة المنشور</summary>
+              <pre className="mt-2 whitespace-pre-wrap font-sans text-sm" dir="auto">{info.caption}</pre>
+            </details>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">

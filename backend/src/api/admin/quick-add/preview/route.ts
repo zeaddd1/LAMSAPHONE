@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { autoPostText, buildCaption, hashtagComment, shortLinks, suggestHashtags } from "../../../../lib/quick-add/caption"
+import { POST_STYLES, autoPostText, autoStyle, buildCaption, buildThreadsText, hashtagComment, hooksFor, pickHook, policyWarnings, shortLinks, suggestHashtags } from "../../../../lib/quick-add/caption"
 import { storeUrl } from "../../../../lib/meta-feed-builder"
 import type { PreviewBody } from "../validators"
 
@@ -41,12 +41,23 @@ export async function POST(req: MedusaRequest<PreviewBody>, res: MedusaResponse)
   const host = storeUrl().replace(/^https?:\/\//, "").replace(/\/$/, "")
   const links = productId ? shortLinks(productId, storeUrl()) : { shop: `${host}/p/…`, wa: `${host}/wa/…` }
   const text = b.text ?? auto_text
+  // الأسلوب والبداية: المختار، وإلا التلقائي حسب الشارة والمواصفات
+  const name = title || "المنتج"
+  const style = POST_STYLES.some((s) => s.key === b.style) ? b.style! : autoStyle(badge, specs)
+  const hooks = hooksFor(style, name)
+  const hook = b.hook ?? pickHook(style, name, productId || name)
   res.json({
     auto_text,
+    styles: POST_STYLES.map((s) => ({ key: s.key, label: s.label })),
+    style,
+    hooks,
+    hook,
     suggested: suggestHashtags(title, categoryNames),
     // نص المنشور بلا هاشتاقات، والهاشتاقات في أول تعليق
-    ig_caption: buildCaption({ title: title || "اسم المنتج", price, text, link: links.shop, waLink: links.wa, network: "instagram" }),
-    caption: buildCaption({ title: title || "اسم المنتج", price, text, link: links.shop, waLink: links.wa }),
+    ig_caption: buildCaption({ title: title || "اسم المنتج", price, text, hook, link: links.shop, waLink: links.wa, network: "instagram" }),
+    caption: buildCaption({ title: title || "اسم المنتج", price, text, hook, link: links.shop, waLink: links.wa }),
+    threads: buildThreadsText({ title: title || "اسم المنتج", price, text, hook, link: links.shop, waLink: links.wa }),
     comment: hashtagComment(b.hashtags),
+    warnings: policyWarnings([hook, text, b.hashtags || ""].join("\n")),
   })
 }

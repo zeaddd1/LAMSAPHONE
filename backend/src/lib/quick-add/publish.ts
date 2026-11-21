@@ -1,5 +1,5 @@
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { autoPostText, buildCaption, buildThreadsText, hashtagComment, productUrl, shortLinks } from "./caption"
+import { POST_STYLES, autoPostText, autoStyle, buildCaption, buildThreadsText, hashtagComment, pickHook, productUrl, shortLinks } from "./caption"
 import { backendUrl, buildMetaFeed, clearMetaFeedCache, storeUrl } from "../meta-feed-builder"
 import { addComment, getPage, postReelToInstagram, postStoryToInstagram, postToFacebook, postToInstagram, postToTelegram, postToThreads, postVideoToFacebook, pushToCatalog } from "./meta-graph"
 import { getMetaSettings, getTelegramSettings } from "./meta-settings"
@@ -44,14 +44,18 @@ export async function publishToMeta(scope: Scope, b: PublishBody): Promise<Publi
   const short = free ? { shop: storeUrl().replace(/^https?:\/\//, "").replace(/\/$/, ""), wa: `wa.me/${whatsappNumber()}` } : shortLinks(p.id, storeUrl())
   // بلا نص من المدير: نص جاهز من مواصفات المنتج وشارته وقسمه
   const text = free ? b.text || "" : b.text ?? autoPostText({ specs: p.metadata?.specs, badge: p.metadata?.badge, storage: p.metadata?.storage, description: p.description, categoryNames: (p.categories || []).map((c: any) => c.name) })
-  const caption = buildCaption({ title: p.title, price, text, link: short.shop, waLink: short.wa, network: "facebook" })
-  const igCaption = buildCaption({ title: p.title, price, text, link: short.shop, waLink: short.wa, network: "instagram" })
-  const threadsText = buildThreadsText({ title: p.title, price, text, link: short.shop, waLink: short.wa })
+  // البداية التشويقية: المختارة، وإلا تلقائية حسب أسلوب المنتج (للنشر التلقائي والمجدول أيضاً)
+  const style = POST_STYLES.some((x) => x.key === b.style) ? b.style! : autoStyle(p.metadata?.badge, p.metadata?.specs)
+  const hook = b.hook ?? (free ? "" : pickHook(style, p.title, p.id))
+  const caption = buildCaption({ title: p.title, price, text, hook, link: short.shop, waLink: short.wa, network: "facebook" })
+  const igCaption = buildCaption({ title: p.title, price, text, hook, link: short.shop, waLink: short.wa, network: "instagram" })
+  const threadsText = buildThreadsText({ title: p.title, price, text, hook, link: short.shop, waLink: short.wa })
   // الهاشتاقات لا تدخل نص المنشور ولا المنتج: تُنشر كأول تعليق
   const comment = hashtagComment(b.hashtags)
 
   // ميتا تحتاج JPEG برابط عام: نسخ الإضافة السريعة، وإلا صور المنتج نفسها
-  const metaImages: string[] = Array.isArray(p.metadata?.meta_images) ? p.metadata.meta_images : []
+  // صور مختارة من «استوديو الصور» لمنتج موجود تأخذ الأولوية على صوره المحفوظة
+  const metaImages: string[] = b.images?.length ? b.images : Array.isArray(p.metadata?.meta_images) ? p.metadata.meta_images : []
   const images = (metaImages.length ? metaImages : [p.thumbnail, ...(p.images || []).map((i: any) => i.url)])
     .filter(Boolean)
     .map(abs)

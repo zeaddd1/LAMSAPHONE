@@ -27,6 +27,52 @@ type Product = {
 }
 type MetaFlags = { has_token: boolean; page_id: string; catalog_id: string; threads_has_token?: boolean; telegram_ready?: boolean }
 
+// ---------- أسلوب المنشور وبدايته التشويقية (مشترك بين المنتج والإضافة السريعة والاستوديو) ----------
+export type StyleInfo = { styles: { key: string; label: string }[]; style: string; hooks: string[]; hook: string; warnings?: string[] }
+
+export function StylePicker({ info, hook, onStyle, onHook }: { info: StyleInfo | null; hook: string | undefined; onStyle: (s: string) => void; onHook: (h: string) => void }) {
+  if (!info) return null
+  const cur = hook ?? info.hook
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border p-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Label size="small">أسلوب المنشور:</Label>
+        {info.styles.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            onClick={() => onStyle(s.key)}
+            className={`rounded-full border px-2.5 py-0.5 text-xs ${info.style === s.key ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-col gap-1">
+        <Label size="small">البداية (أول سطر يراه الزبون):</Label>
+        <div className="flex flex-wrap gap-1">
+          {info.hooks.map((h) => (
+            <button key={h} type="button" onClick={() => onHook(h)} className={`rounded-md border px-2 py-1 text-start text-xs ${cur === h ? "border-ui-fg-interactive bg-ui-bg-highlight" : "hover:bg-ui-bg-subtle-hover"}`} dir="auto">
+              {h}
+            </button>
+          ))}
+          <button type="button" onClick={() => onHook("")} className={`rounded-md border px-2 py-1 text-xs ${cur === "" ? "border-ui-fg-interactive bg-ui-bg-highlight" : "hover:bg-ui-bg-subtle-hover"}`}>
+            بلا بداية
+          </button>
+        </div>
+        <Input dir="auto" size="small" maxLength={150} value={cur} onChange={(e) => onHook(e.target.value)} placeholder="أو اكتب بدايتك بنفسك" />
+      </div>
+      {info.warnings?.length ? (
+        <div className="rounded-md border border-ui-tag-orange-border bg-ui-tag-orange-bg p-2 text-xs text-ui-tag-orange-text">
+          ⚠️ سياسات ميتا: {info.warnings.join(" · ")}
+        </div>
+      ) : (
+        <Text size="xsmall" className="text-ui-fg-subtle">✅ النص متوافق مع سياسات ميتا (بلا طلب إعجاب أو مشاركة أو منشن، وبلا وعود مضللة).</Text>
+      )}
+    </div>
+  )
+}
+
 // «متى ينشر؟»: الآن، أو في وقت تحدده (يُجدول)، أو مع النشر التلقائي اليومي (أول القائمة)
 export type When = { mode: "now" | "at" | "auto"; at: string }
 export const NOW: When = { mode: "now", at: "" }
@@ -712,7 +758,10 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
   const [publishing, setPublishing] = useState(false)
   const [results, setResults] = useState<Record<string, PublishResult> | null>(null)
   const [auto, setAuto] = useState("")
-  const [preview, setPreview] = useState<{ caption: string; ig_caption?: string } | null>(null)
+  const [preview, setPreview] = useState<({ caption: string; ig_caption?: string; threads?: string } & StyleInfo) | null>(null)
+  const [style, setStyle] = useState<string>("")
+  const [hook, setHook] = useState<string | undefined>(undefined)
+  const [net, setNet] = useState<"caption" | "ig_caption" | "threads">("caption")
   const pub = (p.metadata?.meta_published || {}) as Record<string, { at: string; url?: string }>
 
   // المنشور جاهز من بيانات المنتج (المواصفات والشارة والقسم والسعر) مع هاشتاقات مقترحة، ويمكن تعديله قبل النشر
@@ -729,12 +778,15 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
   useEffect(() => {
     const t = setTimeout(() => {
       sdk.client
-        .fetch<{ caption: string; ig_caption?: string }>("/admin/quick-add/preview", { method: "POST", body: { product_id: p.id, text } })
+        .fetch<{ caption: string; ig_caption?: string; threads?: string } & StyleInfo>("/admin/quick-add/preview", {
+          method: "POST",
+          body: { product_id: p.id, text, style: style || undefined, hook, hashtags: tags },
+        })
         .then(setPreview)
         .catch(() => {})
     }, 400)
     return () => clearTimeout(t)
-  }, [p.id, text])
+  }, [p.id, text, style, hook, tags])
 
   if (!meta.has_token && !meta.threads_has_token && !meta.telegram_ready) return <Text size="small">ميتا غير مربوطة. <a className="underline" href="/app/meta-connect">اربطها من هنا</a>.</Text>
 
@@ -744,7 +796,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
     try {
       const r = await sdk.client.fetch<{ results?: Record<string, PublishResult>; scheduled?: { at: string }; autopost?: boolean }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { product_id: p.id, facebook: toFb, instagram: toIg, ig_story: toStory, threads: toThreads, telegram: toTg, catalog: toCat, text, hashtags: tags, ...whenBody(when) },
+        body: { product_id: p.id, facebook: toFb, instagram: toIg, ig_story: toStory, threads: toThreads, telegram: toTg, catalog: toCat, text, hashtags: tags, style: preview?.style, hook: hook ?? preview?.hook, ...whenBody(when) },
       })
       if (r.scheduled) {
         toast.success(`جُدول النشر: ${new Date(r.scheduled.at).toLocaleString("ar")}`)
@@ -788,6 +840,11 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
           </div>
         ))}
       </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-ui-bg-subtle px-3 py-2">
+        <Text size="small">🎨 تريد صوراً أو تصميماً جديداً لهذا المنتج؟</Text>
+        <a className="text-sm font-medium text-ui-fg-interactive underline" href={`/app/image-studio?product=${p.id}`}>افتحه في استوديو الصور ←</a>
+      </div>
+      <StylePicker info={preview} hook={hook} onStyle={(s) => (setStyle(s), setHook(undefined))} onHook={setHook} />
       <div className="flex items-center justify-between gap-2">
         <Label size="small">نص المنشور (جاهز من بيانات المنتج، عدّله إن شئت)</Label>
         {auto && text !== auto && (
@@ -797,9 +854,16 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
       <Textarea dir="auto" rows={7} value={text} onChange={(e) => setText(e.target.value)} placeholder="نص المنشور" />
       <Input dir="auto" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="هاشتاقات (تُنشر كأول تعليق): #سامسونج #صنعاء" />
       {preview && (
-        <details className="rounded-lg border p-2">
-          <summary className="cursor-pointer text-sm font-medium">معاينة المنشور كما سيظهر في فيسبوك</summary>
-          <pre className="mt-2 whitespace-pre-wrap font-sans text-sm" dir="auto">{preview.caption}</pre>
+        <details className="rounded-lg border p-2" open>
+          <summary className="cursor-pointer text-sm font-medium">معاينة المنشور</summary>
+          <div className="mt-2 flex gap-1">
+            {([["caption", "فيسبوك وتيليجرام"], ["ig_caption", "إنستغرام"], ["threads", "Threads"]] as const).map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setNet(k)} className={`rounded-full border px-2.5 py-0.5 text-xs ${net === k ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : ""}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <pre className="mt-2 whitespace-pre-wrap rounded-md bg-ui-bg-subtle p-2 font-sans text-sm" dir="auto">{(preview as any)[net] || preview.caption}</pre>
         </details>
       )}
       <WhenPicker value={when} onChange={setWhen} allowAuto />

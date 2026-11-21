@@ -11,6 +11,9 @@ export const PreviewBody = z.object({
   specs: z.record(z.string(), z.string().max(1000)).optional(),
   badge: z.string().max(50).optional(),
   product_id: z.string().max(100).optional(),
+  // أسلوب المنشور وبدايته التشويقية (فارغ = تلقائي)
+  style: z.string().max(20).optional(),
+  hook: z.string().max(150).optional(),
 })
 export type PreviewBody = z.infer<typeof PreviewBody>
 
@@ -37,6 +40,9 @@ export const PublishBody = z.object({
   ig_story: z.boolean().default(false),
   threads: z.boolean().default(false),
   telegram: z.boolean().default(false),
+  // بداية المنشور: نص يكتبه/يختاره المدير. غير مُرسل = بداية تلقائية حسب أسلوب المنتج. "" = بلا بداية
+  hook: z.string().max(150).optional(),
+  style: z.string().max(20).optional(),
   // متى: فارغ = الآن. وقت ISO = يُجدول. autopost = يدخل أول قائمة النشر التلقائي (منتج موجود فقط)
   schedule_at: z.string().max(40).optional(),
   autopost: z.boolean().optional(),

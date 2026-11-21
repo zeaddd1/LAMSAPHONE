@@ -31,7 +31,7 @@ type PublishResult = { ok: boolean; url?: string; error?: string; skipped?: bool
 const STORE = "https://lamsaphone.yemenbay.com/ye/products/"
 const FIELDS =
   "id,title,handle,thumbnail,status,created_at,metadata,variants.id,variants.title,variants.prices.id,variants.prices.amount,variants.prices.currency_code,categories.id,categories.name,images.id,images.url"
-const NAMES: Record<string, string> = { facebook: "فيسبوك", instagram: "إنستغرام", catalog: "الكتالوج", all: "ميتا" }
+const NAMES: Record<string, string> = { facebook: "فيسبوك", instagram: "إنستغرام", ig_story: "قصة إنستغرام", catalog: "الكتالوج", all: "ميتا" }
 // شارات جاهزة للعروض (أو اكتب شارتك)
 const BADGES = ["عرض خاص", "تخفيض", "الأكثر طلباً", "وصل حديثاً", "كمية محدودة", "سعر مميز"]
 
@@ -659,6 +659,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
   const [toFb, setToFb] = useState(Boolean(meta.page_id))
   const [toIg, setToIg] = useState(Boolean(meta.page_id))
   const [toCat, setToCat] = useState(Boolean(meta.catalog_id))
+  const [toStory, setToStory] = useState(false)
   const [text, setText] = useState("")
   const [tags, setTags] = useState("")
   const [publishing, setPublishing] = useState(false)
@@ -695,7 +696,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
     try {
       const r = await sdk.client.fetch<{ results: Record<string, PublishResult> }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { product_id: p.id, facebook: toFb, instagram: toIg, catalog: toCat, text, hashtags: tags },
+        body: { product_id: p.id, facebook: toFb, instagram: toIg, ig_story: toStory, catalog: toCat, text, hashtags: tags },
       })
       setResults(r.results)
       const failed = Object.values(r.results).filter((x) => !x.ok && !x.skipped).length
@@ -722,7 +723,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
         </div>
       )}
       <div className="flex flex-wrap gap-x-5 gap-y-2">
-        {([["فيسبوك", toFb, setToFb, meta.page_id], ["إنستغرام", toIg, setToIg, meta.page_id], ["الكتالوج + واتساب", toCat, setToCat, meta.catalog_id]] as any[]).map(([l, v, set, ok]) => (
+        {([["فيسبوك", toFb, setToFb, meta.page_id], ["إنستغرام (منشور)", toIg, setToIg, meta.page_id], ["قصة إنستغرام", toStory, setToStory, meta.page_id], ["الكتالوج + واتساب", toCat, setToCat, meta.catalog_id]] as any[]).map(([l, v, set, ok]) => (
           <div key={l} className="flex items-center gap-2">
             <Switch disabled={!ok} checked={Boolean(v && ok)} onCheckedChange={set} />
             <Label size="small">{l}</Label>
@@ -743,7 +744,12 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
           <pre className="mt-2 whitespace-pre-wrap font-sans text-sm" dir="auto">{preview.caption}</pre>
         </details>
       )}
-      <Button className="self-start" isLoading={publishing} disabled={!(toFb || toIg || toCat) || p.status !== "published"} onClick={publish}>نشر الآن</Button>
+      <Button className="self-start" isLoading={publishing} disabled={!(toFb || toIg || toStory || toCat) || p.status !== "published"} onClick={publish}>نشر الآن</Button>
+      {toStory && (
+        <Text size="xsmall" className="text-ui-fg-subtle">
+          القصة تُنشر بأول صورة للمنتج (أو الفيديو) بلا نص، وتبقى 24 ساعة. لتبقى دائماً: افتحها في تطبيق إنستغرام ← «تمييز» (Highlight) ← اختر «أبرز القصص». إنستغرام لا يسمح بإضافتها لأبرز القصص من خارج التطبيق.
+        </Text>
+      )}
       {p.status !== "published" && <Text size="xsmall" className="text-ui-fg-subtle">أظهر المنتج في المتجر أولاً حتى يُنشر.</Text>}
       {results &&
         Object.entries(results).map(([k, r]) =>

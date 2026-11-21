@@ -2,7 +2,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { autoPostText, buildCaption, hashtagComment, productUrl, shortLinks } from "../../../../lib/quick-add/caption"
 import { backendUrl, buildMetaFeed, clearMetaFeedCache, storeUrl } from "../../../../lib/meta-feed-builder"
-import { addComment, getPage, postReelToInstagram, postToFacebook, postToInstagram, postVideoToFacebook, pushToCatalog } from "../../../../lib/quick-add/meta-graph"
+import { addComment, getPage, postReelToInstagram, postStoryToInstagram, postToFacebook, postToInstagram, postVideoToFacebook, pushToCatalog } from "../../../../lib/quick-add/meta-graph"
 import { getMetaSettings } from "../../../../lib/quick-add/meta-settings"
 import type { PublishBody } from "../validators"
 
@@ -55,7 +55,7 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   const results: Record<string, Result> = {}
   const need = (on: boolean, ok: boolean, why: string): Result | null => (!on ? { ok: false, skipped: true } : !ok ? { ok: false, error: why } : null)
 
-  if (!s.token && (b.facebook || b.instagram || b.catalog)) {
+  if (!s.token && (b.facebook || b.instagram || b.ig_story || b.catalog)) {
     res.json({ link, caption, results: { all: { ok: false, error: "ميتا غير مربوطة بعد: افتح تبويب ربط ميتا" } } })
     return
   }
@@ -65,7 +65,7 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   }
 
   let page: Awaited<ReturnType<typeof getPage>> | null = null
-  if ((b.facebook || b.instagram) && s.page_id) {
+  if ((b.facebook || b.instagram || b.ig_story) && s.page_id) {
     try {
       page = await getPage(cfg, s.page_id)
     } catch (e: any) {
@@ -78,6 +78,10 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   results.instagram =
     need(b.instagram, Boolean(page && igId), "لا يوجد حساب إنستغرام أعمال مربوط بالصفحة") ||
     (await run(() => (videoUrl ? postReelToInstagram(cfg, igId!, page!.page_token, videoUrl, igCaption, coverUrl) : postToInstagram(cfg, igId!, page!.page_token, images, igCaption)), (id) => addComment(cfg, id, page!.page_token, comment), comment))
+  // القصة: أول صورة (أو الفيديو)، بلا نص لأن القصص لا تقبل نصاً عبر الـ API
+  results.ig_story =
+    need(b.ig_story, Boolean(page && igId), "لا يوجد حساب إنستغرام أعمال مربوط بالصفحة") ||
+    (await run(() => postStoryToInstagram(cfg, igId!, page!.page_token, videoUrl ? { videoUrl } : { imageUrl: images[0] })))
   results.catalog =
     need(b.catalog, Boolean(s.catalog_id), "رقم الكتالوج غير مضبوط") ||
     (await run(async () => {
@@ -92,7 +96,7 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   try {
     const prev = (p.metadata?.meta_published || {}) as Record<string, any>
     const next = { ...prev }
-    for (const k of ["facebook", "instagram", "catalog"]) {
+    for (const k of ["facebook", "instagram", "ig_story", "catalog"]) {
       const r = results[k]
       if (r?.ok) next[k] = { at: new Date().toISOString(), url: r.url || null }
     }

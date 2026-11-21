@@ -135,6 +135,23 @@ export async function postReelToInstagram(cfg: GraphConfig, igUserId: string, to
   return { id: pub.id, url: (info as any).permalink }
 }
 
+// قصة إنستغرام (Story) بصورة JPEG أو فيديو MP4 برابط عام. القصص لا تقبل نصاً ولا روابط عبر الـ API،
+// وإضافتها إلى «أبرز القصص» (Highlights) لا تتوفر عبر الـ API: تُضاف يدوياً من تطبيق إنستغرام.
+export async function postStoryToInstagram(cfg: GraphConfig, igUserId: string, token: string, media: { imageUrl?: string; videoUrl?: string }): Promise<{ id: string; url?: string }> {
+  if (!media.imageUrl && !media.videoUrl) throw new GraphError("لا توجد صورة للقصة")
+  const c = await call(cfg, "POST", `${igUserId}/media`, { media_type: "STORIES", ...(media.videoUrl ? { video_url: media.videoUrl } : { image_url: media.imageUrl }) }, token)
+  const sleep = cfg.sleep || ((ms: number) => new Promise((r) => setTimeout(r, ms)))
+  for (let i = 0; ; i++) {
+    const st = await call(cfg, "GET", c.id, { fields: "status_code" }, token)
+    if (st.status_code === "FINISHED") break
+    if (st.status_code === "ERROR" || st.status_code === "EXPIRED") throw new GraphError("رفض إنستغرام القصة (JPEG أو MP4 برابط عام)")
+    if (i >= 40) throw new GraphError("انتهت مهلة تجهيز القصة عند إنستغرام")
+    await sleep(media.videoUrl ? 3000 : 1500)
+  }
+  const pub = await call(cfg, "POST", `${igUserId}/media_publish`, { creation_id: c.id }, token)
+  return { id: pub.id }
+}
+
 // تحويل عنصر الكتالوج (بصيغة g:xxx من ملف الكتالوج) إلى صيغة items_batch (نفس أسماء حقول الملف، والسعر "700.00 USD")
 export function feedItemToBatch(item: Record<string, string>) {
   const data: Record<string, unknown> = {}

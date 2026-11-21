@@ -14,6 +14,7 @@ export type MetaPublic = {
   threads_has_token?: boolean
   threads_token_hint?: string
   threads_user_id?: string
+  telegram_ready?: boolean
   from_env: { token: boolean; page_id: boolean; catalog_id: boolean }
 }
 type Check = {

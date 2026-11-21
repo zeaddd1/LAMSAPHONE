@@ -169,8 +169,10 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
   const [toCatalog, setToCatalog] = useState(metaReady && Boolean(ctx.meta.catalog_id))
   const threadsReady = Boolean(ctx.meta.threads_has_token)
   const [toThreads, setToThreads] = useState(threadsReady)
+  const tgReady = Boolean(ctx.meta.telegram_ready)
+  const [toTg, setToTg] = useState(false)
   const [when, setWhen] = useState<When>(NOW)
-  const anyDest = (metaReady && (toFb || toIg || toCatalog)) || (threadsReady && toThreads)
+  const anyDest = (metaReady && (toFb || toIg || toCatalog)) || (threadsReady && toThreads) || (tgReady && toTg)
   const [postText, setPostText] = useState("")
   // نص المنشور يُكتب تلقائياً من المواصفات والقسم حتى يكتب المدير نصه بنفسه
   const [autoText, setAutoText] = useState(true)
@@ -550,7 +552,7 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
     try {
       const r = await sdk.client.fetch<{ link: string; results: Record<string, PublishResult>; scheduled?: { at: string }; autopost?: boolean }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { product_id: d.id, facebook: again("facebook", toFb), instagram: again("instagram", toIg), threads: again("threads", toThreads), catalog: again("catalog", toCatalog), text: postText, hashtags, use_video: useVideo, ...whenBody(when) },
+        body: { product_id: d.id, facebook: again("facebook", toFb), instagram: again("instagram", toIg), threads: again("threads", toThreads), telegram: again("telegram", toTg), catalog: again("catalog", toCatalog), text: postText, hashtags, use_video: useVideo, ...whenBody(when) },
       })
       if (r.scheduled || r.autopost) {
         toast.success(r.scheduled ? `جُدول النشر: ${new Date(r.scheduled.at).toLocaleString("ar")}` : "أُضيف لأول قائمة النشر التلقائي")
@@ -890,6 +892,7 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
           ["إنستغرام (منشور)", toIg, setToIg, Boolean(ctx.meta.page_id)],
           ["كتالوج ميتا + واتساب", toCatalog, setToCatalog, Boolean(ctx.meta.catalog_id)],
           ["Threads", toThreads, setToThreads, threadsReady, true],
+          ["تيليجرام", toTg, setToTg, tgReady, true],
         ].map(([label, val, set, ok, own]: any) => (
           <div key={label} className="flex items-center justify-between">
             <Label size="small">{label}</Label>

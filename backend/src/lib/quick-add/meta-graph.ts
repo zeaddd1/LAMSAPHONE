@@ -218,6 +218,60 @@ export async function postToThreads(
   return { id: pub.id, url: (info as any).permalink }
 }
 
+// ---------- تيليجرام (Bot API): البوت مشرف في القناة أو المجموعة ----------
+async function tgCall(token: string, method: string, params: Record<string, unknown> = {}, f: typeof fetch = fetch) {
+  const res = await f(`https://api.telegram.org/bot${token}/${method}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(params) })
+  const j: any = await res.json().catch(() => ({}))
+  if (!j.ok) throw new GraphError(j.description ? `تيليجرام: ${j.description}` : `Telegram HTTP ${res.status}`, j.error_code)
+  return j.result
+}
+
+export async function telegramGetMe(token: string, f?: typeof fetch): Promise<{ id: number; username: string }> {
+  return tgCall(token, "getMe", {}, f)
+}
+
+export async function telegramGetChat(token: string, chatId: string, f?: typeof fetch): Promise<{ id: number; title?: string; type: string; username?: string }> {
+  return tgCall(token, "getChat", { chat_id: chatId }, f)
+}
+
+// يكتشف القنوات والمجموعات التي أُضيف إليها البوت (من آخر التحديثات): بعد إضافته مشرفاً اكتب أي رسالة فيها
+export async function telegramFindChats(token: string, f?: typeof fetch): Promise<{ id: string; title: string; type: string }[]> {
+  const ups: any[] = await tgCall(token, "getUpdates", { allowed_updates: ["my_chat_member", "channel_post", "message"] }, f)
+  const seen = new Map<string, { id: string; title: string; type: string }>()
+  for (const u of ups) {
+    const chat = u.my_chat_member?.chat || u.channel_post?.chat || u.message?.chat
+    if (chat && chat.type !== "private") seen.set(String(chat.id), { id: String(chat.id), title: chat.title || chat.username || String(chat.id), type: chat.type })
+  }
+  return Array.from(seen.values())
+}
+
+// منشور تيليجرام: صورة واحدة مع أزرار «اطلب»، أو ألبوم حتى 10 صور (الوصف على أول صورة، حد 1024 حرفاً)
+export async function postToTelegram(
+  token: string,
+  chatId: string,
+  imageUrls: string[],
+  text: string,
+  buttons: { text: string; url: string }[] = [],
+  f?: typeof fetch
+): Promise<{ id: string; url?: string }> {
+  const caption = text.length > 1024 ? `${text.slice(0, 1023)}…` : text
+  const urls = imageUrls.slice(0, 10)
+  const markup = buttons.length ? { inline_keyboard: [buttons.map((b) => ({ text: b.text, url: b.url }))] } : undefined
+  let msg: any
+  if (urls.length > 1) {
+    const sent = await tgCall(token, "sendMediaGroup", { chat_id: chatId, media: urls.map((u, i) => ({ type: "photo", media: u, ...(i === 0 ? { caption } : {}) })) }, f)
+    msg = sent[0]
+    // الألبوم لا يقبل أزراراً: نرسل الأزرار في رسالة قصيرة بعده
+    if (markup) await tgCall(token, "sendMessage", { chat_id: chatId, text: "🛒 للطلب:", reply_markup: markup }, f).catch(() => null)
+  } else if (urls.length === 1) {
+    msg = await tgCall(token, "sendPhoto", { chat_id: chatId, photo: urls[0], caption, ...(markup ? { reply_markup: markup } : {}) }, f)
+  } else {
+    msg = await tgCall(token, "sendMessage", { chat_id: chatId, text: caption, ...(markup ? { reply_markup: markup } : {}) }, f)
+  }
+  const user = msg?.chat?.username
+  return { id: String(msg?.message_id || ""), url: user ? `https://t.me/${user}/${msg.message_id}` : undefined }
+}
+
 // تحويل عنصر الكتالوج (بصيغة g:xxx من ملف الكتالوج) إلى صيغة items_batch (نفس أسماء حقول الملف، والسعر "700.00 USD")
 export function feedItemToBatch(item: Record<string, string>) {
   const data: Record<string, unknown> = {}

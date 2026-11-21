@@ -1,8 +1,8 @@
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { autoPostText, buildCaption, buildThreadsText, hashtagComment, productUrl, shortLinks } from "./caption"
 import { backendUrl, buildMetaFeed, clearMetaFeedCache, storeUrl } from "../meta-feed-builder"
-import { addComment, getPage, postReelToInstagram, postStoryToInstagram, postToFacebook, postToInstagram, postToThreads, postVideoToFacebook, pushToCatalog } from "./meta-graph"
-import { getMetaSettings } from "./meta-settings"
+import { addComment, getPage, postReelToInstagram, postStoryToInstagram, postToFacebook, postToInstagram, postToTelegram, postToThreads, postVideoToFacebook, pushToCatalog } from "./meta-graph"
+import { getMetaSettings, getTelegramSettings } from "./meta-settings"
 import { whatsappNumber } from "../assistant/engine"
 import type { PublishBody } from "../../api/admin/quick-add/validators"
 
@@ -14,7 +14,7 @@ export type Result = { ok: boolean; url?: string; error?: string; skipped?: bool
 export type PublishOutput = { status: number; message?: string; link?: string; caption?: string; results?: Record<string, Result> }
 type Scope = { resolve: (key: string) => any }
 
-export const DESTINATIONS = ["facebook", "instagram", "ig_story", "threads", "catalog"] as const
+export const DESTINATIONS = ["facebook", "instagram", "ig_story", "threads", "telegram", "catalog"] as const
 
 const abs = (u: string) => (/^https?:\/\//i.test(u) ? u : `${backendUrl().replace(/\/$/, "")}/${u.replace(/^\//, "")}`)
 
@@ -67,7 +67,7 @@ export async function publishToMeta(scope: Scope, b: PublishBody): Promise<Publi
   const results: Record<string, Result> = {}
   const need = (on: boolean, ok: boolean, why: string): Result | null => (!on ? { ok: false, skipped: true } : !ok ? { ok: false, error: why } : null)
 
-  if (!s.token && (b.facebook || b.instagram || b.ig_story || b.catalog) && !b.threads) {
+  if (!s.token && (b.facebook || b.instagram || b.ig_story || b.catalog) && !b.threads && !b.telegram) {
     return { status: 200, link, caption, results: { all: { ok: false, error: "ميتا غير مربوطة بعد: افتح صفحة ربط ميتا" } } }
   }
   if (local) return { status: 200, link, caption, results: { all: { ok: false, error: "روابط الصور محلية، ميتا لا تستطيع قراءتها" } } }
@@ -94,6 +94,17 @@ export async function publishToMeta(scope: Scope, b: PublishBody): Promise<Publi
   results.threads =
     need(b.threads, Boolean(s.threads_token && s.threads_user_id), "Threads غير مربوط: افتح صفحة ربط ميتا ← Threads") ||
     (await run(() => postToThreads(s.threads_token, s.threads_user_id, images, threadsText)))
+  // تيليجرام: الصور مع نص المنشور الكامل (روابطه قابلة للضغط) وأزرار الطلب
+  const tg = b.telegram ? await getTelegramSettings(scope) : null
+  const shopUrl = free ? storeUrl() : `https://${short.shop}`
+  results.telegram =
+    need(b.telegram, Boolean(tg?.bot_token && tg?.chat_id), "تيليجرام غير مربوط: افتح صفحة ربط ميتا ← تيليجرام") ||
+    (await run(() =>
+      postToTelegram(tg!.bot_token, tg!.chat_id, images, [caption, comment].filter(Boolean).join("\n\n"), [
+        { text: "🛒 تسوّق", url: shopUrl },
+        { text: "💬 واتساب", url: `https://${short.wa.replace(/^https?:\/\//, "")}` },
+      ])
+    ))
   results.catalog =
     need(b.catalog && !free, Boolean(s.token && s.catalog_id), "رقم الكتالوج غير مضبوط") ||
     (await run(async () => {
@@ -245,9 +256,10 @@ export async function runItem(scope: Scope, item: ScheduleItem): Promise<void> {
 }
 
 // الساعة الحالية بتوقيت اليمن، ومفتاح الفترة (يوم + ساعة) حتى لا يتكرر النشر في نفس الساعة
-export function yemenSlot(now = new Date()): { hour: number; key: string } {
+export function yemenSlot(now = new Date()): { hour: number; key: string; day: number } {
   const y = new Date(now.getTime() + YEMEN_OFFSET_H * 3600_000)
-  return { hour: y.getUTCHours(), key: `${y.toISOString().slice(0, 10)}-${y.getUTCHours()}` }
+  // day: 0 = الأحد … 6 = السبت
+  return { hour: y.getUTCHours(), key: `${y.toISOString().slice(0, 10)}-${y.getUTCHours()}`, day: y.getUTCDay() }
 }
 
 // المنتجات التالية للنشر التلقائي: الظاهرة في المتجر، لم تُنشر بعد على أي وجهة مختارة.

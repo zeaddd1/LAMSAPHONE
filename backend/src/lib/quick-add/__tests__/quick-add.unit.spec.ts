@@ -212,7 +212,7 @@ describe("threads and schedule", () => {
     expect(a.facebook).toBe(true)
   })
   it("uses Sanaa time for the slot", () => {
-    expect(yemenSlot(new Date("2026-11-21T08:30:00Z"))).toEqual({ hour: 11, key: "2026-11-21-11" })
-    expect(yemenSlot(new Date("2026-11-21T22:10:00Z"))).toEqual({ hour: 1, key: "2026-11-22-1" })
+    expect(yemenSlot(new Date("2026-11-21T08:30:00Z"))).toEqual({ hour: 11, key: "2026-11-21-11", day: 6 })
+    expect(yemenSlot(new Date("2026-11-21T22:10:00Z"))).toEqual({ hour: 1, key: "2026-11-22-1", day: 0 })
   })
 })

@@ -1,5 +1,5 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
-import { getMetaSettings, saveThreadsToken } from "../lib/quick-add/meta-settings"
+import { getMetaSettings, getTelegramSettings, markTelegramSlot, saveThreadsToken } from "../lib/quick-add/meta-settings"
 import { refreshThreadsToken } from "../lib/quick-add/meta-graph"
 import { getScheduleState, markAutopostSlot, nextAutopostProducts, publishToMeta, runItem, yemenSlot } from "../lib/quick-add/publish"
 
@@ -42,6 +42,17 @@ export default async function metaAutopost(container: MedusaContainer) {
           .map(([k, r]) => `${k}:${r.ok ? "ok" : r.error}`)
           .join(" ")
         logger.info(`meta-autopost: auto ${p.title} → ${summary || out.message}`)
+      }
+    }
+
+    // 2ب) تيليجرام: خطة أسبوعية مستقلة (أيام وساعة)، ينشر في تيليجرام فقط ما لم يُنشر فيه بعد
+    const tg = await getTelegramSettings(container)
+    if (tg.plan.enabled && tg.bot_token && tg.chat_id && tg.plan.days.includes(slot.day) && tg.plan.hour === slot.hour && tg.plan.last_slot !== slot.key) {
+      await markTelegramSlot(container, slot.key)
+      const next = await nextAutopostProducts(container, { telegram: true } as any, tg.plan.per_run)
+      for (const p of next) {
+        const out = await publishToMeta(container, { product_id: p.id, telegram: true, use_video: false } as any)
+        logger.info(`meta-autopost: telegram ${p.title} → ${out.results?.telegram?.ok ? "ok" : out.results?.telegram?.error || out.message}`)
       }
     }
 

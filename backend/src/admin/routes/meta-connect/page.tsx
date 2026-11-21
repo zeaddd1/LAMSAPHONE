@@ -24,6 +24,7 @@ const MetaConnectPage = () => {
           <Tabs.List>
             <Tabs.Trigger value="meta">الصفحة والكتالوج وThreads</Tabs.Trigger>
             <Tabs.Trigger value="schedule">الجدولة والنشر التلقائي</Tabs.Trigger>
+            <Tabs.Trigger value="telegram">تيليجرام</Tabs.Trigger>
             <Tabs.Trigger value="bot">الرد الآلي وواتساب</Tabs.Trigger>
             <Tabs.Trigger value="backup">النسخ الاحتياطية</Tabs.Trigger>
           </Tabs.List>
@@ -33,6 +34,9 @@ const MetaConnectPage = () => {
         </Tabs.Content>
         <Tabs.Content value="schedule">
           <SchedulePanel />
+        </Tabs.Content>
+        <Tabs.Content value="telegram">
+          <TelegramPanel />
         </Tabs.Content>
         <Tabs.Content value="bot">
           <BotSettings />
@@ -246,6 +250,195 @@ function SchedulePanel() {
             ))}
           </div>
         )}
+      </section>
+    </div>
+  )
+}
+
+// ---------- تيليجرام: مستقل عن ميتا، بوت ينشر في قناتك أو مجموعتك بخطة أسبوعية ----------
+type TgPlan = { enabled: boolean; days: number[]; hour: number; per_run: number }
+type TgPublic = { has_token: boolean; token_hint: string; chat_id: string; chat_title: string; bot_username: string; plan: TgPlan; from_env: boolean }
+type TgChat = { id: string; title: string; type: string }
+const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
+const CHAT_TYPE: Record<string, string> = { channel: "قناة", supergroup: "مجموعة", group: "مجموعة" }
+
+function TelegramPanel() {
+  const [s, setS] = useState<TgPublic | null>(null)
+  const [plan, setPlan] = useState<TgPlan | null>(null)
+  const [upcoming, setUpcoming] = useState<{ id: string; title: string }[]>([])
+  const [token, setToken] = useState("")
+  const [chats, setChats] = useState<TgChat[] | null>(null)
+  const [manual, setManual] = useState("")
+  const [busy, setBusy] = useState("")
+
+  const load = () =>
+    sdk.client
+      .fetch<{ settings: TgPublic; upcoming: { id: string; title: string }[] }>("/admin/quick-add/telegram")
+      .then((r) => (setS(r.settings), setPlan(r.settings.plan), setUpcoming(r.upcoming)))
+      .catch((e) => toast.error(String(e?.message || e)))
+  useEffect(() => {
+    load()
+  }, [])
+
+  const call = async (key: string, body: Record<string, unknown>, ok?: string) => {
+    setBusy(key)
+    try {
+      const r = await sdk.client.fetch<any>("/admin/quick-add/telegram", { method: "POST", body })
+      if (r.settings) (setS(r.settings), setPlan(r.settings.plan))
+      if (r.chats) setChats(r.chats)
+      if (ok) toast.success(ok)
+      return r
+    } catch (e: any) {
+      toast.error(e?.message || "تعذّر التنفيذ")
+    } finally {
+      setBusy("")
+    }
+  }
+
+  if (!s || !plan) return <Text className="p-6">جارٍ التحميل…</Text>
+  const planDirty = JSON.stringify(plan) !== JSON.stringify(s.plan)
+  const perWeek = plan.days.length * plan.per_run
+
+  return (
+    <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 rounded-lg border p-4">
+          <div className="flex items-center justify-between gap-2">
+            <Text weight="plus">✈️ بوت تيليجرام</Text>
+            {s.has_token ? <Badge size="2xsmall" color="green">@{s.bot_username || "bot"}</Badge> : <Badge size="2xsmall" color="grey">غير مربوط</Badge>}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              autoComplete="off"
+              className="flex-1 rounded-md border bg-ui-bg-field px-2 py-1.5 text-sm"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder={s.has_token ? `محفوظ (${s.token_hint}) — الصق رمزاً جديداً لاستبداله` : "رمز البوت من BotFather"}
+              dir="ltr"
+            />
+            <Button size="small" isLoading={busy === "token"} disabled={!token.trim()} onClick={() => call("token", { action: "save_token", token }, "تم ربط البوت").then(() => setToken(""))}>
+              حفظ
+            </Button>
+          </div>
+          {s.has_token && (
+            <>
+              <div className="flex flex-col gap-1.5 border-t pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Text size="small" weight="plus">أين ينشر؟</Text>
+                  {s.chat_id ? <Badge size="2xsmall" color="green">{s.chat_title}</Badge> : <Badge size="2xsmall" color="orange">لم تُختر قناة</Badge>}
+                </div>
+                <Button size="small" variant="secondary" className="self-start" isLoading={busy === "find"} onClick={() => call("find", { action: "find_chats" })}>
+                  🔎 ابحث عن قنواتي ومجموعاتي
+                </Button>
+                {chats && !chats.length && <Text size="xsmall" className="text-ui-fg-error">لم يُعثر على شيء. أضف البوت مشرفاً في القناة أو المجموعة، ثم انشر فيها أي رسالة، ثم ابحث مرة أخرى.</Text>}
+                {chats?.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between gap-2 rounded-md border p-2">
+                    <Text size="small">{CHAT_TYPE[c.type] || c.type}: {c.title}</Text>
+                    <Button size="small" variant={s.chat_id === c.id ? "primary" : "secondary"} isLoading={busy === `set${c.id}`} onClick={() => call(`set${c.id}`, { action: "set_chat", chat_id: c.id }, "تم الاختيار")}>
+                      {s.chat_id === c.id ? "مختارة ✓" : "اختر"}
+                    </Button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input className="flex-1 rounded-md border bg-ui-bg-field px-2 py-1 text-sm" dir="ltr" value={manual} onChange={(e) => setManual(e.target.value)} placeholder="أو اكتب @اسم_القناة" />
+                  <Button size="small" variant="secondary" disabled={!manual.trim()} isLoading={busy === "manual"} onClick={() => call("manual", { action: "set_chat", chat_id: manual.trim() }, "تم الاختيار")}>
+                    اختر
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 border-t pt-3">
+                <Button size="small" variant="secondary" disabled={!s.chat_id} isLoading={busy === "test"} onClick={() => call("test", { action: "test" }, "أُرسلت رسالة تجربة")}>
+                  إرسال رسالة تجربة
+                </Button>
+                {!s.from_env && (
+                  <Button size="small" variant="danger" isLoading={busy === "clear"} onClick={() => confirm("فصل تيليجرام؟ سيتوقف النشر فيه.") && call("clear", { action: "clear" }, "فُصل تيليجرام")}>
+                    فصل
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-lg border p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <Text weight="plus">📆 الخطة الأسبوعية لتيليجرام</Text>
+              <Text size="xsmall" className="text-ui-fg-subtle">مستقلة عن ميتا. ينشر في تيليجرام فقط منتجات المتجر التي لم تُنشر فيه بعد، بالنص الجاهز وأزرار «تسوّق» و«واتساب».</Text>
+            </div>
+            <Switch checked={plan.enabled} disabled={!s.chat_id} onCheckedChange={(v) => setPlan({ ...plan, enabled: v })} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Text size="small" weight="plus">الأيام</Text>
+            <div className="flex flex-wrap gap-1">
+              {DAYS.map((d, i) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setPlan({ ...plan, days: plan.days.includes(i) ? plan.days.filter((x) => x !== i) : [...plan.days, i].sort() })}
+                  className={`rounded-full border px-3 py-1 text-xs ${plan.days.includes(i) ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Text size="small" weight="plus">الساعة (توقيت صنعاء):</Text>
+            <select className="rounded-md border bg-ui-bg-field px-2 py-1 text-sm" value={plan.hour} onChange={(e) => setPlan({ ...plan, hour: Number(e.target.value) })}>
+              {Array.from({ length: 24 }, (_, h) => (
+                <option key={h} value={h}>{hourLabel(h)}</option>
+              ))}
+            </select>
+            <Text size="small" weight="plus">منتجات كل مرة:</Text>
+            {[1, 2].map((n) => (
+              <button key={n} type="button" onClick={() => setPlan({ ...plan, per_run: n })} className={`rounded-full border px-3 py-0.5 text-sm ${plan.per_run === n ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : ""}`}>
+                {n}
+              </button>
+            ))}
+          </div>
+          <Text size="small">المجموع: <b>{perWeek}</b> منشور في الأسبوع {perWeek >= 3 && perWeek <= 4 ? "✓ (المقترح 3 أو 4)" : "(المقترح 3 أو 4)"}</Text>
+          <div className="flex items-center gap-2">
+            <Button size="small" disabled={!planDirty || (plan.enabled && !plan.days.length)} isLoading={busy === "plan"} onClick={() => call("plan", { action: "plan", plan }, plan.enabled ? "تم تشغيل الخطة" : "تم الحفظ").then(load)}>
+              حفظ الخطة
+            </Button>
+            {s.plan.enabled ? <Badge size="2xsmall" color="green">تعمل: {s.plan.days.map((d) => DAYS[d]).join("، ")} {hourLabel(s.plan.hour)}</Badge> : <Badge size="2xsmall" color="grey">متوقفة</Badge>}
+          </div>
+          {upcoming.length > 0 && (
+            <div className="flex flex-col gap-1 border-t pt-2">
+              <Text size="small" weight="plus">التالي في تيليجرام:</Text>
+              <ol className="list-decimal ps-5 text-sm">
+                {upcoming.map((p) => (
+                  <li key={p.id}>{p.title}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3 text-sm leading-7">
+        <Text weight="plus">خطوات الربط (مرة واحدة، 5 دقائق)</Text>
+        <ol className="list-decimal ps-5">
+          <li>
+            <b>أنشئ القناة:</b> في تيليجرام ← قلم الكتابة ← <b>قناة جديدة</b> باسم «لمسة فون» واجعلها <b>عامة</b> برابط مثل <span dir="ltr">t.me/lamsaphone</span>. القناة للعروض، ينشر فيها المتجر فقط.
+          </li>
+          <li>
+            <b>مجتمع للنقاش (اختياري ومفيد):</b> من إعدادات القناة ← <b>النقاش</b> ← أنشئ مجموعة «مجتمع لمسة فون». يعلّق الزبائن ويسألون تحت كل منشور، وتبقى القناة نظيفة.
+          </li>
+          <li>
+            <b>أنشئ البوت:</b> افتح <a className="underline" href="https://t.me/BotFather" target="_blank" rel="noreferrer">@BotFather</a> ← <span dir="ltr">/newbot</span> ← اسم مثل «Lamsa Phone Bot» ← يعطيك <b>رمزاً</b>: الصقه هنا واضغط حفظ.
+          </li>
+          <li>
+            <b>أضف البوت مشرفاً</b> في القناة (الإعدادات ← المشرفون ← إضافة مشرف ← ابحث باسم البوت) مع صلاحية <b>نشر الرسائل</b>.
+          </li>
+          <li>انشر أي رسالة في القناة، ثم اضغط «ابحث عن قنواتي ومجموعاتي» واختر القناة، ثم «إرسال رسالة تجربة».</li>
+          <li>شغّل الخطة الأسبوعية واختر الأيام والساعة. المقترح: 3 أيام × منتج واحد، مثل الأحد والثلاثاء والخميس 8 مساءً.</li>
+        </ol>
+        <Text size="small" className="text-ui-fg-subtle">
+          تستطيع أيضاً النشر في تيليجرام يدوياً أو بوقت محدد من تبويب «النشر على ميتا» لأي منتج، ومن الإضافة السريعة واستوديو الصور (مفتاح «تيليجرام»). الروابط في تيليجرام قابلة للضغط، ويُضاف تحت كل منشور زرّا «تسوّق» و«واتساب».
+        </Text>
       </section>
     </div>
   )

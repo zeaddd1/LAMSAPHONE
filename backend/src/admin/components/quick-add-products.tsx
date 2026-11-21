@@ -25,7 +25,7 @@ type Product = {
   categories?: { id?: string; name: string }[]
   images?: { id?: string; url: string }[]
 }
-type MetaFlags = { has_token: boolean; page_id: string; catalog_id: string; threads_has_token?: boolean }
+type MetaFlags = { has_token: boolean; page_id: string; catalog_id: string; threads_has_token?: boolean; telegram_ready?: boolean }
 
 // «متى ينشر؟»: الآن، أو في وقت تحدده (يُجدول)، أو مع النشر التلقائي اليومي (أول القائمة)
 export type When = { mode: "now" | "at" | "auto"; at: string }
@@ -74,7 +74,7 @@ type PublishResult = { ok: boolean; url?: string; error?: string; skipped?: bool
 const STORE = "https://lamsaphone.yemenbay.com/ye/products/"
 const FIELDS =
   "id,title,handle,thumbnail,status,created_at,metadata,variants.id,variants.title,variants.prices.id,variants.prices.amount,variants.prices.currency_code,categories.id,categories.name,images.id,images.url"
-const NAMES: Record<string, string> = { facebook: "فيسبوك", instagram: "إنستغرام", ig_story: "قصة إنستغرام", threads: "Threads", catalog: "الكتالوج", all: "ميتا" }
+const NAMES: Record<string, string> = { facebook: "فيسبوك", instagram: "إنستغرام", ig_story: "قصة إنستغرام", threads: "Threads", telegram: "تيليجرام", catalog: "الكتالوج", all: "ميتا" }
 // شارات جاهزة للعروض (أو اكتب شارتك)
 const BADGES = ["عرض خاص", "تخفيض", "الأكثر طلباً", "وصل حديثاً", "كمية محدودة", "سعر مميز"]
 
@@ -454,7 +454,7 @@ function Card({ p, selected, onSelect, onEdit, onPlace, disabled, total, positio
         {p.status !== "published" && <Badge size="2xsmall" color="grey">مخفي</Badge>}
         {p.metadata?.condition === "used" && <Badge size="2xsmall" color="orange">مستخدم</Badge>}
         {(p.variants?.length || 0) > 1 && <Badge size="2xsmall">{p.variants.length} خيار</Badge>}
-        {["facebook", "instagram", "ig_story", "threads", "catalog"].some((k) => pub[k]) && <Badge size="2xsmall" color="purple">ميتا ✓</Badge>}
+        {["facebook", "instagram", "ig_story", "threads", "telegram", "catalog"].some((k) => pub[k]) && <Badge size="2xsmall" color="purple">ميتا ✓</Badge>}
           {p.metadata?.autopost_priority && !["facebook", "instagram", "threads"].some((k) => pub[k]) && <Badge size="2xsmall" color="blue">🤖 تلقائي</Badge>}
       </div>
       <div className="mt-auto flex items-center gap-1">
@@ -705,6 +705,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
   const [toCat, setToCat] = useState(Boolean(meta.catalog_id))
   const [toStory, setToStory] = useState(false)
   const [toThreads, setToThreads] = useState(Boolean(meta.threads_has_token))
+  const [toTg, setToTg] = useState(false)
   const [when, setWhen] = useState<When>(NOW)
   const [text, setText] = useState("")
   const [tags, setTags] = useState("")
@@ -735,7 +736,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
     return () => clearTimeout(t)
   }, [p.id, text])
 
-  if (!meta.has_token && !meta.threads_has_token) return <Text size="small">ميتا غير مربوطة. <a className="underline" href="/app/meta-connect">اربطها من هنا</a>.</Text>
+  if (!meta.has_token && !meta.threads_has_token && !meta.telegram_ready) return <Text size="small">ميتا غير مربوطة. <a className="underline" href="/app/meta-connect">اربطها من هنا</a>.</Text>
 
   const publish = async () => {
     if (when.mode === "at" && !when.at) return toast.error("اختر وقت النشر")
@@ -743,7 +744,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
     try {
       const r = await sdk.client.fetch<{ results?: Record<string, PublishResult>; scheduled?: { at: string }; autopost?: boolean }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { product_id: p.id, facebook: toFb, instagram: toIg, ig_story: toStory, threads: toThreads, catalog: toCat, text, hashtags: tags, ...whenBody(when) },
+        body: { product_id: p.id, facebook: toFb, instagram: toIg, ig_story: toStory, threads: toThreads, telegram: toTg, catalog: toCat, text, hashtags: tags, ...whenBody(when) },
       })
       if (r.scheduled) {
         toast.success(`جُدول النشر: ${new Date(r.scheduled.at).toLocaleString("ar")}`)
@@ -780,7 +781,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
         </div>
       )}
       <div className="flex flex-wrap gap-x-5 gap-y-2">
-        {([["فيسبوك", toFb, setToFb, meta.has_token && meta.page_id], ["إنستغرام (منشور)", toIg, setToIg, meta.has_token && meta.page_id], ["قصة إنستغرام", toStory, setToStory, meta.has_token && meta.page_id], ["Threads", toThreads, setToThreads, meta.threads_has_token], ["الكتالوج + واتساب", toCat, setToCat, meta.has_token && meta.catalog_id]] as any[]).map(([l, v, set, ok]) => (
+        {([["فيسبوك", toFb, setToFb, meta.has_token && meta.page_id], ["إنستغرام (منشور)", toIg, setToIg, meta.has_token && meta.page_id], ["قصة إنستغرام", toStory, setToStory, meta.has_token && meta.page_id], ["Threads", toThreads, setToThreads, meta.threads_has_token], ["تيليجرام", toTg, setToTg, meta.telegram_ready], ["الكتالوج + واتساب", toCat, setToCat, meta.has_token && meta.catalog_id]] as any[]).map(([l, v, set, ok]) => (
           <div key={l} className="flex items-center gap-2">
             <Switch disabled={!ok} checked={Boolean(v && ok)} onCheckedChange={set} />
             <Label size="small">{l}</Label>
@@ -802,7 +803,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
         </details>
       )}
       <WhenPicker value={when} onChange={setWhen} allowAuto />
-      <Button className="self-start" isLoading={publishing} disabled={(when.mode !== "auto" && !(toFb || toIg || toStory || toThreads || toCat)) || p.status !== "published"} onClick={publish}>{whenLabel(when)}</Button>
+      <Button className="self-start" isLoading={publishing} disabled={(when.mode !== "auto" && !(toFb || toIg || toStory || toThreads || toTg || toCat)) || p.status !== "published"} onClick={publish}>{whenLabel(when)}</Button>
       {toStory && (
         <Text size="xsmall" className="text-ui-fg-subtle">
           القصة تُنشر بأول صورة للمنتج (أو الفيديو) بلا نص، وتبقى 24 ساعة. لتبقى دائماً: افتحها في تطبيق إنستغرام ← «تمييز» (Highlight) ← اختر «أبرز القصص». إنستغرام لا يسمح بإضافتها لأبرز القصص من خارج التطبيق.

@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { getMetaSettings, publicSettings } from "../../../../lib/quick-add/meta-settings"
+import { getMetaSettings, publicSettings, telegramReady } from "../../../../lib/quick-add/meta-settings"
 
 // كل ما تحتاجه صفحة الإضافة السريعة في طلب واحد: الأقسام، قناة البيع، ملف الشحن، المخزن، العملة، وحالة ربط ميتا
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
@@ -25,6 +25,6 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     shipping_profile_id: (profileList.find((p) => p.type === "default") || profileList[0])?.id || null,
     stock_locations: (locations.data as any[]).map((l) => ({ id: l.id, name: l.name })),
     currency_code: ((regions.data as any[])[0]?.currency_code || "usd").toLowerCase(),
-    meta: publicSettings(await getMetaSettings(req.scope)),
+    meta: { ...publicSettings(await getMetaSettings(req.scope)), telegram_ready: await telegramReady(req.scope) },
   })
 }

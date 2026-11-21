@@ -92,6 +92,72 @@ export async function saveMetaSettings(scope: Scope, input: MetaSettingsInput): 
   return getMetaSettings(scope)
 }
 
+// ---------- تيليجرام (منفصل عن ميتا): بوت ينشر في قناة أو مجموعة، بخطة أسبوعية خاصة ----------
+// يُحفظ في store.metadata.telegram. الرمز لا يُعاد للوحة أبداً.
+export type TelegramPlan = { enabled: boolean; days: number[]; hour: number; per_run: number; last_slot?: string }
+export type TelegramSettings = { bot_token: string; chat_id: string; chat_title: string; bot_username: string; plan: TelegramPlan }
+export const DEFAULT_TG_PLAN: TelegramPlan = { enabled: false, days: [0, 2, 4], hour: 20, per_run: 1 } // الأحد والثلاثاء والخميس 8 مساءً
+const TG_KEY = "telegram"
+
+export function cleanTgPlan(x: any): TelegramPlan {
+  const days = Array.isArray(x?.days) ? Array.from(new Set<number>(x.days.map((d: any) => Math.floor(Number(d))).filter((d: number) => d >= 0 && d <= 6))).sort((a, b) => a - b) : DEFAULT_TG_PLAN.days
+  const hour = Math.floor(Number(x?.hour))
+  const per = Math.floor(Number(x?.per_run))
+  return {
+    enabled: Boolean(x?.enabled),
+    days,
+    hour: hour >= 0 && hour <= 23 ? hour : DEFAULT_TG_PLAN.hour,
+    per_run: per >= 1 && per <= 3 ? per : 1,
+    ...(typeof x?.last_slot === "string" ? { last_slot: x.last_slot } : {}),
+  }
+}
+
+export async function getTelegramSettings(scope: Scope): Promise<TelegramSettings> {
+  const { store } = await getStore(scope)
+  const t = ((store?.metadata as any)?.[TG_KEY] || {}) as Partial<TelegramSettings>
+  return {
+    bot_token: process.env.TELEGRAM_BOT_TOKEN || t.bot_token || "",
+    chat_id: process.env.TELEGRAM_CHAT_ID || t.chat_id || "",
+    chat_title: t.chat_title || "",
+    bot_username: t.bot_username || "",
+    plan: cleanTgPlan(t.plan || DEFAULT_TG_PLAN),
+  }
+}
+
+// يقرأ أحدث نسخة ويغيّر ما أُرسل فقط
+export async function patchTelegram(scope: Scope, patch: Partial<TelegramSettings> & { clear_token?: boolean }): Promise<TelegramSettings> {
+  const { storeService, store } = await getStore(scope)
+  if (!store) throw new Error("no store")
+  const prev = ((store.metadata as any)?.[TG_KEY] || {}) as Partial<TelegramSettings>
+  const { clear_token, ...rest } = patch
+  const next: Partial<TelegramSettings> = { ...prev, ...Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined)) }
+  if (clear_token) Object.assign(next, { bot_token: "", chat_id: "", chat_title: "", bot_username: "" })
+  if (patch.plan) next.plan = cleanTgPlan({ ...cleanTgPlan(prev.plan || DEFAULT_TG_PLAN), ...patch.plan, last_slot: (prev.plan as any)?.last_slot })
+  await storeService.updateStores(store.id, { metadata: { ...(store.metadata || {}), [TG_KEY]: next } })
+  return getTelegramSettings(scope)
+}
+
+export async function markTelegramSlot(scope: Scope, key: string) {
+  const { storeService, store } = await getStore(scope)
+  if (!store) return
+  const prev = ((store.metadata as any)?.[TG_KEY] || {}) as Partial<TelegramSettings>
+  await storeService.updateStores(store.id, { metadata: { ...(store.metadata || {}), [TG_KEY]: { ...prev, plan: { ...cleanTgPlan(prev.plan || DEFAULT_TG_PLAN), last_slot: key } } } })
+}
+
+export const telegramReady = async (scope: Scope) => getTelegramSettings(scope).then((t) => Boolean(t.bot_token && t.chat_id))
+
+export function publicTelegram(t: TelegramSettings) {
+  return {
+    has_token: Boolean(t.bot_token),
+    token_hint: t.bot_token ? `…${t.bot_token.slice(-4)}` : "",
+    chat_id: t.chat_id,
+    chat_title: t.chat_title,
+    bot_username: t.bot_username,
+    plan: t.plan,
+    from_env: Boolean(process.env.TELEGRAM_BOT_TOKEN),
+  }
+}
+
 // ما يُرسل للوحة: لا نعيد الرمز أبداً، فقط آخر 4 أحرف
 export function publicSettings(s: MetaSettings) {
   return {

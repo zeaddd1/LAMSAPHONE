@@ -7,6 +7,10 @@ export const PreviewBody = z.object({
   text: z.string().max(2000).optional(),
   hashtags: z.string().max(3000).optional(),
   category_names: z.array(z.string().max(100)).max(20).optional(),
+  // لكتابة نص المنشور الجاهز: مواصفات وشارة منتج جديد، أو رقم منتج موجود فتُقرأ بياناته من المتجر
+  specs: z.record(z.string(), z.string().max(1000)).optional(),
+  badge: z.string().max(50).optional(),
+  product_id: z.string().max(100).optional(),
 })
 export type PreviewBody = z.infer<typeof PreviewBody>
 

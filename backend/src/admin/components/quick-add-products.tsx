@@ -663,7 +663,30 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
   const [tags, setTags] = useState("")
   const [publishing, setPublishing] = useState(false)
   const [results, setResults] = useState<Record<string, PublishResult> | null>(null)
+  const [auto, setAuto] = useState("")
+  const [preview, setPreview] = useState<{ caption: string; ig_caption?: string } | null>(null)
   const pub = (p.metadata?.meta_published || {}) as Record<string, { at: string; url?: string }>
+
+  // المنشور جاهز من بيانات المنتج (المواصفات والشارة والقسم والسعر) مع هاشتاقات مقترحة، ويمكن تعديله قبل النشر
+  useEffect(() => {
+    sdk.client
+      .fetch<{ auto_text: string; suggested: string[] }>("/admin/quick-add/preview", { method: "POST", body: { product_id: p.id } })
+      .then((r) => {
+        setAuto(r.auto_text)
+        setText(r.auto_text)
+        setTags(r.suggested.join(" "))
+      })
+      .catch(() => {})
+  }, [p.id])
+  useEffect(() => {
+    const t = setTimeout(() => {
+      sdk.client
+        .fetch<{ caption: string; ig_caption?: string }>("/admin/quick-add/preview", { method: "POST", body: { product_id: p.id, text } })
+        .then(setPreview)
+        .catch(() => {})
+    }, 400)
+    return () => clearTimeout(t)
+  }, [p.id, text])
 
   if (!meta.has_token) return <Text size="small">ميتا غير مربوطة. <a className="underline" href="/app/meta-connect">اربطها من هنا</a>.</Text>
 
@@ -706,8 +729,20 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
           </div>
         ))}
       </div>
-      <Textarea dir="auto" rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="نص المنشور (اختياري)" />
+      <div className="flex items-center justify-between gap-2">
+        <Label size="small">نص المنشور (جاهز من بيانات المنتج، عدّله إن شئت)</Label>
+        {auto && text !== auto && (
+          <button type="button" className="text-xs text-ui-fg-interactive hover:underline" onClick={() => setText(auto)}>إرجاع النص الجاهز</button>
+        )}
+      </div>
+      <Textarea dir="auto" rows={7} value={text} onChange={(e) => setText(e.target.value)} placeholder="نص المنشور" />
       <Input dir="auto" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="هاشتاقات (تُنشر كأول تعليق): #سامسونج #صنعاء" />
+      {preview && (
+        <details className="rounded-lg border p-2">
+          <summary className="cursor-pointer text-sm font-medium">معاينة المنشور كما سيظهر في فيسبوك</summary>
+          <pre className="mt-2 whitespace-pre-wrap font-sans text-sm" dir="auto">{preview.caption}</pre>
+        </details>
+      )}
       <Button className="self-start" isLoading={publishing} disabled={!(toFb || toIg || toCat) || p.status !== "published"} onClick={publish}>نشر الآن</Button>
       {p.status !== "published" && <Text size="xsmall" className="text-ui-fg-subtle">أظهر المنتج في المتجر أولاً حتى يُنشر.</Text>}
       {results &&

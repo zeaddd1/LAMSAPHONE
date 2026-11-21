@@ -1,4 +1,4 @@
-import { buildCaption, hashtagComment, normalizeHashtags, productUrl, shortCode, shortLinks, suggestHashtags } from "../caption"
+import { autoPostText, buildCaption, hashtagComment, normalizeHashtags, productUrl, shortCode, shortLinks, suggestHashtags } from "../caption"
 import { addComment, feedItemToBatch, postToFacebook, postToInstagram, pushToCatalog } from "../meta-graph"
 import { POST_H, POST_MARGIN, POST_W, STORE_MARGIN, STORE_SIZE, fitBox, trimBox } from "../../../admin/lib/quick-add-geometry"
 
@@ -172,5 +172,24 @@ describe("global store image standard", () => {
     const b = fitBox(400, 900, POST_W, POST_H, "contain", POST_MARGIN)
     expect(b.h).toBeLessThanOrEqual(POST_H)
     expect(b.h).toBeGreaterThan(POST_H * 0.85)
+  })
+})
+
+describe("autoPostText", () => {
+  it("writes a ready post from phone specs, badge and category", () => {
+    const t = autoPostText({
+      specs: { screen: "6.8 بوصة Dynamic AMOLED 2X، 120Hz", cpu: "Snapdragon 8 Gen 3", memory: "12GB / 256GB", battery: "5000mAh شحن 45W" },
+      badge: "عرض",
+      categoryNames: ["سامسونج"],
+    })
+    expect(t).toContain("🔥 عرض")
+    expect(t).toContain("▫️ الشاشة: 6.8 بوصة Dynamic AMOLED 2X، 120Hz")
+    expect(t).toContain("▫️ المعالج: Snapdragon 8 Gen 3")
+    expect(t).toContain("📂 القسم: سامسونج")
+    expect(t).not.toMatch(/مستخدم|جديد/)
+  })
+  it("uses accessory fields when there are no phone specs, and is empty with no data", () => {
+    expect(autoPostText({ specs: { type: "سماعة لاسلكية", features: "عزل ضوضاء" } })).toContain("▫️ النوع: سماعة لاسلكية")
+    expect(autoPostText({})).toBe("")
   })
 })

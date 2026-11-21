@@ -121,6 +121,55 @@ export function buildCaption(input: CaptionInput, maxLen = 2200): string {
   return caption
 }
 
+// ---------- نص المنشور الجاهز من بيانات المنتج ----------
+// يُكتب تلقائياً لكل منتج من مواصفاته وشارته وقسمه، فلا يحتاج المدير أن يكتب شيئاً (ويستطيع تعديله قبل النشر).
+const SPEC_LABELS: Record<string, string> = {
+  screen: "الشاشة",
+  cpu: "المعالج",
+  memory: "الذاكرة",
+  camera: "الكاميرا",
+  front_camera: "الأمامية",
+  battery: "البطارية",
+  os: "النظام",
+  build: "التصميم",
+  connectivity: "المميزات",
+  type: "النوع",
+  chip: "الشريحة",
+  features: "المميزات",
+  resistance: "التحمل",
+}
+// ترتيب الأهمية: الجوالات أولاً ثم السماعات والساعات والإكسسوارات
+const PHONE_ORDER = ["screen", "cpu", "memory", "camera", "battery", "front_camera", "os"]
+const ACCESSORY_ORDER = ["type", "chip", "features", "battery", "connectivity", "resistance"]
+
+// قيمة مختصرة للمنشور: أول جزء مفيد بلا تفاصيل طويلة
+const brief = (v: string, max = 70) => {
+  const s = v.replace(/\s+/g, " ").trim()
+  if (s.length <= max) return s
+  const cut = s.split(/[،,؛;(]/)[0].trim()
+  return cut.length >= 8 && cut.length <= max ? cut : `${s.slice(0, max - 1).trim()}…`
+}
+
+// الحالة (جديد/مستخدم) لا تُذكر في المنشور: سياسة المتجر أن تُذكر فقط إذا سأل العميل
+export type AutoTextInput = { specs?: Record<string, unknown> | null; badge?: string | null; categoryNames?: string[] }
+
+export function autoPostText(input: AutoTextInput): string {
+  const specs = (input.specs || {}) as Record<string, unknown>
+  const has = (k: string) => typeof specs[k] === "string" && (specs[k] as string).trim() !== ""
+  const order = PHONE_ORDER.filter(has).length >= 2 ? PHONE_ORDER : ACCESSORY_ORDER
+  const lines: string[] = []
+  const badge = (input.badge || "").trim()
+  if (badge) lines.push(`🔥 ${badge}`)
+  const specLines = order.filter(has).slice(0, 6).map((k) => `▫️ ${SPEC_LABELS[k]}: ${brief(specs[k] as string)}`)
+  if (specLines.length) {
+    if (lines.length) lines.push("")
+    lines.push("المواصفات:", ...specLines)
+  }
+  const cat = (input.categoryNames || []).find((c) => c && c.trim())
+  if (cat) lines.push("", `📂 القسم: ${cat.trim()}`)
+  return lines.join("\n").trim()
+}
+
 // اقتراحات هاشتاقات لسوق الجوالات: صنعاء أولاً ثم اليمن، حسب القسم، تُكمَّل بكلمات من اسم المنتج.
 // ميتا لا تقدّم قائمة "ترند" رسمية، فهذه نقطة بداية يعدّلها المدير.
 const BASE_TAGS = ["لمسة_فون", "صنعاء", "جوالات_صنعاء", "اليمن", "جوالات_اليمن", "جوالات", "عروض"]

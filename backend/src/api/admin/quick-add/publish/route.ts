@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { buildCaption, hashtagComment, productUrl, shortLinks } from "../../../../lib/quick-add/caption"
+import { autoPostText, buildCaption, hashtagComment, productUrl, shortLinks } from "../../../../lib/quick-add/caption"
 import { backendUrl, buildMetaFeed, clearMetaFeedCache, storeUrl } from "../../../../lib/meta-feed-builder"
 import { addComment, getPage, postReelToInstagram, postToFacebook, postToInstagram, postVideoToFacebook, pushToCatalog } from "../../../../lib/quick-add/meta-graph"
 import { getMetaSettings } from "../../../../lib/quick-add/meta-settings"
@@ -16,7 +16,7 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const { data } = await query.graph({
     entity: "product",
-    fields: ["id", "title", "handle", "thumbnail", "metadata", "images.url", "variants.prices.amount", "variants.prices.currency_code"],
+    fields: ["id", "title", "handle", "thumbnail", "metadata", "categories.name", "images.url", "variants.prices.amount", "variants.prices.currency_code"],
     filters: { id: b.product_id },
   })
   const p = (data as any[])[0]
@@ -32,8 +32,8 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   const price = prices.length ? Math.min(...prices.map((x: any) => Number(x.amount))) : undefined
   // الهاشتاقات لا تدخل نص المنشور ولا المنتج: تُنشر كأول تعليق
   const short = shortLinks(p.id, storeUrl())
-  const caption = buildCaption({ title: p.title, price, text: b.text, link: short.shop, waLink: short.wa, network: "facebook" })
-  const igCaption = buildCaption({ title: p.title, price, text: b.text, link: short.shop, waLink: short.wa, network: "instagram" })
+  // بلا نص من المدير: نص جاهز من مواصفات المنتج وشارته وقسمه
+  const igCaption = buildCaption({ title: p.title, price, text, link: short.shop, waLink: short.wa, network: "instagram" })
   const comment = hashtagComment(b.hashtags)
 
   // ميتا تحتاج JPEG برابط عام: نسخ الإضافة السريعة، وإلا صور المنتج نفسها

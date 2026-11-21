@@ -328,15 +328,15 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
   useEffect(() => {
     const t = setTimeout(() => {
       sdk.client
-        .fetch<{ caption: string; ig_caption?: string; comment: string; suggested: string[] }>("/admin/quick-add/preview", {
+        .fetch<{ caption: string; ig_caption?: string; comment: string; suggested: string[]; auto_text?: string }>("/admin/quick-add/preview", {
           method: "POST",
-          body: { title: fullTitle, price: priceNum > 0 ? priceNum : undefined, text: postText, hashtags, category_names: cat?.names || [], handle: done?.handle },
+          body: { title: fullTitle, price: priceNum > 0 ? priceNum : undefined, text: autoText ? undefined : postText, hashtags, category_names: cat?.names || [], handle: done?.handle, specs: cleanSpecs(specs) },
         })
-        .then(setPreview)
+        .then((r) => (setPreview(r), autoText && setPostText(r.auto_text || "")))
         .catch(() => {})
     }, 400)
     return () => clearTimeout(t)
-  }, [fullTitle, priceNum, postText, hashtags, categoryId, done?.handle])
+  }, [fullTitle, priceNum, postText, hashtags, categoryId, done?.handle, specs, autoText])
 
   const addVideo = async (f: File) => {
     setVideoProgress(0)
@@ -885,8 +885,8 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
           </div>
         ))}
         <div className="flex flex-col gap-1">
-          <Label size="small">نص المنشور (اختياري)</Label>
-          <Textarea dir="auto" rows={3} value={postText} onChange={(e) => setPostText(e.target.value)} placeholder="عرض خاص لفترة محدودة…" />
+          <div className="flex items-center justify-between gap-2">
+          <Textarea dir="auto" rows={6} value={postText} onChange={(e) => (setAutoText(false), setPostText(e.target.value))} placeholder="عرض خاص لفترة محدودة…" />
         </div>
         <div className="flex flex-col gap-1">
           <Label size="small">هاشتاقات وكلمات للترويج</Label>

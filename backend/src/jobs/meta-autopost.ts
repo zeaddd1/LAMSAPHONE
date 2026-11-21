@@ -1,9 +1,9 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
-import { getMetaSettings, getTelegramSettings, markTelegramSlot, saveThreadsToken } from "../lib/quick-add/meta-settings"
+import { getMetaSettings, saveThreadsToken } from "../lib/quick-add/meta-settings"
 import { refreshThreadsToken } from "../lib/quick-add/meta-graph"
-import { getScheduleState, markAutopostSlot, nextAutopostProducts, publishToMeta, runItem, yemenSlot } from "../lib/quick-add/publish"
+import { getScheduleState, markPlanSlot, planDue, runItem, runPlan, yemenSlot } from "../lib/quick-add/publish"
 
-// كل 5 دقائق: 1) ينشر المنشورات المجدولة التي حان وقتها. 2) النشر التلقائي اليومي في الساعات المختارة.
+// كل 5 دقائق: 1) ينشر المنشورات المجدولة التي حان وقتها. 2) خطط النشر التلقائي (كل خطة بأيامها وساعاتها ومنصاتها).
 // 3) يجدّد رمز Threads قبل انتهائه (صالح 60 يوماً).
 let running = false
 
@@ -12,7 +12,7 @@ export default async function metaAutopost(container: MedusaContainer) {
   running = true
   const logger = container.resolve("logger")
   try {
-    const { queue, autopost } = await getScheduleState(container)
+    const { queue, plans } = await getScheduleState(container)
 
     // 1) المجدول
     const due = queue.filter((x) => x.status === "pending" && new Date(x.at).getTime() <= Date.now()).sort((a, b) => a.at.localeCompare(b.at))
@@ -21,38 +21,14 @@ export default async function metaAutopost(container: MedusaContainer) {
       logger.info(`meta-autopost: scheduled ${item.id} (${item.label}) processed`)
     }
 
-    // 2) التلقائي اليومي
+    // 2) الخطط: نسجّل الفترة أولاً حتى لا يتكرر النشر إن طال التنفيذ
     const slot = yemenSlot()
-    if (autopost.enabled && autopost.hours.includes(slot.hour) && autopost.last_slot !== slot.key) {
-      // نسجّل الفترة أولاً حتى لا يتكرر النشر إن طال التنفيذ
-      await markAutopostSlot(container, slot.key)
-      const next = await nextAutopostProducts(container, autopost, autopost.per_run)
-      for (const p of next) {
-        const out = await publishToMeta(container, {
-          product_id: p.id,
-          facebook: autopost.facebook,
-          instagram: autopost.instagram,
-          ig_story: autopost.ig_story,
-          threads: autopost.threads,
-          catalog: autopost.catalog,
-          use_video: true,
-        } as any)
-        const summary = Object.entries(out.results || {})
-          .filter(([, r]) => !r.skipped)
-          .map(([k, r]) => `${k}:${r.ok ? "ok" : r.error}`)
-          .join(" ")
-        logger.info(`meta-autopost: auto ${p.title} → ${summary || out.message}`)
-      }
-    }
-
-    // 2ب) تيليجرام: خطة أسبوعية مستقلة (أيام وساعة)، ينشر في تيليجرام فقط ما لم يُنشر فيه بعد
-    const tg = await getTelegramSettings(container)
-    if (tg.plan.enabled && tg.bot_token && tg.chat_id && tg.plan.days.includes(slot.day) && tg.plan.hours.includes(slot.hour) && tg.plan.last_slot !== slot.key) {
-      await markTelegramSlot(container, slot.key)
-      const next = await nextAutopostProducts(container, { telegram: true } as any, tg.plan.per_run)
-      for (const p of next) {
-        const out = await publishToMeta(container, { product_id: p.id, telegram: true, use_video: false } as any)
-        logger.info(`meta-autopost: telegram ${p.title} → ${out.results?.telegram?.ok ? "ok" : out.results?.telegram?.error || out.message}`)
+    for (const p of plans.filter((x) => planDue(x, slot))) {
+      await markPlanSlot(container, p.id, slot.key)
+      try {
+        await runPlan(container, p, logger)
+      } catch (e: any) {
+        logger.error(`meta-autopost: plan ${p.name}: ${e?.message || e}`)
       }
     }
 

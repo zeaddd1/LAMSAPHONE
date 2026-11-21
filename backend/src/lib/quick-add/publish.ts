@@ -170,21 +170,24 @@ export type ScheduleItem = {
   error?: string
 }
 
-export type AutopostSettings = {
+// خطط النشر التلقائي: كل خطة مستقلة بأيامها وساعاتها ومنصاتها (فيسبوك وحده، إنستغرام وحده، Threads وحده،
+// تيليجرام وحده، أو أي مزيج). كل خطة تنشر المنتجات التي لم تُنشر بعد على منصاتها هي، فلا تتعارض الخطط.
+export type Dest = (typeof DESTINATIONS)[number]
+export type Plan = {
+  id: string
+  name: string
   enabled: boolean
-  hours: number[] // بتوقيت اليمن (UTC+3)
-  per_run: number
-  facebook: boolean
-  instagram: boolean
-  ig_story: boolean
-  threads: boolean
-  catalog: boolean
+  days: number[] // 0 = الأحد … 6 = السبت
+  hours: number[] // بتوقيت اليمن (UTC+3)، حتى 6
+  per_run: number // 1 إلى 5
+  dests: Dest[]
   last_slot?: string
 }
 
-export const DEFAULT_AUTOPOST: AutopostSettings = { enabled: false, hours: [11, 20], per_run: 1, facebook: true, instagram: true, ig_story: false, threads: false, catalog: false }
+export const DEFAULT_PLAN: Plan = { id: "p_meta", name: "فيسبوك وإنستغرام", enabled: false, days: [0, 1, 2, 3, 4, 5, 6], hours: [11, 20], per_run: 1, dests: ["facebook", "instagram"] }
 const YEMEN_OFFSET_H = 3
 const MAX_QUEUE = 150
+const MAX_PLANS = 12
 
 async function storeOf(scope: Scope) {
   const svc = scope.resolve(Modules.STORE)
@@ -192,40 +195,75 @@ async function storeOf(scope: Scope) {
   return { svc, store }
 }
 
-export function cleanAutopost(x: any): AutopostSettings {
-  const hours = Array.isArray(x?.hours) ? Array.from(new Set<number>(x.hours.map((h: any) => Math.floor(Number(h))).filter((h: number) => h >= 0 && h <= 23))).sort((a: any, b: any) => a - b).slice(0, 6) : DEFAULT_AUTOPOST.hours
+const ints = (a: any, min: number, max: number) =>
+  Array.from(new Set<number>((Array.isArray(a) ? a : []).map((d: any) => Math.floor(Number(d))).filter((d: number) => d >= min && d <= max))).sort((x, y) => x - y)
+
+export function cleanPlan(x: any, i = 0): Plan {
   const per = Math.floor(Number(x?.per_run))
+  const dests = (Array.isArray(x?.dests) ? x.dests : []).filter((d: any) => (DESTINATIONS as readonly string[]).includes(d))
   return {
+    id: typeof x?.id === "string" && /^[\w-]{1,30}$/.test(x.id) ? x.id : `p${Date.now().toString(36)}${i}`,
+    name: (typeof x?.name === "string" && x.name.trim() ? x.name.trim() : "خطة").slice(0, 40),
     enabled: Boolean(x?.enabled),
-    hours: hours as number[],
+    days: Array.isArray(x?.days) ? ints(x.days, 0, 6) : DEFAULT_PLAN.days,
+    hours: ints(x?.hours, 0, 23).slice(0, 6),
     per_run: per >= 1 && per <= 5 ? per : 1,
-    facebook: x?.facebook ?? DEFAULT_AUTOPOST.facebook,
-    instagram: x?.instagram ?? DEFAULT_AUTOPOST.instagram,
-    ig_story: Boolean(x?.ig_story),
-    threads: Boolean(x?.threads),
-    catalog: Boolean(x?.catalog),
+    dests: Array.from(new Set<Dest>(dests)),
     ...(typeof x?.last_slot === "string" ? { last_slot: x.last_slot } : {}),
   }
 }
 
-export async function getScheduleState(scope: Scope): Promise<{ queue: ScheduleItem[]; autopost: AutopostSettings }> {
+// أول مرة: تُنقل الإعدادات السابقة (النشر التلقائي لميتا وخطة تيليجرام) إلى خطط
+function plansFrom(m: any): Plan[] {
+  if (Array.isArray(m?.meta_plans)) return m.meta_plans.slice(0, MAX_PLANS).map(cleanPlan)
+  const out: Plan[] = []
+  const a = m?.meta_autopost
+  if (a) {
+    const dests = (["facebook", "instagram", "ig_story", "threads", "catalog"] as Dest[]).filter((d) => a[d])
+    out.push(cleanPlan({ id: "p_meta", name: "ميتا", enabled: a.enabled, days: [0, 1, 2, 3, 4, 5, 6], hours: a.hours, per_run: a.per_run, dests: dests.length ? dests : DEFAULT_PLAN.dests }))
+  }
+  const t = m?.telegram?.plan
+  if (t) out.push(cleanPlan({ id: "p_tg", name: "تيليجرام", enabled: t.enabled, days: t.days, hours: t.hours || (t.hour !== undefined ? [t.hour] : [20]), per_run: t.per_run, dests: ["telegram"] }))
+  return out.length ? out : [{ ...DEFAULT_PLAN }]
+}
+
+export async function getScheduleState(scope: Scope): Promise<{ queue: ScheduleItem[]; plans: Plan[] }> {
   const { store } = await storeOf(scope)
   const m = (store?.metadata || {}) as any
-  return { queue: Array.isArray(m.meta_schedule) ? m.meta_schedule : [], autopost: cleanAutopost(m.meta_autopost || DEFAULT_AUTOPOST) }
+  return { queue: Array.isArray(m.meta_schedule) ? m.meta_schedule : [], plans: plansFrom(m) }
 }
 
 // يقرأ أحدث نسخة من بيانات المتجر ثم يكتب المفتاح المطلوب فقط (حتى لا يمسح إعدادات أخرى حُفظت للتو)
-async function patchStore(scope: Scope, key: "meta_schedule" | "meta_autopost", fn: (cur: any) => any) {
+async function patchStore(scope: Scope, key: "meta_schedule" | "meta_plans", fn: (cur: any, all: any) => any) {
   const { svc, store } = await storeOf(scope)
   if (!store) throw new Error("no store")
-  const next = fn(((store.metadata || {}) as any)[key])
-  await svc.updateStores(store.id, { metadata: { ...(store.metadata || {}), [key]: next } })
+  const all = (store.metadata || {}) as any
+  const next = fn(all[key], all)
+  await svc.updateStores(store.id, { metadata: { ...all, [key]: next } })
   return next
 }
 
-export async function saveAutopost(scope: Scope, input: any): Promise<AutopostSettings> {
-  return patchStore(scope, "meta_autopost", (cur) => cleanAutopost({ ...cleanAutopost(cur || DEFAULT_AUTOPOST), ...input, last_slot: cur?.last_slot }))
+// حفظ الخطط من اللوحة: نحافظ على آخر فترة نُشرت فيها كل خطة حتى لا تتكرر في نفس الساعة
+export async function savePlans(scope: Scope, input: any[]): Promise<Plan[]> {
+  return patchStore(scope, "meta_plans", (_cur, all) => {
+    const prev = new Map(plansFrom(all).map((p) => [p.id, p]))
+    return (Array.isArray(input) ? input : []).slice(0, MAX_PLANS).map((x, i) => {
+      const p = cleanPlan(x, i)
+      const old = prev.get(p.id)
+      if (old?.last_slot) p.last_slot = old.last_slot
+      else delete p.last_slot
+      return p
+    })
+  })
 }
+
+export async function markPlanSlot(scope: Scope, id: string, key: string) {
+  await patchStore(scope, "meta_plans", (_cur, all) => plansFrom(all).map((p) => (p.id === id ? { ...p, last_slot: key } : p)))
+}
+
+// هل حان وقت هذه الخطة الآن؟
+export const planDue = (p: Plan, slot: { day: number; hour: number; key: string }) =>
+  p.enabled && p.dests.length > 0 && p.days.includes(slot.day) && p.hours.includes(slot.hour) && p.last_slot !== slot.key
 
 export async function enqueue(scope: Scope, at: Date, body: PublishBody, label: string): Promise<ScheduleItem> {
   const item: ScheduleItem = { id: `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, at: at.toISOString(), label: label.slice(0, 120), body: { ...body, schedule_at: undefined } as any, status: "pending", created_at: new Date().toISOString() }
@@ -264,10 +302,9 @@ export function yemenSlot(now = new Date()): { hour: number; key: string; day: n
 
 // المنتجات التالية للنشر التلقائي: الظاهرة في المتجر، لم تُنشر بعد على أي وجهة مختارة.
 // «مع النشر التلقائي» من صفحة المنتج تجعله أولاً، ثم ترتيب العرض (1، 2، 3…)، ثم الأحدث.
-export async function nextAutopostProducts(scope: Scope, a: AutopostSettings, limit: number): Promise<{ id: string; title: string }[]> {
+export async function nextAutopostProducts(scope: Scope, dests: readonly Dest[], limit: number): Promise<{ id: string; title: string }[]> {
   const products = scope.resolve(Modules.PRODUCT)
   const list = await products.listProducts({ status: "published" }, { take: 1000, select: ["id", "title", "metadata", "created_at"] })
-  const dests = DESTINATIONS.filter((d) => (a as any)[d])
   const fresh = list.filter((p: any) => {
     const pub = (p.metadata?.meta_published || {}) as Record<string, unknown>
     return !p.metadata?.autopost_skip && dests.length > 0 && dests.every((d) => !pub[d])
@@ -283,6 +320,16 @@ export async function nextAutopostProducts(scope: Scope, a: AutopostSettings, li
   return fresh.slice(0, limit).map((p: any) => ({ id: p.id, title: p.title }))
 }
 
-export async function markAutopostSlot(scope: Scope, key: string) {
-  await patchStore(scope, "meta_autopost", (cur) => ({ ...cleanAutopost(cur || DEFAULT_AUTOPOST), last_slot: key }))
+// نشر خطة: منتجاتها التالية على منصاتها هي فقط
+export async function runPlan(scope: Scope, p: Plan, logger?: { info: (m: string) => void }) {
+  const next = await nextAutopostProducts(scope, p.dests, p.per_run)
+  const flags = Object.fromEntries(DESTINATIONS.map((d) => [d, p.dests.includes(d)]))
+  for (const prod of next) {
+    const out = await publishToMeta(scope, { product_id: prod.id, ...flags, use_video: true } as any)
+    const summary = Object.entries(out.results || {})
+      .filter(([, r]) => !r.skipped)
+      .map(([k, r]) => `${k}:${r.ok ? "ok" : r.error}`)
+      .join(" ")
+    logger?.info(`meta-autopost: [${p.name}] ${prod.title} → ${summary || out.message}`)
+  }
 }

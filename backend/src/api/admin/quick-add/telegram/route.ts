@@ -7,11 +7,11 @@ import { storeUrl } from "../../../../lib/meta-feed-builder"
 // تيليجرام (مستقل عن ميتا): ربط البوت والقناة/المجموعة، والخطة الأسبوعية
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const t = await getTelegramSettings(req.scope)
-  const upcoming = t.bot_token && t.chat_id ? await nextAutopostProducts(req.scope, { telegram: true } as any, 5) : []
+  const upcoming = t.bot_token && t.chat_id ? await nextAutopostProducts(req.scope, ["telegram"], 5) : []
   res.json({ settings: publicTelegram(t), upcoming, now: yemenSlot() })
 }
 
-// action: save_token | find_chats | set_chat | plan | test | clear
+// action: save_token | find_chats | set_chat | test | clear  (خطط النشر في تبويب الجدولة)
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const b = (req.body || {}) as any
   const cur = await getTelegramSettings(req.scope)
@@ -34,11 +34,6 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       if (!/^(-?\d{5,20}|@[A-Za-z0-9_]{4,40})$/.test(id)) throw new Error("رقم القناة أو المجموعة غير صحيح (مثل -100123… أو @lamsaphone)")
       const chat = await telegramGetChat(cur.bot_token, id)
       const t = await patchTelegram(req.scope, { chat_id: String(chat.id), chat_title: chat.title || chat.username || String(chat.id) })
-      res.json({ settings: publicTelegram(t) })
-      return
-    }
-    if (b.action === "plan") {
-      const t = await patchTelegram(req.scope, { plan: b.plan || {} })
       res.json({ settings: publicTelegram(t) })
       return
     }

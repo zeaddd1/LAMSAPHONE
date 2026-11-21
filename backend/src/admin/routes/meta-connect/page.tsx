@@ -49,20 +49,21 @@ const MetaConnectPage = () => {
   )
 }
 
-// ---------- الجدولة والنشر التلقائي ----------
+// ---------- الجدولة والنشر التلقائي: خطط مستقلة لكل منصة أو مجتمعة ----------
 type Res = { ok: boolean; url?: string; error?: string; skipped?: boolean }
 type Item = { id: string; at: string; label: string; status: string; done_at?: string; results?: Record<string, Res>; error?: string; body: Record<string, any> }
-type Auto = { enabled: boolean; hours: number[]; per_run: number; facebook: boolean; instagram: boolean; ig_story: boolean; threads: boolean; catalog: boolean; last_slot?: string }
-type State = { queue: Item[]; autopost: Auto; upcoming: { id: string; title: string }[]; now: { hour: number; key: string } }
+type Plan = { id: string; name: string; enabled: boolean; days: number[]; hours: number[]; per_run: number; dests: string[] }
+type State = { queue: Item[]; plans: Plan[]; upcoming: Record<string, { id: string; title: string }[]>; now: { hour: number; key: string; day: number } }
 
-const DEST: [keyof Auto, string][] = [
+const DEST: [string, string][] = [
   ["facebook", "فيسبوك"],
   ["instagram", "إنستغرام (منشور)"],
   ["ig_story", "قصة إنستغرام"],
   ["threads", "Threads"],
+  ["telegram", "تيليجرام"],
   ["catalog", "الكتالوج + واتساب"],
 ]
-const DEST_NAMES: Record<string, string> = { facebook: "فيسبوك", instagram: "إنستغرام", ig_story: "قصة", threads: "Threads", catalog: "الكتالوج", all: "ميتا" }
+const DEST_NAMES: Record<string, string> = { facebook: "فيسبوك", instagram: "إنستغرام", ig_story: "قصة", threads: "Threads", telegram: "تيليجرام", catalog: "الكتالوج", all: "ميتا" }
 const STATUS: Record<string, [string, "green" | "orange" | "red" | "grey" | "blue"]> = {
   pending: ["مجدول", "blue"],
   running: ["يُنشر الآن", "orange"],
@@ -70,37 +71,113 @@ const STATUS: Record<string, [string, "green" | "orange" | "red" | "grey" | "blu
   failed: ["فشل", "red"],
   cancelled: ["أُلغي", "grey"],
 }
+const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
 const fmt = (iso: string) => new Date(iso).toLocaleString("ar", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
 const hourLabel = (h: number) => `${h % 12 || 12} ${h < 12 ? "صباحاً" : "مساءً"}`
+const newId = () => `p${Date.now().toString(36)}`
+
+// قوالب جاهزة: كل منصة لحالها، أو الكل معاً
+const TEMPLATES: { label: string; plan: Omit<Plan, "id"> }[] = [
+  { label: "فيسبوك وحده", plan: { name: "فيسبوك", enabled: false, days: ALL_DAYS, hours: [12], per_run: 1, dests: ["facebook"] } },
+  { label: "إنستغرام وحده", plan: { name: "إنستغرام", enabled: false, days: ALL_DAYS, hours: [20], per_run: 1, dests: ["instagram"] } },
+  { label: "قصص إنستغرام", plan: { name: "قصص إنستغرام", enabled: false, days: ALL_DAYS, hours: [10, 18], per_run: 1, dests: ["ig_story"] } },
+  { label: "Threads وحده", plan: { name: "Threads", enabled: false, days: ALL_DAYS, hours: [14], per_run: 1, dests: ["threads"] } },
+  { label: "تيليجرام وحده", plan: { name: "تيليجرام", enabled: false, days: [0, 2, 4], hours: [20], per_run: 1, dests: ["telegram"] } },
+  { label: "الكتالوج وواتساب", plan: { name: "الكتالوج وواتساب", enabled: false, days: ALL_DAYS, hours: [9], per_run: 3, dests: ["catalog"] } },
+  { label: "الكل معاً", plan: { name: "الكل معاً", enabled: false, days: ALL_DAYS, hours: [20], per_run: 1, dests: ["facebook", "instagram", "threads", "telegram"] } },
+]
+
+const chip = (on: boolean) => `rounded-full border px-3 py-1 text-xs ${on ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`
+const toggle = (a: number[], v: number, max = 7) => (a.includes(v) ? a.filter((x) => x !== v) : [...a, v].sort((x, y) => x - y).slice(0, max))
+
+function PlanCard({ p, onChange, onDelete, upcoming }: { p: Plan; onChange: (p: Plan) => void; onDelete: () => void; upcoming: { id: string; title: string }[] }) {
+  const perWeek = p.days.length * p.hours.length * p.per_run
+  return (
+    <div className={`flex flex-col gap-3 rounded-lg border p-4 ${p.enabled ? "border-ui-fg-interactive" : ""}`}>
+      <div className="flex items-center justify-between gap-2">
+        <input className="min-w-0 flex-1 rounded-md border bg-ui-bg-field px-2 py-1 text-sm font-medium" value={p.name} maxLength={40} onChange={(e) => onChange({ ...p, name: e.target.value })} />
+        <label className="flex items-center gap-2 text-sm">
+          <Switch checked={p.enabled} onCheckedChange={(v) => onChange({ ...p, enabled: v })} />
+          {p.enabled ? "تعمل" : "متوقفة"}
+        </label>
+        <button type="button" className="text-xs text-ui-fg-error hover:underline" onClick={onDelete}>حذف</button>
+      </div>
+      <div className="flex flex-col gap-1">
+        <Text size="xsmall" weight="plus">المنصات</Text>
+        <div className="flex flex-wrap gap-1">
+          {DEST.map(([k, l]) => (
+            <button key={k} type="button" className={chip(p.dests.includes(k))} onClick={() => onChange({ ...p, dests: p.dests.includes(k) ? p.dests.filter((x) => x !== k) : [...p.dests, k] })}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <Text size="xsmall" weight="plus">الأيام</Text>
+          <button type="button" className="text-[11px] text-ui-fg-interactive hover:underline" onClick={() => onChange({ ...p, days: p.days.length === 7 ? [] : ALL_DAYS })}>
+            {p.days.length === 7 ? "إلغاء الكل" : "كل يوم"}
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {DAYS.map((d, i) => (
+            <button key={d} type="button" className={chip(p.days.includes(i))} onClick={() => onChange({ ...p, days: toggle(p.days, i) })}>
+              {d}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        <Text size="xsmall" weight="plus">الساعات (توقيت صنعاء، حتى 6)</Text>
+        <div className="flex flex-wrap gap-1">
+          {Array.from({ length: 24 }, (_, h) => h).map((h) => (
+            <button key={h} type="button" className={`min-w-[60px] ${chip(p.hours.includes(h))}`} onClick={() => onChange({ ...p, hours: toggle(p.hours, h, 6) })}>
+              {hourLabel(h)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Text size="xsmall" weight="plus">منتجات كل مرة:</Text>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} type="button" className={chip(p.per_run === n)} onClick={() => onChange({ ...p, per_run: n })}>
+            {n}
+          </button>
+        ))}
+        <Text size="xsmall" className="text-ui-fg-subtle">= {perWeek} منشور أسبوعياً</Text>
+      </div>
+      {p.enabled && (!p.dests.length || !p.days.length || !p.hours.length) && <Text size="xsmall" className="text-ui-fg-error">اختر منصة ويوماً وساعة على الأقل حتى تعمل.</Text>}
+      {upcoming.length > 0 && (
+        <Text size="xsmall" className="text-ui-fg-subtle">
+          التالي: {upcoming.map((x) => x.title).join(" ← ")}
+        </Text>
+      )}
+    </div>
+  )
+}
 
 function SchedulePanel() {
   const [st, setSt] = useState<State | null>(null)
-  const [auto, setAuto] = useState<Auto | null>(null)
+  const [plans, setPlans] = useState<Plan[] | null>(null)
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState("")
 
-  const load = () =>
-    sdk.client
-      .fetch<State>("/admin/quick-add/schedule")
-      .then((r) => (setSt(r), setAuto(r.autopost)))
-      .catch((e) => toast.error(String(e?.message || e)))
+  const apply = (r: State) => (setSt(r), setPlans(r.plans))
+  const load = () => sdk.client.fetch<State>("/admin/quick-add/schedule").then(apply).catch((e) => toast.error(String(e?.message || e)))
   useEffect(() => {
     load()
-    const t = setInterval(load, 60_000)
-    return () => clearInterval(t)
   }, [])
 
-  if (!st || !auto) return <Text className="p-6">جارٍ التحميل…</Text>
-  const dirty = JSON.stringify({ ...auto, last_slot: undefined }) !== JSON.stringify({ ...st.autopost, last_slot: undefined })
-  const toggleHour = (h: number) => setAuto({ ...auto, hours: auto.hours.includes(h) ? auto.hours.filter((x) => x !== h) : [...auto.hours, h].sort((a, b) => a - b).slice(0, 6) })
+  if (!st || !plans) return <Text className="p-6">جارٍ التحميل…</Text>
+  const strip = (x: Plan[]) => JSON.stringify(x.map(({ id, name, enabled, days, hours, per_run, dests }) => ({ id, name, enabled, days, hours, per_run, dests })))
+  const dirty = strip(plans) !== strip(st.plans)
 
-  const saveAuto = async () => {
-    if (auto.enabled && (!auto.hours.length || !DEST.some(([k]) => auto[k]))) return toast.error("اختر ساعة واحدة ووجهة واحدة على الأقل")
+  const savePlans = async () => {
     setSaving(true)
     try {
-      await sdk.client.fetch("/admin/quick-add/schedule", { method: "POST", body: { action: "autopost", settings: auto } })
-      toast.success(auto.enabled ? "تم تشغيل النشر التلقائي" : "تم الحفظ")
-      await load()
+      apply(await sdk.client.fetch<State>("/admin/quick-add/schedule", { method: "POST", body: { action: "plans", plans } }))
+      toast.success("حُفظت خطط النشر")
     } catch (e: any) {
       toast.error(e?.message || "تعذّر الحفظ")
     } finally {
@@ -110,9 +187,8 @@ function SchedulePanel() {
   const act = async (id: string, action: "cancel" | "run_now") => {
     setBusyId(id)
     try {
-      await sdk.client.fetch("/admin/quick-add/schedule", { method: "POST", body: { action, id } })
+      apply(await sdk.client.fetch<State>("/admin/quick-add/schedule", { method: "POST", body: { action, id } }))
       toast.success(action === "cancel" ? "أُلغي المنشور" : "تم التنفيذ، راجع النتيجة")
-      await load()
     } catch (e: any) {
       toast.error(e?.message || "تعذّر التنفيذ")
     } finally {
@@ -122,73 +198,47 @@ function SchedulePanel() {
 
   const pending = st.queue.filter((x) => x.status === "pending" || x.status === "running").sort((a, b) => a.at.localeCompare(b.at))
   const past = st.queue.filter((x) => !(x.status === "pending" || x.status === "running")).slice(0, 30)
+  const active = st.plans.filter((p) => p.enabled)
 
   return (
     <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
       <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 rounded-lg border p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <Text weight="plus">🤖 النشر التلقائي اليومي</Text>
-              <Text size="xsmall" className="text-ui-fg-subtle">ينشر بنفسه منتجات المتجر التي لم تُنشر بعد، في الساعات التي تختارها، بالنص الجاهز من بيانات كل منتج. لا يكرر أي منتج.</Text>
-            </div>
-            <Switch checked={auto.enabled} onCheckedChange={(v) => setAuto({ ...auto, enabled: v })} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Text size="small" weight="plus">الساعات (بتوقيت صنعاء، حتى 6)</Text>
-            <div className="flex flex-wrap gap-1">
-              {Array.from({ length: 24 }, (_, h) => h).map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => toggleHour(h)}
-                  className={`min-w-[64px] rounded-md border px-2 py-1 text-xs ${auto.hours.includes(h) ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
-                >
-                  {hourLabel(h)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Text size="small" weight="plus">عدد المنتجات في كل مرة:</Text>
-            {[1, 2, 3].map((n) => (
-              <button key={n} type="button" onClick={() => setAuto({ ...auto, per_run: n })} className={`rounded-full border px-3 py-0.5 text-sm ${auto.per_run === n ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : ""}`}>
-                {n}
+        <div className="flex flex-col gap-2 rounded-lg border bg-ui-bg-subtle p-4">
+          <Text weight="plus">🤖 خطط النشر التلقائي</Text>
+          <Text size="xsmall" className="text-ui-fg-subtle">
+            كل خطة مستقلة بمنصاتها وأيامها وساعاتها: فيسبوك وحده، إنستغرام وحده، Threads وحده، تيليجرام وحده، أو أي مزيج. كل خطة تنشر بالنص الجاهز منتجات المتجر التي لم
+            تُنشر بعد على منصاتها هي، ولا يتكرر منتج على نفس المنصة.
+          </Text>
+          <div className="flex flex-wrap items-center gap-1">
+            <Text size="xsmall" weight="plus">+ خطة جديدة:</Text>
+            {TEMPLATES.map((t) => (
+              <button key={t.label} type="button" className={chip(false)} onClick={() => setPlans([...plans, { ...t.plan, id: newId() }])}>
+                {t.label}
               </button>
             ))}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Text size="small" weight="plus">أين ينشر:</Text>
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
-              {DEST.map(([k, l]) => (
-                <label key={k} className="flex items-center gap-2 text-sm">
-                  <Switch checked={Boolean(auto[k])} onCheckedChange={(v) => setAuto({ ...auto, [k]: v })} />
-                  {l}
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button size="small" isLoading={saving} disabled={!dirty} onClick={saveAuto}>حفظ</Button>
-            {st.autopost.enabled ? <Badge size="2xsmall" color="green">يعمل: {st.autopost.hours.map(hourLabel).join("، ")}</Badge> : <Badge size="2xsmall" color="grey">متوقف</Badge>}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 rounded-lg border p-4">
-          <Text weight="plus">التالي في النشر التلقائي</Text>
-          {st.upcoming.length ? (
-            <ol className="list-decimal ps-5 text-sm">
-              {st.upcoming.map((p) => (
-                <li key={p.id}>{p.title}</li>
-              ))}
-            </ol>
-          ) : (
-            <Text size="small" className="text-ui-fg-subtle">كل المنتجات الظاهرة نُشرت على الوجهات المختارة.</Text>
-          )}
-          <Text size="xsmall" className="text-ui-fg-subtle">
-            الترتيب: المنتجات التي اخترت لها «مع النشر التلقائي» أولاً، ثم ترتيب العرض في المتجر (1، 2، 3…)، ثم الأحدث.
+          <Text size="xsmall">
+            {active.length ? `يعمل الآن ${active.length}: ${active.map((p) => p.name).join("، ")}` : "لا توجد خطة تعمل."} · الوقت في صنعاء الآن: {DAYS[st.now.day]} {hourLabel(st.now.hour)}
           </Text>
         </div>
+        {plans.map((p, i) => (
+          <PlanCard
+            key={p.id}
+            p={p}
+            upcoming={st.upcoming[p.id] || []}
+            onChange={(n) => setPlans(plans.map((x, k) => (k === i ? n : x)))}
+            onDelete={() => confirm(`حذف خطة «${p.name}»؟`) && setPlans(plans.filter((_, k) => k !== i))}
+          />
+        ))}
+        {!plans.length && <Text size="small" className="text-ui-fg-subtle">لا توجد خطط. أضف خطة من القوالب أعلاه.</Text>}
+        <div className="sticky bottom-2 flex items-center gap-2">
+          <Button isLoading={saving} disabled={!dirty} onClick={savePlans}>حفظ الخطط</Button>
+          {dirty && <Text size="xsmall" className="text-ui-fg-subtle">لديك تغييرات غير محفوظة</Text>}
+        </div>
+        <Text size="xsmall" className="text-ui-fg-subtle">
+          واتساب: لا تسمح ميتا بالنشر الآلي في «الحالة» أو «قنوات واتساب». المتاح «الكتالوج + واتساب»: يحدّث منتجاتك في كتالوج واتساب للأعمال تلقائياً.
+          الترتيب في كل خطة: ما اخترت له «مع النشر التلقائي» أولاً، ثم ترتيب العرض في المتجر، ثم الأحدث.
+        </Text>
       </section>
 
       <section className="flex flex-col gap-4">
@@ -255,16 +305,14 @@ function SchedulePanel() {
   )
 }
 
-// ---------- تيليجرام: مستقل عن ميتا، بوت ينشر في قناتك أو مجموعتك بخطة أسبوعية ----------
+// ---------- تيليجرام: مستقل عن ميتا، بوت ينشر في قناتك أو مجموعتك (مواعيده في خطط الجدولة) ----------
 type TgPlan = { enabled: boolean; days: number[]; hours: number[]; per_run: number }
 type TgPublic = { has_token: boolean; token_hint: string; chat_id: string; chat_title: string; bot_username: string; plan: TgPlan; from_env: boolean }
 type TgChat = { id: string; title: string; type: string }
-const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
 const CHAT_TYPE: Record<string, string> = { channel: "قناة", supergroup: "مجموعة", group: "مجموعة" }
 
 function TelegramPanel() {
   const [s, setS] = useState<TgPublic | null>(null)
-  const [plan, setPlan] = useState<TgPlan | null>(null)
   const [upcoming, setUpcoming] = useState<{ id: string; title: string }[]>([])
   const [token, setToken] = useState("")
   const [chats, setChats] = useState<TgChat[] | null>(null)
@@ -274,7 +322,7 @@ function TelegramPanel() {
   const load = () =>
     sdk.client
       .fetch<{ settings: TgPublic; upcoming: { id: string; title: string }[] }>("/admin/quick-add/telegram")
-      .then((r) => (setS(r.settings), setPlan(r.settings.plan), setUpcoming(r.upcoming)))
+      .then((r) => (setS(r.settings), setUpcoming(r.upcoming)))
       .catch((e) => toast.error(String(e?.message || e)))
   useEffect(() => {
     load()
@@ -284,7 +332,7 @@ function TelegramPanel() {
     setBusy(key)
     try {
       const r = await sdk.client.fetch<any>("/admin/quick-add/telegram", { method: "POST", body })
-      if (r.settings) (setS(r.settings), setPlan(r.settings.plan))
+      if (r.settings) setS(r.settings)
       if (r.chats) setChats(r.chats)
       if (ok) toast.success(ok)
       return r
@@ -295,10 +343,7 @@ function TelegramPanel() {
     }
   }
 
-  if (!s || !plan) return <Text className="p-6">جارٍ التحميل…</Text>
-  const planDirty = JSON.stringify(plan) !== JSON.stringify(s.plan)
-  const perWeek = plan.days.length * plan.hours.length * plan.per_run
-  const perDay = plan.hours.length * plan.per_run
+  if (!s) return <Text className="p-6">جارٍ التحميل…</Text>
 
   return (
     <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
@@ -362,72 +407,12 @@ function TelegramPanel() {
           )}
         </div>
 
-        <div className="flex flex-col gap-3 rounded-lg border p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <Text weight="plus">📆 الخطة الأسبوعية لتيليجرام</Text>
-              <Text size="xsmall" className="text-ui-fg-subtle">مستقلة عن ميتا. ينشر في تيليجرام فقط منتجات المتجر التي لم تُنشر فيه بعد، بالنص الجاهز وأزرار «تسوّق» و«واتساب».</Text>
-            </div>
-            <Switch checked={plan.enabled} disabled={!s.chat_id} onCheckedChange={(v) => setPlan({ ...plan, enabled: v })} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Text size="small" weight="plus">الأيام</Text>
-            <div className="flex flex-wrap gap-1">
-              {DAYS.map((d, i) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => setPlan({ ...plan, days: plan.days.includes(i) ? plan.days.filter((x) => x !== i) : [...plan.days, i].sort() })}
-                  className={`rounded-full border px-3 py-1 text-xs ${plan.days.includes(i) ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Text size="small" weight="plus">الساعات في كل يوم (توقيت صنعاء، حتى 6)</Text>
-            <div className="flex flex-wrap gap-1">
-              {Array.from({ length: 24 }, (_, h) => h).map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => setPlan({ ...plan, hours: plan.hours.includes(h) ? plan.hours.filter((x) => x !== h) : [...plan.hours, h].sort((a, b) => a - b).slice(0, 6) })}
-                  className={`min-w-[64px] rounded-md border px-2 py-1 text-xs ${plan.hours.includes(h) ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
-                >
-                  {hourLabel(h)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Text size="small" weight="plus">منتجات كل مرة:</Text>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button key={n} type="button" onClick={() => setPlan({ ...plan, per_run: n })} className={`rounded-full border px-3 py-0.5 text-sm ${plan.per_run === n ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : ""}`}>
-                {n}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-col gap-2 rounded-lg border bg-ui-bg-subtle p-4">
+          <Text weight="plus">📆 مواعيد النشر في تيليجرام</Text>
           <Text size="small">
-            المجموع: <b>{perWeek}</b> منشور في الأسبوع ({perDay} في كل يوم مختار). تيليجرام لا يحدد عدد المنشورات، فاختر ما يناسب جمهورك.
+            تُضبط من تبويب «الجدولة والنشر التلقائي» ← «+ خطة جديدة» ← «تيليجرام وحده» (أو ضمّه لخطة مع ميتا). تختار الأيام والساعات وعدد المنتجات، بلا حد من تيليجرام.
           </Text>
-          {perDay > 6 && <Text size="xsmall" className="text-ui-fg-subtle">تنبيه: أكثر من 6 منشورات يومياً قد يجعل بعض المشتركين يكتمون القناة. الأفضل توزيعها على ساعات متباعدة.</Text>}
-          <div className="flex items-center gap-2">
-            <Button size="small" disabled={!planDirty || (plan.enabled && (!plan.days.length || !plan.hours.length))} isLoading={busy === "plan"} onClick={() => call("plan", { action: "plan", plan }, plan.enabled ? "تم تشغيل الخطة" : "تم الحفظ").then(load)}>
-              حفظ الخطة
-            </Button>
-            {s.plan.enabled ? <Badge size="2xsmall" color="green">تعمل: {s.plan.days.map((d) => DAYS[d]).join("، ")} · {s.plan.hours.map(hourLabel).join("، ")}</Badge> : <Badge size="2xsmall" color="grey">متوقفة</Badge>}
-          </div>
-          {upcoming.length > 0 && (
-            <div className="flex flex-col gap-1 border-t pt-2">
-              <Text size="small" weight="plus">التالي في تيليجرام:</Text>
-              <ol className="list-decimal ps-5 text-sm">
-                {upcoming.map((p) => (
-                  <li key={p.id}>{p.title}</li>
-                ))}
-              </ol>
-            </div>
-          )}
+          {upcoming.length > 0 && <Text size="xsmall" className="text-ui-fg-subtle">التالي في تيليجرام: {upcoming.map((x) => x.title).join(" ← ")}</Text>}
         </div>
       </section>
 
@@ -447,7 +432,7 @@ function TelegramPanel() {
             <b>أضف البوت مشرفاً</b> في القناة (الإعدادات ← المشرفون ← إضافة مشرف ← ابحث باسم البوت) مع صلاحية <b>نشر الرسائل</b>.
           </li>
           <li>انشر أي رسالة في القناة، ثم اضغط «ابحث عن قنواتي ومجموعاتي» واختر القناة، ثم «إرسال رسالة تجربة».</li>
-          <li>شغّل الخطة الأسبوعية واختر الأيام والساعات وعدد المنتجات. العدد مفتوح بلا حد من تيليجرام، مثلاً: كل يوم × 3 ساعات (12 ظهراً، 6 و9 مساءً) × منتج = 21 منشوراً أسبوعياً.</li>
+          <li>من تبويب «الجدولة والنشر التلقائي» أضف خطة «تيليجرام وحده» واختر الأيام والساعات وعدد المنتجات (بلا حد من تيليجرام)، أو ضمّ تيليجرام لخطة مع ميتا.</li>
         </ol>
         <Text size="small" className="text-ui-fg-subtle">
           تستطيع أيضاً النشر في تيليجرام يدوياً أو بوقت محدد من تبويب «النشر على ميتا» لأي منتج، ومن الإضافة السريعة واستوديو الصور (مفتاح «تيليجرام»). الروابط في تيليجرام قابلة للضغط، ويُضاف تحت كل منشور زرّا «تسوّق» و«واتساب».

@@ -194,7 +194,7 @@ describe("autoPostText", () => {
   })
 })
 
-import { cleanAutopost, yemenSlot } from "../publish"
+import { cleanPlan, planDue, yemenSlot } from "../publish"
 
 describe("threads and schedule", () => {
   it("keeps Threads text within 500 chars and never cuts the links", () => {
@@ -204,12 +204,17 @@ describe("threads and schedule", () => {
     expect(t).toContain("lamsaphone.yemenbay.com/wa/abc123")
     expect(t).toContain("💰 السعر: 700$")
   })
-  it("cleans autopost settings", () => {
-    const a = cleanAutopost({ enabled: true, hours: [25, 9, 9, "20", -1], per_run: 9, threads: true })
-    expect(a.hours).toEqual([9, 20])
-    expect(a.per_run).toBe(1)
-    expect(a.threads).toBe(true)
-    expect(a.facebook).toBe(true)
+  it("cleans plans and runs each one only at its own day and hour", () => {
+    const p = cleanPlan({ id: "p1", name: "إنستغرام وحده", enabled: true, days: [6, 6, 9], hours: [25, 11, "20", -1], per_run: 9, dests: ["instagram", "whatsapp_status"] })
+    expect(p.days).toEqual([6])
+    expect(p.hours).toEqual([11, 20])
+    expect(p.per_run).toBe(1)
+    expect(p.dests).toEqual(["instagram"])
+    const sat11 = yemenSlot(new Date("2026-11-21T08:30:00Z"))
+    expect(planDue(p, sat11)).toBe(true)
+    expect(planDue({ ...p, last_slot: sat11.key }, sat11)).toBe(false)
+    expect(planDue({ ...p, days: [0] }, sat11)).toBe(false)
+    expect(planDue({ ...p, enabled: false }, sat11)).toBe(false)
   })
   it("uses Sanaa time for the slot", () => {
     expect(yemenSlot(new Date("2026-11-21T08:30:00Z"))).toEqual({ hour: 11, key: "2026-11-21-11", day: 6 })

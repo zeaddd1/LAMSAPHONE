@@ -4,9 +4,9 @@ import { Button, Container, Text } from "@medusajs/ui"
 // زر يفتح صفحة الإضافة السريعة أعلى قائمة المنتجات
 const QuickAddButton = () => (
   <Container className="flex items-center justify-between px-6 py-3" dir="rtl">
-    <Text size="small">أضف منتجاً بالاسم والقسم والصور والسعر فقط، وانشره على ميتا مباشرة.</Text>
+    <Text size="small">الاستوديو الإبداعي: صمّم الصور، أضف منتجاً، أو اكتب منشوراً، وانشره على كل المنصات الآن أو مجدولاً.</Text>
     <Button size="small" asChild>
-      <a href="/app/quick-add">إضافة سريعة</a>
+      <a href="/app/quick-add">الاستوديو الإبداعي</a>
     </Button>
   </Container>
 )

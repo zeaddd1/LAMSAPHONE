@@ -842,7 +842,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-ui-bg-subtle px-3 py-2">
         <Text size="small">🎨 تريد صوراً أو تصميماً جديداً لهذا المنتج؟</Text>
-        <a className="text-sm font-medium text-ui-fg-interactive underline" href={`/app/image-studio?product=${p.id}`}>افتحه في استوديو الصور ←</a>
+        <a className="text-sm font-medium text-ui-fg-interactive underline" href={`/app/quick-add?tab=post&product=${p.id}`}>افتحه في الاستوديو الإبداعي ←</a>
       </div>
       <StylePicker info={preview} hook={hook} onStyle={(s) => (setStyle(s), setHook(undefined))} onHook={setHook} />
       <div className="flex items-center justify-between gap-2">

@@ -8,6 +8,8 @@ import { ProcessedVideo, VIDEO_MAX_SECONDS, processVideo } from "../../lib/quick
 import PostPreview from "../../components/quick-add-post-preview"
 import type { FitMode } from "../../lib/quick-add-geometry"
 import type { MetaPublic } from "../../components/quick-add-meta-connect"
+import { StudioDesign, StudioPublish } from "../../components/creative-studio"
+import type { StudioInput } from "../../lib/image-studio"
 import QuickAddProducts, { NOW, StyleInfo, StylePicker, When, WhenPicker, whenBody, whenLabel } from "../../components/quick-add-products"
 import { BRANDS, CATALOG, CatalogModel, STORE_ORIGIN, describe as describeModel, imageUrls } from "../../lib/samsung-catalog"
 import { SPEC_FIELDS, Specs, cleanSpecs } from "../../lib/product-specs"
@@ -64,51 +66,89 @@ const nameMatches = (name: string, want: string) => {
   return [want, ...(ALIASES[want] || [])].some((a) => n.includes(norm(a).replace(/^ال/, "")))
 }
 
+// الاستوديو الإبداعي: مكان واحد لكل شيء. منتج جديد للمتجر، أو منشور فقط بلا منتج، أو تصميم الصور بالذكاء الاصطناعي،
+// أو إدارة المنتجات ونشرها. بيانات «تصميم الصور» وصورته الناتجة تنتقل تلقائياً لتبويبَي «منتج جديد» و«منشور فقط».
+type Tab = "add" | "post" | "design" | "list"
+const TABS: [Tab, string, string][] = [
+  ["add", "➕ منتج جديد", "يُضاف للمتجر ويُنشر"],
+  ["post", "📣 منشور فقط", "عرض أو إعلان بلا إضافة للمتجر"],
+  ["design", "🎨 تصميم الصور", "صور احترافية بالذكاء الاصطناعي"],
+  ["list", "📦 المنتجات", "تعديل وترتيب ونشر"],
+]
+const tabFromUrl = (): Tab => {
+  if (typeof window === "undefined") return "add"
+  if (window.location.hash === "#list") return "list"
+  const t = new URLSearchParams(window.location.search).get("tab") as Tab
+  return TABS.some(([k]) => k === t) ? t : "add"
+}
+
 const QuickAddPage = () => {
   const [ctx, setCtx] = useState<Ctx | null>(null)
-  const [view, setView] = useState<"add" | "list">(() => (typeof window !== "undefined" && window.location.hash === "#list" ? "list" : "add"))
+  const [view, setViewState] = useState<Tab>(tabFromUrl)
+  // ما صمّمته في «تصميم الصور»: يظهر في التبويبات الأخرى بزر واحد
+  const [studio, setStudio] = useState<{ input?: StudioInput; main?: File }>({})
   const loadCtx = () => sdk.client.fetch<Ctx>("/admin/quick-add/context").then(setCtx).catch((e) => toast.error(String(e?.message || e)))
   useEffect(() => {
     loadCtx()
   }, [])
+  const setView = (t: Tab) => {
+    setViewState(t)
+    // نحفظ التبويب في الرابط (ونُبقي المنتج المفتوح في «منشور فقط»)
+    const q = new URLSearchParams(window.location.search)
+    q.set("tab", t)
+    if (t !== "post") q.delete("product")
+    window.history.replaceState(null, "", `${window.location.pathname}?${q.toString()}`)
+  }
 
   return (
     <Container className="p-0" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-4 sm:px-6">
         <div>
-          <Heading level="h1">إضافة سريعة</Heading>
+          <Heading level="h1">الاستوديو الإبداعي</Heading>
           <Text size="small" className="text-ui-fg-subtle">
-            أضف منتجاً للمتجر وانشره على فيسبوك وإنستغرام وكتالوج ميتا وواتساب في خطوة واحدة.
+            صمّم الصور، أضف المنتج للمتجر، أو اكتب منشوراً، ثم انشره على فيسبوك وإنستغرام وThreads وتيليجرام وكتالوج واتساب: الآن أو مجدولاً.
           </Text>
         </div>
-        <a href="/app/image-studio" className="text-sm text-ui-fg-interactive underline">🎨 استوديو الصور</a>
         {/* ربط ميتا صار صفحة مستقلة حتى لا يتغير الربط بالخطأ أثناء إضافة المنتجات */}
         {ctx && (
           <a href="/app/meta-connect" className="text-sm text-ui-fg-interactive underline">
-            ربط ميتا {ctx.meta.has_token ? <Badge size="2xsmall" color="green" className="ms-1">مربوط</Badge> : <Badge size="2xsmall" color="orange" className="ms-1">غير مربوط</Badge>}
+            ربط ميتا والجدولة {ctx.meta.has_token ? <Badge size="2xsmall" color="green" className="ms-1">مربوط</Badge> : <Badge size="2xsmall" color="orange" className="ms-1">غير مربوط</Badge>}
           </a>
         )}
       </div>
-      {/* تبويبان: إضافة منتج جديد، أو إدارة كل المنتجات (تعديل، ترتيب، حذف، نشر على ميتا) */}
-      <div className="flex gap-2 border-b px-4 py-2 sm:px-6">
-        {([["add", "إضافة منتج"], ["list", "المنتجات (تعديل ونشر)"]] as const).map(([k, label]) => (
+      <div className="grid grid-cols-2 gap-2 border-b px-4 py-3 sm:grid-cols-4 sm:px-6">
+        {TABS.map(([k, label, hint]) => (
           <button
             key={k}
             type="button"
             onClick={() => setView(k)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${view === k ? "bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
+            className={`flex flex-col items-start rounded-lg border px-3 py-2 text-start transition ${view === k ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
           >
-            {label}
+            <span className="text-sm font-semibold">{label}</span>
+            <span className={`text-[11px] ${view === k ? "opacity-90" : "text-ui-fg-subtle"}`}>{hint}</span>
           </button>
         ))}
       </div>
-      {!ctx ? (
-        <Text className="p-6">جارٍ التحميل…</Text>
-      ) : view === "add" ? (
-        <AddForm ctx={ctx} reloadCtx={loadCtx} goMeta={() => (window.location.href = "/app/meta-connect")} />
-      ) : (
-        <QuickAddProducts meta={ctx.meta} currency={ctx.currency_code} />
+      {studio.main && view !== "design" && (
+        <div className="mx-4 mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-ui-bg-subtle px-3 py-2 text-sm sm:mx-6">
+          🎨 لديك صورة من «تصميم الصور»{studio.input?.name ? ` (${studio.input.name})` : ""}: تجدها جاهزة بزر «استخدم صورة الاستوديو» أدناه.
+        </div>
       )}
+      {/* تصميم الصور يبقى محمّلاً (مخفياً) حتى لا تضيع خطواته عند التنقل بين التبويبات */}
+      <div className={view === "design" ? "" : "hidden"}>
+        <StudioDesign onShare={(input, main) => setStudio({ input, main })} onGoAdd={() => setView("add")} />
+      </div>
+      {!ctx ? (
+        view !== "design" && <Text className="p-6">جارٍ التحميل…</Text>
+      ) : view === "add" ? (
+        <AddForm ctx={ctx} reloadCtx={loadCtx} goMeta={() => (window.location.href = "/app/meta-connect")} studioImage={studio.main} studioName={studio.input?.name} />
+      ) : view === "post" ? (
+        <div className="pt-4">
+          <StudioPublish input={studio.input} mainImage={studio.main} />
+        </div>
+      ) : view === "list" ? (
+        <QuickAddProducts meta={ctx.meta} currency={ctx.currency_code} />
+      ) : null}
     </Container>
   )
 }
@@ -130,7 +170,7 @@ function useCategoryOptions(ctx: Ctx) {
   }, [ctx.categories])
 }
 
-function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; reloadCtx: () => Promise<unknown> }) {
+function AddForm({ ctx, goMeta, reloadCtx, studioImage, studioName }: { ctx: Ctx; goMeta: () => void; reloadCtx: () => Promise<unknown>; studioImage?: File; studioName?: string }) {
   const cats = useCategoryOptions(ctx)
   const metaReady = ctx.meta.has_token
   // الحقول الأساسية أولاً
@@ -380,6 +420,20 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
       } finally {
         setProcessing((n) => n - 1)
       }
+    }
+  }
+  // صورة المتجر الناتجة من تبويب «تصميم الصور» (تُقصّ وتُختم مثل أي صورة)
+  const addStudio = async () => {
+    if (!studioImage) return
+    setProcessing((n) => n + 1)
+    try {
+      const img = await processImage(studioImage, { mode, autoTrim, background: "auto", brand, storeBrand })
+      setImages((xs) => [img, ...xs].slice(0, MAX_IMAGES))
+      toast.success("أُضيفت صورة الاستوديو كصورة رئيسية")
+    } catch {
+      toast.error("تعذّر قراءة صورة الاستوديو")
+    } finally {
+      setProcessing((n) => n - 1)
     }
   }
   const [imageUrl, setImageUrl] = useState("")
@@ -810,6 +864,11 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
               إضافة من الرابط
             </Button>
           </div>
+          {studioImage && (
+            <Button variant="secondary" className="self-start" disabled={processing > 0} onClick={addStudio}>
+              🎨 استخدم صورة الاستوديو{studioName ? ` (${studioName})` : ""}
+            </Button>
+          )}
           {processing > 0 && <Text size="small">جارٍ تجهيز {processing} صورة…</Text>}
           {videoProgress !== null && (
             <div className="flex flex-col gap-1">
@@ -991,6 +1050,6 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
   )
 }
 
-export const config = defineRouteConfig({ label: "إضافة سريعة", icon: Plus })
+export const config = defineRouteConfig({ label: "الاستوديو الإبداعي", icon: Plus })
 
 export default QuickAddPage

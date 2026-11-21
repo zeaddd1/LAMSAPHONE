@@ -23,7 +23,13 @@ export const CatalogBody = z.object({
 export type CatalogBody = z.infer<typeof CatalogBody>
 
 export const PublishBody = z.object({
-  product_id: z.string().min(1),
+  // فارغ = منشور حر من «استوديو الصور» لا يُضاف للمتجر (بالصور والعنوان والسعر أدناه)
+  product_id: z.string().min(1).optional(),
+  title: z.string().max(300).optional(),
+  price: z.number().nonnegative().optional(),
+  images: z.array(z.string().max(1000)).max(10).optional(),
+  // صورة القصة كما هي (9:16 مثلاً)، وإلا أول صورة
+  story_image: z.string().max(1000).optional(),
   facebook: z.boolean().default(false),
   instagram: z.boolean().default(false),
   catalog: z.boolean().default(false),

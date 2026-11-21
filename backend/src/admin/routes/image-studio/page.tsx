@@ -31,6 +31,8 @@ import {
   markDone,
   shouldOpenTool,
 } from "../../lib/image-studio"
+import { processImage } from "../../lib/quick-add-image"
+import { sdk } from "../../lib/sdk"
 
 // استوديو الصور: معالج خطوة بخطوة لتوليد صور المنتج يدوياً عبر Gemini وCanva (بلا API ولا تكلفة).
 // انسخ البرومت ← تُفتح الأداة وينتقل للخطوة التالية ← نفّذ ما نسخته ← نزّل الصورة ← انسخ التالي.
@@ -350,7 +352,193 @@ const ImageStudioPage = () => {
           )}
         </main>
       </div>
+
+      <StudioPublish input={input} mainImage={slots.main?.file} />
     </Container>
+  )
+}
+
+// ---------- نشر حر على ميتا من الاستوديو: منشور أو قصة بلا إضافة منتج للمتجر ----------
+type MetaFlags = { has_token: boolean; page_id: string }
+type PubImg = { post: File; story: File; preview: string }
+type PubResult = { ok: boolean; url?: string; error?: string; skipped?: boolean; comment_error?: string }
+const PUB_NAMES: Record<string, string> = { facebook: "فيسبوك", instagram: "إنستغرام", ig_story: "قصة إنستغرام", all: "ميتا" }
+
+// صورة القصة: كما هي (بلا قص) بصيغة JPEG أقل من 1MB (حد الرفع في السيرفر)
+async function toStoryJpeg(file: File): Promise<File> {
+  const bmp = await createImageBitmap(file)
+  for (const [max, q] of [[1600, 0.88], [1280, 0.82], [1080, 0.75]] as const) {
+    const s = Math.min(1, max / Math.max(bmp.width, bmp.height))
+    const c = document.createElement("canvas")
+    c.width = Math.round(bmp.width * s)
+    c.height = Math.round(bmp.height * s)
+    const ctx = c.getContext("2d")!
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(0, 0, c.width, c.height)
+    ctx.drawImage(bmp, 0, 0, c.width, c.height)
+    const blob = await new Promise<Blob>((r) => c.toBlob((b) => r(b!), "image/jpeg", q))
+    if (blob.size < 950 * 1024 || max === 1080) return new File([blob], `${file.name.replace(/\.\w+$/, "")}-story.jpg`, { type: "image/jpeg" })
+  }
+  throw new Error("تعذّر تجهيز صورة القصة")
+}
+
+// نص جاهز من بيانات الاستوديو (المواصفات واللون)
+const studioText = (i: StudioInput) =>
+  [i.specs.trim() && `▫️ المواصفات: ${i.specs.trim()}`, i.color.trim() && `🎨 اللون: ${i.color.trim()}`].filter(Boolean).join("\n")
+
+function StudioPublish({ input, mainImage }: { input: StudioInput; mainImage?: File }) {
+  const [meta, setMeta] = useState<MetaFlags | null>(null)
+  const [title, setTitle] = useState("")
+  const [price, setPrice] = useState("")
+  const [text, setText] = useState("")
+  const [tags, setTags] = useState("")
+  const [imgs, setImgs] = useState<PubImg[]>([])
+  const [adding, setAdding] = useState(0)
+  const [toFb, setToFb] = useState(true)
+  const [toIg, setToIg] = useState(true)
+  const [toStory, setToStory] = useState(false)
+  const [busy, setBusy] = useState("")
+  const [results, setResults] = useState<Record<string, PubResult> | null>(null)
+
+  useEffect(() => {
+    sdk.client.fetch<{ settings: MetaFlags }>("/admin/quick-add/meta-settings").then((r) => setMeta(r.settings)).catch(() => setMeta({ has_token: false, page_id: "" }))
+  }, [])
+  // يملأ العنوان والسعر والنص من بيانات المنتج في الاستوديو (ويمكن تعديلها)
+  const fill = () => {
+    setTitle([input.brand, input.name].map((x) => x.trim()).filter(Boolean).join(" "))
+    setPrice(input.price.replace(/[^\d.]/g, ""))
+    setText(studioText(input))
+  }
+  useEffect(() => {
+    if (!title && !text) fill()
+  }, [input.name])
+
+  const add = async (files: File[]) => {
+    const list = files.filter((f) => f.type.startsWith("image/") || /\.(heic|heif|avif|webp|jpe?g|png)$/i.test(f.name)).slice(0, Math.max(0, 10 - imgs.length))
+    setAdding((n) => n + list.length)
+    for (const f of list) {
+      try {
+        // المنشور: قص 4:5 مع ختم لمسة فون (مثل الإضافة السريعة). القصة: الصورة كما هي
+        const pr = await processImage(f, { mode: "contain", autoTrim: true, background: "auto", brand: true })
+        const story = await toStoryJpeg(f)
+        setImgs((xs) => [...xs, { post: pr.jpeg, story, preview: pr.postPreview || pr.preview }])
+      } catch {
+        toast.error(`تعذّر قراءة الصورة ${f.name}`)
+      } finally {
+        setAdding((n) => n - 1)
+      }
+    }
+  }
+
+  const ready = Boolean(meta?.has_token && meta.page_id)
+  const any = toFb || toIg || toStory
+  const publish = async () => {
+    if (!imgs.length) return toast.error("أضف صورة واحدة على الأقل")
+    if (!title.trim()) return toast.error("اكتب عنوان المنشور")
+    setResults(null)
+    try {
+      setBusy("رفع الصور…")
+      const upload = async (f: File) => ((await sdk.admin.upload.create({ files: [f] })).files[0] as any).url as string
+      const images: string[] = []
+      if (toFb || toIg) for (const i of imgs) images.push(await upload(i.post))
+      const story_image = toStory ? await upload(imgs[0].story) : undefined
+      setBusy("النشر على ميتا…")
+      const n = Number(price)
+      const r = await sdk.client.fetch<{ results: Record<string, PubResult> }>("/admin/quick-add/publish", {
+        method: "POST",
+        body: { title: title.trim(), price: n > 0 ? n : undefined, text, hashtags: tags, images: images.length ? images : [story_image], story_image, facebook: toFb, instagram: toIg, ig_story: toStory, catalog: false, use_video: false },
+      })
+      setResults(r.results)
+      const failed = Object.values(r.results).filter((x) => !x.ok && !x.skipped).length
+      failed ? toast.warning("نُشر جزئياً، راجع النتائج") : toast.success("تم النشر على ميتا")
+    } catch (e: any) {
+      toast.error(e?.message || "فشل النشر")
+    } finally {
+      setBusy("")
+    }
+  }
+
+  return (
+    <div className="mx-6 mb-6 flex flex-col gap-3 rounded-lg border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <Text weight="plus">📣 نشر على ميتا بدون إضافة للمتجر</Text>
+          <Text size="xsmall" className="text-ui-fg-subtle">منشور أو قصة لعرض أو إعلان أو صنف لا تريد إضافته للمتجر. لا يُحفظ أي منتج.</Text>
+        </div>
+        <Button size="small" variant="transparent" onClick={fill}>تعبئة من بيانات الاستوديو</Button>
+      </div>
+      {meta && !ready && (
+        <Text size="small" className="text-ui-fg-error">
+          ميتا غير مربوطة. <a className="underline" href="/app/meta-connect">اربطها من صفحة ربط ميتا</a>.
+        </Text>
+      )}
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-[1fr_120px] gap-2">
+            <Field label="عنوان المنشور" value={title} onChange={setTitle} placeholder="عروض نهاية الأسبوع" />
+            <Field label="السعر $ (اختياري)" value={price} onChange={setPrice} placeholder="450" ltr />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label size="small">نص المنشور</Label>
+            <Textarea dir="auto" rows={5} value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب العرض أو التفاصيل…" />
+          </div>
+          <Field label="هاشتاقات (تُنشر كأول تعليق)" value={tags} onChange={setTags} placeholder="#لمسة_فون #صنعاء #عروض" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label size="small">الصور ({imgs.length}/10) — الأولى للقصة</Label>
+          <div className="grid grid-cols-4 gap-2">
+            {imgs.map((im, i) => (
+              <div key={im.preview} className={`relative overflow-hidden rounded-md border bg-white ${i === 0 ? "ring-2 ring-ui-fg-interactive" : ""}`}>
+                <img src={im.preview} alt="" className="aspect-[4/5] w-full object-contain" />
+                <button type="button" className="absolute left-1 top-1 rounded bg-white/90 px-1 text-xs text-ui-fg-error" onClick={() => setImgs((xs) => xs.filter((_, k) => k !== i))} aria-label="حذف">✕</button>
+                {i > 0 && (
+                  <button type="button" className="absolute right-1 top-1 rounded bg-white/90 px-1 text-xs" title="اجعلها الأولى" onClick={() => setImgs((xs) => [xs[i], ...xs.filter((_, k) => k !== i)])}>★</button>
+                )}
+              </div>
+            ))}
+            {imgs.length < 10 && (
+              <label className="flex aspect-[4/5] cursor-pointer items-center justify-center rounded-md border-2 border-dashed text-center text-xs hover:bg-ui-bg-base">
+                {adding ? `جارٍ التجهيز ${adding}…` : "+ صور"}
+                <input type="file" accept="image/*" multiple hidden onChange={(e) => (add(Array.from(e.target.files || [])), (e.target.value = ""))} />
+              </label>
+            )}
+          </div>
+          {mainImage && (
+            <Button size="small" variant="secondary" className="self-start" onClick={() => add([mainImage])}>
+              + استخدم «صورة المتجر الناتجة» من الخطوات
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-3">
+        {([["فيسبوك (منشور)", toFb, setToFb], ["إنستغرام (منشور)", toIg, setToIg], ["قصة إنستغرام", toStory, setToStory]] as const).map(([l, v, set]) => (
+          <label key={l} className="flex items-center gap-2 text-sm">
+            <Switch disabled={!ready} checked={v && ready} onCheckedChange={set} />
+            {l}
+          </label>
+        ))}
+        <Button isLoading={Boolean(busy)} disabled={!ready || !any || adding > 0 || !imgs.length} onClick={publish}>
+          {busy || (toStory && !toFb && !toIg ? "نشر كقصة فقط" : "نشر الآن")}
+        </Button>
+      </div>
+      {toStory && (
+        <Text size="xsmall" className="text-ui-fg-subtle">
+          القصة تُنشر بالصورة الأولى كما هي (يفضّل 9:16 من خطوة «تصميم ستوري»)، بلا نص، وتبقى 24 ساعة. لتبقى دائماً: افتحها في تطبيق إنستغرام ← «تمييز» ← «أبرز القصص».
+        </Text>
+      )}
+      {results &&
+        Object.entries(results).map(([k, r]) =>
+          r.skipped ? null : (
+            <Text key={k} size="small">
+              {PUB_NAMES[k] || k}: {r.ok ? (r.url ? <a className="underline" href={r.url} target="_blank" rel="noreferrer">تم ✓</a> : "تم ✓") : <span className="text-ui-fg-error">{r.error}</span>}
+              {r.comment_error && <span className="block text-ui-fg-subtle">{r.comment_error}</span>}
+            </Text>
+          )
+        )}
+    </div>
   )
 }
 

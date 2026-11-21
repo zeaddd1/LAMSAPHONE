@@ -4,6 +4,7 @@ import { autoPostText, buildCaption, hashtagComment, productUrl, shortLinks } fr
 import { backendUrl, buildMetaFeed, clearMetaFeedCache, storeUrl } from "../../../../lib/meta-feed-builder"
 import { addComment, getPage, postReelToInstagram, postStoryToInstagram, postToFacebook, postToInstagram, postVideoToFacebook, pushToCatalog } from "../../../../lib/quick-add/meta-graph"
 import { getMetaSettings } from "../../../../lib/quick-add/meta-settings"
+import { whatsappNumber } from "../../../../lib/assistant/engine"
 import type { PublishBody } from "../validators"
 
 type Result = { ok: boolean; url?: string; error?: string; skipped?: boolean; comment_error?: string }
@@ -13,27 +14,38 @@ const abs = (u: string) => (/^https?:\/\//i.test(u) ? u : `${backendUrl().replac
 // نشر منتج موجود على ميتا. كل وجهة مستقلة: فشل واحدة لا يوقف الباقي.
 export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse) {
   const b = req.validatedBody
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
-  const { data } = await query.graph({
-    entity: "product",
-    fields: ["id", "title", "handle", "description", "thumbnail", "metadata", "categories.name", "images.url", "variants.prices.amount", "variants.prices.currency_code"],
-    filters: { id: b.product_id },
-  })
-  const p = (data as any[])[0]
-  if (!p) {
-    res.status(404).json({ message: "المنتج غير موجود" })
-    return
+  // منشور حر من «استوديو الصور»: بلا منتج في المتجر، بصور مرفوعة واسم وسعر ونص
+  const free = !b.product_id
+  let p: any
+  if (free) {
+    if (!b.images?.length || !(b.title || "").trim()) {
+      res.status(400).json({ message: "أضف صورة واحدة على الأقل وعنواناً للمنشور" })
+      return
+    }
+    p = { id: "", title: b.title!.trim(), handle: "", metadata: { meta_images: b.images }, images: [], variants: [] }
+  } else {
+    const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+    const { data } = await query.graph({
+      entity: "product",
+      fields: ["id", "title", "handle", "description", "thumbnail", "metadata", "categories.name", "images.url", "variants.prices.amount", "variants.prices.currency_code"],
+      filters: { id: b.product_id },
+    })
+    p = (data as any[])[0]
+    if (!p) {
+      res.status(404).json({ message: "المنتج غير موجود" })
+      return
+    }
   }
 
   const s = await getMetaSettings(req.scope)
   const cfg = { token: s.token, version: s.graph_version }
-  const link = productUrl(p.handle, storeUrl())
+  const link = free ? storeUrl() : productUrl(p.handle, storeUrl())
   const prices = (p.variants || []).flatMap((v: any) => v.prices || []).filter((x: any) => x.currency_code === "usd")
-  const price = prices.length ? Math.min(...prices.map((x: any) => Number(x.amount))) : undefined
+  const price = free ? b.price : prices.length ? Math.min(...prices.map((x: any) => Number(x.amount))) : undefined
   // الهاشتاقات لا تدخل نص المنشور ولا المنتج: تُنشر كأول تعليق
-  const short = shortLinks(p.id, storeUrl())
+  const short = free ? { shop: storeUrl().replace(/^https?:\/\//, "").replace(/\/$/, ""), wa: `wa.me/${whatsappNumber()}` } : shortLinks(p.id, storeUrl())
   // بلا نص من المدير: نص جاهز من مواصفات المنتج وشارته وقسمه
-  const text = b.text ?? autoPostText({ specs: p.metadata?.specs, badge: p.metadata?.badge, storage: p.metadata?.storage, description: p.description, categoryNames: (p.categories || []).map((c: any) => c.name) })
+  const text = free ? b.text || "" : b.text ?? autoPostText({ specs: p.metadata?.specs, badge: p.metadata?.badge, storage: p.metadata?.storage, description: p.description, categoryNames: (p.categories || []).map((c: any) => c.name) })
   const caption = buildCaption({ title: p.title, price, text, link: short.shop, waLink: short.wa, network: "facebook" })
   const igCaption = buildCaption({ title: p.title, price, text, link: short.shop, waLink: short.wa, network: "instagram" })
   const comment = hashtagComment(b.hashtags)
@@ -81,9 +93,9 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   // القصة: أول صورة (أو الفيديو)، بلا نص لأن القصص لا تقبل نصاً عبر الـ API
   results.ig_story =
     need(b.ig_story, Boolean(page && igId), "لا يوجد حساب إنستغرام أعمال مربوط بالصفحة") ||
-    (await run(() => postStoryToInstagram(cfg, igId!, page!.page_token, videoUrl ? { videoUrl } : { imageUrl: images[0] })))
+    (await run(() => postStoryToInstagram(cfg, igId!, page!.page_token, videoUrl ? { videoUrl } : { imageUrl: b.story_image ? abs(b.story_image) : images[0] })))
   results.catalog =
-    need(b.catalog, Boolean(s.catalog_id), "رقم الكتالوج غير مضبوط") ||
+    need(b.catalog && !free, Boolean(s.catalog_id), "رقم الكتالوج غير مضبوط") ||
     (await run(async () => {
       clearMetaFeedCache()
       const { items } = await buildMetaFeed(req.scope, { productIds: [p.id] })
@@ -93,7 +105,7 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   delete results.page
 
   // نسجّل آخر نشر ناجح لكل وجهة في المنتج، لتظهر حالته في قائمة المنتجات
-  try {
+  if (!free) try {
     const prev = (p.metadata?.meta_published || {}) as Record<string, any>
     const next = { ...prev }
     for (const k of ["facebook", "instagram", "ig_story", "catalog"]) {

@@ -33,7 +33,34 @@ export const SITE_TEXT_FIELDS: SiteTextField[] = [
   { key: "footer_privacy", group: "أسفل الصفحة (الفوتر)", label: "رابط سياسة الخصوصية", default: "سياسة الخصوصية" },
   { key: "footer_track", group: "أسفل الصفحة (الفوتر)", label: "رابط تتبع الطلب", default: "تتبع الطلب" },
   { key: "footer_copyright", group: "أسفل الصفحة (الفوتر)", label: "سطر الحقوق (بعد السنة)", default: "لمسة فون للهواتف الذكية. جميع الحقوق محفوظة." },
+
+  // منشورات ميتا وThreads وتيليجرام: بدايات إضافية وخواتيم جاهزة تُكتب تلقائياً (لا تظهر في صفحات المتجر)
+  { key: "post_openings", group: "منشورات السوشيال: البدايات والخواتيم", label: "بدايات خاصة بلمسة فون (كل سطر بداية، {name} = اسم المنتج)", default: "✨ جديدنا في لمسة فون: {name}\nمع لمسة فون، {name} صار بين يديك\n📱 من لمسة فون إليك: {name}", multiline: true },
+  { key: "post_closing_main", group: "منشورات السوشيال: البدايات والخواتيم", label: "الخاتمة الأساسية (لكل المنتجات)", default: "✅ أصلي ومفحوص | 🛡️ ضمان | 🚚 توصيل للمحافظات\n📍 صنعاء - شارع القصر، أمام السيفي", multiline: true },
+  { key: "post_closing_us", group: "منشورات السوشيال: البدايات والخواتيم", label: "خاتمة الأجهزة الوارد الأمريكي (سامسونج تلقائياً)", default: "🇺🇸 وارد أمريكي بنظافة وكالة | ✅ فحص شامل | 🛡️ ضمان\n📍 صنعاء - شارع القصر، أمام السيفي | 🚚 توصيل للمحافظات", multiline: true },
+  { key: "post_closing_trust", group: "منشورات السوشيال: البدايات والخواتيم", label: "خاتمة الثقة", default: "💯 ثقتكم أمانة: أجهزة أصلية بضمان، وتفحصها بنفسك قبل الاستلام\n📍 صنعاء - شارع القصر | 🚚 توصيل للمحافظات", multiline: true },
 ]
+
+// البدايات الإضافية والخواتيم للمنشورات (من «نصوص المتجر»، وإلا الافتراضي)
+export type PostTexts = { openings: string[]; closings: { key: string; label: string; text: string }[] }
+export function postTextsFrom(texts: Record<string, string>): PostTexts {
+  return {
+    openings: (texts.post_openings || "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 8),
+    closings: [
+      { key: "main", label: "✅ الأساسية", text: texts.post_closing_main || "" },
+      { key: "us", label: "🇺🇸 وارد أمريكي", text: texts.post_closing_us || "" },
+      { key: "trust", label: "💯 الثقة", text: texts.post_closing_trust || "" },
+    ].filter((c) => c.text.trim()),
+  }
+}
+export async function getPostTexts(scope: { resolve: (key: string) => any }): Promise<PostTexts> {
+  return postTextsFrom(mergeSiteTexts(await getSiteTextOverrides(scope)))
+}
+// الخاتمة التلقائية: الوارد الأمريكي لأجهزة سامسونج (النسخة الأمريكية)، وإلا الأساسية
+export function autoClosing(pt: PostTexts, brand?: string | null): string {
+  const pick = (k: string) => pt.closings.find((c) => c.key === k)?.text
+  return (String(brand || "").toLowerCase() === "samsung" ? pick("us") : undefined) || pick("main") || ""
+}
 
 const KEYS = new Set(SITE_TEXT_FIELDS.map((f) => f.key))
 const MAX = 2000

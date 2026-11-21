@@ -14,6 +14,9 @@ export const PreviewBody = z.object({
   // أسلوب المنشور وبدايته التشويقية (فارغ = تلقائي)
   style: z.string().max(20).optional(),
   hook: z.string().max(150).optional(),
+  closing: z.string().max(500).optional(),
+  // ماركة المنتج الجديد (سامسونج = خاتمة «وارد أمريكي» تلقائياً)
+  brand: z.string().max(40).optional(),
 })
 export type PreviewBody = z.infer<typeof PreviewBody>
 
@@ -43,6 +46,8 @@ export const PublishBody = z.object({
   // بداية المنشور: نص يكتبه/يختاره المدير. غير مُرسل = بداية تلقائية حسب أسلوب المنتج. "" = بلا بداية
   hook: z.string().max(150).optional(),
   style: z.string().max(20).optional(),
+  // خاتمة الثقة والضمان: غير مُرسلة = تلقائية (وارد أمريكي لسامسونج، وإلا الأساسية)، "" = بلا خاتمة
+  closing: z.string().max(500).optional(),
   // متى: فارغ = الآن. وقت ISO = يُجدول. autopost = يدخل أول قائمة النشر التلقائي (منتج موجود فقط)
   schedule_at: z.string().max(40).optional(),
   autopost: z.boolean().optional(),

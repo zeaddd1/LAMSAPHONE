@@ -87,6 +87,8 @@ const QuickAddPage = () => {
   const [view, setViewState] = useState<Tab>(tabFromUrl)
   // ما صمّمته في «تصميم الصور»: يظهر في التبويبات الأخرى بزر واحد
   const [studio, setStudio] = useState<{ input?: StudioInput; main?: File }>({})
+  const [seed, setSeed] = useState<{ name: string; n: number } | undefined>(undefined)
+  const openDesign = (name: string) => (setSeed({ name, n: Date.now() }), setView("design"))
   const loadCtx = () => sdk.client.fetch<Ctx>("/admin/quick-add/context").then(setCtx).catch((e) => toast.error(String(e?.message || e)))
   useEffect(() => {
     loadCtx()
@@ -136,12 +138,12 @@ const QuickAddPage = () => {
       )}
       {/* تصميم الصور يبقى محمّلاً (مخفياً) حتى لا تضيع خطواته عند التنقل بين التبويبات */}
       <div className={view === "design" ? "" : "hidden"}>
-        <StudioDesign onShare={(input, main) => setStudio({ input, main })} onGoAdd={() => setView("add")} />
+        <StudioDesign onShare={(input, main) => setStudio({ input, main })} onGoAdd={() => setView("add")} seed={seed} />
       </div>
       {!ctx ? (
         view !== "design" && <Text className="p-6">جارٍ التحميل…</Text>
       ) : view === "add" ? (
-        <AddForm ctx={ctx} reloadCtx={loadCtx} goMeta={() => (window.location.href = "/app/meta-connect")} studioImage={studio.main} studioName={studio.input?.name} />
+        <AddForm ctx={ctx} reloadCtx={loadCtx} goMeta={() => (window.location.href = "/app/meta-connect")} studioImage={studio.main} studioName={studio.input?.name} onOpenDesign={openDesign} />
       ) : view === "post" ? (
         <div className="pt-4">
           <StudioPublish input={studio.input} mainImage={studio.main} />
@@ -170,7 +172,21 @@ function useCategoryOptions(ctx: Ctx) {
   }, [ctx.categories])
 }
 
-function AddForm({ ctx, goMeta, reloadCtx, studioImage, studioName }: { ctx: Ctx; goMeta: () => void; reloadCtx: () => Promise<unknown>; studioImage?: File; studioName?: string }) {
+function AddForm({
+  ctx,
+  goMeta,
+  reloadCtx,
+  studioImage,
+  studioName,
+  onOpenDesign,
+}: {
+  ctx: Ctx
+  goMeta: () => void
+  reloadCtx: () => Promise<unknown>
+  studioImage?: File
+  studioName?: string
+  onOpenDesign?: (name: string) => void
+}) {
   const cats = useCategoryOptions(ctx)
   const metaReady = ctx.meta.has_token
   // الحقول الأساسية أولاً
@@ -221,6 +237,7 @@ function AddForm({ ctx, goMeta, reloadCtx, studioImage, studioName }: { ctx: Ctx
   // أسلوب المنشور وبدايته («» = تلقائي حسب المنتج)
   const [postStyle, setPostStyle] = useState("")
   const [hook, setHook] = useState<string | undefined>(undefined)
+  const [closing, setClosing] = useState<string | undefined>(undefined)
 
   const [busy, setBusy] = useState<string>("")
   const [done, setDone] = useState<Done | null>(null)
@@ -381,13 +398,13 @@ function AddForm({ ctx, goMeta, reloadCtx, studioImage, studioName }: { ctx: Ctx
       sdk.client
         .fetch<{ caption: string; ig_caption?: string; comment: string; suggested: string[]; auto_text?: string } & StyleInfo>("/admin/quick-add/preview", {
           method: "POST",
-          body: { title: fullTitle, price: priceNum > 0 ? priceNum : undefined, text: autoText ? undefined : postText, hashtags, category_names: cat?.names || [], handle: done?.handle, specs: cleanSpecs(specs), style: postStyle || undefined, hook },
+          body: { title: fullTitle, price: priceNum > 0 ? priceNum : undefined, text: autoText ? undefined : postText, hashtags, category_names: cat?.names || [], handle: done?.handle, specs: cleanSpecs(specs), style: postStyle || undefined, hook, closing, brand: model?.brand },
         })
         .then((r) => (setPreview(r), autoText && setPostText(r.auto_text || "")))
         .catch(() => {})
     }, 400)
     return () => clearTimeout(t)
-  }, [fullTitle, priceNum, postText, hashtags, categoryId, done?.handle, specs, autoText, postStyle, hook])
+  }, [fullTitle, priceNum, postText, hashtags, categoryId, done?.handle, specs, autoText, postStyle, hook, closing, model?.brand])
 
   const addVideo = async (f: File) => {
     setVideoProgress(0)
@@ -478,6 +495,7 @@ function AddForm({ ctx, goMeta, reloadCtx, studioImage, studioName }: { ctx: Ctx
     setPostText("")
     setAutoText(true)
     setHook(undefined)
+    setClosing(undefined)
     setHashtags("")
     setStorages([])
     setColors([])
@@ -610,7 +628,7 @@ function AddForm({ ctx, goMeta, reloadCtx, studioImage, studioName }: { ctx: Ctx
     try {
       const r = await sdk.client.fetch<{ link: string; results: Record<string, PublishResult>; scheduled?: { at: string }; autopost?: boolean }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { product_id: d.id, facebook: again("facebook", toFb), instagram: again("instagram", toIg), threads: again("threads", toThreads), telegram: again("telegram", toTg), catalog: again("catalog", toCatalog), text: postText, hashtags, use_video: useVideo, style: preview?.style, hook: hook ?? preview?.hook, ...whenBody(when) },
+        body: { product_id: d.id, facebook: again("facebook", toFb), instagram: again("instagram", toIg), threads: again("threads", toThreads), telegram: again("telegram", toTg), catalog: again("catalog", toCatalog), text: postText, hashtags, use_video: useVideo, style: preview?.style, hook: hook ?? preview?.hook, closing: closing ?? preview?.closing, ...whenBody(when) },
       })
       if (r.scheduled || r.autopost) {
         toast.success(r.scheduled ? `جُدول النشر: ${new Date(r.scheduled.at).toLocaleString("ar")}` : "أُضيف لأول قائمة النشر التلقائي")
@@ -864,11 +882,18 @@ function AddForm({ ctx, goMeta, reloadCtx, studioImage, studioName }: { ctx: Ctx
               إضافة من الرابط
             </Button>
           </div>
-          {studioImage && (
-            <Button variant="secondary" className="self-start" disabled={processing > 0} onClick={addStudio}>
-              🎨 استخدم صورة الاستوديو{studioName ? ` (${studioName})` : ""}
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {studioImage && (
+              <Button variant="secondary" disabled={processing > 0} onClick={addStudio}>
+                🎨 استخدم صورة الاستوديو{studioName ? ` (${studioName})` : ""}
+              </Button>
+            )}
+            {onOpenDesign && (
+              <Button variant="transparent" onClick={() => onOpenDesign(fullTitle)}>
+                ✨ صمّم صور هذا المنتج بالذكاء الاصطناعي
+              </Button>
+            )}
+          </div>
           {processing > 0 && <Text size="small">جارٍ تجهيز {processing} صورة…</Text>}
           {videoProgress !== null && (
             <div className="flex flex-col gap-1">
@@ -963,7 +988,7 @@ function AddForm({ ctx, goMeta, reloadCtx, studioImage, studioName }: { ctx: Ctx
           </div>
         ))}
         {anyDest && <WhenPicker value={when} onChange={setWhen} allowAuto />}
-        {anyDest && <StylePicker info={preview} hook={hook} onStyle={(s) => (setPostStyle(s), setHook(undefined))} onHook={setHook} />}
+        {anyDest && <StylePicker info={preview} hook={hook} onStyle={(s) => (setPostStyle(s), setHook(undefined))} onHook={setHook} closing={closing} onClosing={setClosing} />}
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between gap-2">
             <Label size="small">نص المنشور (جاهز من المواصفات، عدّله إن شئت)</Label>

@@ -4,6 +4,7 @@ import { backendUrl, buildMetaFeed, clearMetaFeedCache, storeUrl } from "../meta
 import { addComment, getPage, postReelToInstagram, postStoryToInstagram, postToFacebook, postToInstagram, postToTelegram, postToThreads, postVideoToFacebook, pushToCatalog } from "./meta-graph"
 import { getMetaSettings, getTelegramSettings } from "./meta-settings"
 import { whatsappNumber } from "../assistant/engine"
+import { autoClosing, getPostTexts } from "../site-texts"
 import type { PublishBody } from "../../api/admin/quick-add/validators"
 
 // النشر على ميتا (فيسبوك، إنستغرام منشور وقصة، Threads، الكتالوج) من مكان واحد:
@@ -46,10 +47,13 @@ export async function publishToMeta(scope: Scope, b: PublishBody): Promise<Publi
   const text = free ? b.text || "" : b.text ?? autoPostText({ specs: p.metadata?.specs, badge: p.metadata?.badge, storage: p.metadata?.storage, description: p.description, categoryNames: (p.categories || []).map((c: any) => c.name) })
   // البداية التشويقية: المختارة، وإلا تلقائية حسب أسلوب المنتج (للنشر التلقائي والمجدول أيضاً)
   const style = POST_STYLES.some((x) => x.key === b.style) ? b.style! : autoStyle(p.metadata?.badge, p.metadata?.specs)
-  const hook = b.hook ?? (free ? "" : pickHook(style, p.title, p.id))
-  const caption = buildCaption({ title: p.title, price, text, hook, link: short.shop, waLink: short.wa, network: "facebook" })
-  const igCaption = buildCaption({ title: p.title, price, text, hook, link: short.shop, waLink: short.wa, network: "instagram" })
-  const threadsText = buildThreadsText({ title: p.title, price, text, hook, link: short.shop, waLink: short.wa })
+  const pt = await getPostTexts(scope)
+  const hook = b.hook ?? (free ? "" : pickHook(style, p.title, p.id, pt.openings))
+  // خاتمة الثقة والضمان: المختارة، وإلا التلقائية (وارد أمريكي لسامسونج)
+  const closing = b.closing ?? autoClosing(pt, p.metadata?.brand)
+  const caption = buildCaption({ title: p.title, price, text, hook, closing, link: short.shop, waLink: short.wa, network: "facebook" })
+  const igCaption = buildCaption({ title: p.title, price, text, hook, closing, link: short.shop, waLink: short.wa, network: "instagram" })
+  const threadsText = buildThreadsText({ title: p.title, price, text, hook, closing, link: short.shop, waLink: short.wa })
   // الهاشتاقات لا تدخل نص المنشور ولا المنتج: تُنشر كأول تعليق
   const comment = hashtagComment(b.hashtags)
 

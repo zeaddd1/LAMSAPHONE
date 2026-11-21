@@ -245,3 +245,22 @@ describe("post styles and Meta policy", () => {
     for (const s of ["offer", "new", "best", "power", "value", "classic"]) expect(policyWarnings(hooksFor(s, "S24").join("\n"))).toEqual([])
   })
 })
+
+import { autoClosing, mergeSiteTexts, postTextsFrom } from "../../site-texts"
+
+describe("openings and closings from store texts", () => {
+  const pt = postTextsFrom(mergeSiteTexts({}))
+  it("adds Lamsa Phone openings to every style", () => {
+    expect(pt.openings.length).toBeGreaterThan(0)
+    expect(hooksFor("classic", "S24", pt.openings).some((h) => h.includes("جديدنا") && h.includes("S24"))).toBe(true)
+  })
+  it("picks the US-import closing for Samsung, the main one otherwise, and honours an empty closing", () => {
+    expect(autoClosing(pt, "Samsung")).toContain("وارد أمريكي")
+    expect(autoClosing(pt, "Apple")).toContain("أصلي ومفحوص")
+    const withClosing = buildCaption({ title: "S24", link: "x", closing: autoClosing(pt, "Samsung") })
+    expect(withClosing).toContain("وارد أمريكي")
+    expect(buildCaption({ title: "S24", link: "x", closing: "" })).not.toContain("📍")
+    expect(buildCaption({ title: "S24", link: "x" })).toContain("📍")
+    expect(policyWarnings(pt.closings.map((c) => c.text).concat(pt.openings).join("\n"))).toEqual([])
+  })
+})

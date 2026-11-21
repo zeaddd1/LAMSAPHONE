@@ -59,7 +59,11 @@ export type CaptionInput = {
   network?: "facebook" | "instagram"
   // بداية تشويقية تسبق الاسم (من أساليب المنشور)
   hook?: string
+  // خاتمة الثقة والضمان والعنوان (من «نصوص المتجر»). غير مُرسلة = السطر الافتراضي، "" = بلا خاتمة
+  closing?: string
 }
+
+export const DEFAULT_CLOSING = "📍 صنعاء - شارع القصر | 🚚 توصيل للمحافظات | ✅ ضمان فحص"
 
 // ---------- أساليب المنشور والبدايات التشويقية ----------
 // كلها متوافقة مع سياسات ميتا: لا طلب إعجاب أو مشاركة أو منشن مقابل شيء، لا وعود مضللة ولا استعجال كاذب،
@@ -86,14 +90,15 @@ export function autoStyle(badge?: string | null, specs?: Record<string, unknown>
   return "classic"
 }
 
-export function hooksFor(style: string, name: string): string[] {
+// extra: بدايات لمسة فون الخاصة من «نصوص المتجر» (تظهر مع كل أسلوب)
+export function hooksFor(style: string, name: string, extra: string[] = []): string[] {
   const st = POST_STYLES.find((x) => x.key === style) || POST_STYLES[POST_STYLES.length - 1]
-  return st.hooks.map((h) => fillName(h, name))
+  return Array.from(new Set([...st.hooks, ...extra].map((h) => fillName(h, name).slice(0, 150))))
 }
 
 // بداية ثابتة لكل منتج (تختلف من منتج لآخر فلا تتكرر نفس البداية في الصفحة)
-export function pickHook(style: string, name: string, seed: string): string {
-  const list = hooksFor(style, name)
+export function pickHook(style: string, name: string, seed: string, extra: string[] = []): string {
+  const list = hooksFor(style, name, extra)
   let n = 0
   for (const ch of seed) n = (n * 31 + ch.charCodeAt(0)) >>> 0
   return list[n % list.length]
@@ -159,7 +164,8 @@ export function buildCaption(input: CaptionInput, maxLen = 2200): string {
       lines.push(`💬 اطلب عبر واتساب 👈 wa.me/${input.whatsapp.replace(/[^\d]/g, "")}`)
     }
   }
-  lines.push("📍 صنعاء - شارع القصر | 🚚 توصيل للمحافظات | ✅ ضمان فحص")
+  const closing = (input.closing ?? DEFAULT_CLOSING).trim()
+  if (closing) lines.push(closing)
 
   // إنستغرام: 30 هاشتاق كحد أقصى و2200 حرف للنص كاملاً
   const tags = normalizeHashtags(input.hashtags, 30)
@@ -188,6 +194,9 @@ export function buildThreadsText(input: CaptionInput, maxLen = 500): string {
   if (price) head.push(`💰 السعر: ${price}`)
   const tail = [`🛒 ${input.link}`]
   if (input.waLink) tail.push(`💬 واتساب: ${input.waLink}`)
+  // أول سطر من الخاتمة فقط (حد Threads 500 حرف)
+  const closing = (input.closing ?? "").split("\n")[0].trim()
+  if (closing && closing.length <= 120) tail.unshift(closing)
   const fixed = head.join("\n").length + tail.join("\n").length + 4
   let text = (input.text || "").trim()
   const room = maxLen - fixed

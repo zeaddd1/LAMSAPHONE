@@ -28,11 +28,36 @@ type Product = {
 type MetaFlags = { has_token: boolean; page_id: string; catalog_id: string; threads_has_token?: boolean; telegram_ready?: boolean }
 
 // ---------- أسلوب المنشور وبدايته التشويقية (مشترك بين المنتج والإضافة السريعة والاستوديو) ----------
-export type StyleInfo = { styles: { key: string; label: string }[]; style: string; hooks: string[]; hook: string; warnings?: string[] }
+export type StyleInfo = {
+  styles: { key: string; label: string }[]
+  style: string
+  hooks: string[]
+  hook: string
+  closings?: { key: string; label: string; text: string }[]
+  closing?: string
+  warnings?: string[]
+}
 
-export function StylePicker({ info, hook, onStyle, onHook }: { info: StyleInfo | null; hook: string | undefined; onStyle: (s: string) => void; onHook: (h: string) => void }) {
+// البداية والخاتمة تُكتبان تلقائياً، وتستطيع اختيار غيرهما أو تعديلهما لهذا المنشور فقط.
+// الجاهزة نفسها (بدايات لمسة فون والخواتيم) تُعدَّل مرة واحدة من «نصوص المتجر».
+export function StylePicker({
+  info,
+  hook,
+  onStyle,
+  onHook,
+  closing,
+  onClosing,
+}: {
+  info: StyleInfo | null
+  hook: string | undefined
+  onStyle: (s: string) => void
+  onHook: (h: string) => void
+  closing?: string
+  onClosing?: (c: string) => void
+}) {
   if (!info) return null
   const cur = hook ?? info.hook
+  const curClosing = closing ?? info.closing ?? ""
   return (
     <div className="flex flex-col gap-2 rounded-lg border p-2">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -62,6 +87,25 @@ export function StylePicker({ info, hook, onStyle, onHook }: { info: StyleInfo |
         </div>
         <Input dir="auto" size="small" maxLength={150} value={cur} onChange={(e) => onHook(e.target.value)} placeholder="أو اكتب بدايتك بنفسك" />
       </div>
+      {onClosing && (
+        <div className="flex flex-col gap-1">
+          <Label size="small">الخاتمة (الثقة والضمان والعنوان):</Label>
+          <div className="flex flex-wrap gap-1">
+            {(info.closings || []).map((c) => (
+              <button key={c.key} type="button" onClick={() => onClosing(c.text)} className={`rounded-md border px-2 py-1 text-xs ${curClosing === c.text ? "border-ui-fg-interactive bg-ui-bg-highlight" : "hover:bg-ui-bg-subtle-hover"}`}>
+                {c.label}
+              </button>
+            ))}
+            <button type="button" onClick={() => onClosing("")} className={`rounded-md border px-2 py-1 text-xs ${curClosing === "" ? "border-ui-fg-interactive bg-ui-bg-highlight" : "hover:bg-ui-bg-subtle-hover"}`}>
+              بلا خاتمة
+            </button>
+          </div>
+          <Textarea dir="auto" rows={2} maxLength={500} value={curClosing} onChange={(e) => onClosing(e.target.value)} />
+          <Text size="xsmall" className="text-ui-fg-subtle">
+            التعديل هنا لهذا المنشور فقط. لتغيير البدايات والخواتيم الجاهزة دائماً: <a className="underline" href="/app/site-texts">نصوص المتجر</a> ← «منشورات السوشيال».
+          </Text>
+        </div>
+      )}
       {info.warnings?.length ? (
         <div className="rounded-md border border-ui-tag-orange-border bg-ui-tag-orange-bg p-2 text-xs text-ui-tag-orange-text">
           ⚠️ سياسات ميتا: {info.warnings.join(" · ")}
@@ -761,6 +805,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
   const [preview, setPreview] = useState<({ caption: string; ig_caption?: string; threads?: string } & StyleInfo) | null>(null)
   const [style, setStyle] = useState<string>("")
   const [hook, setHook] = useState<string | undefined>(undefined)
+  const [closing, setClosing] = useState<string | undefined>(undefined)
   const [net, setNet] = useState<"caption" | "ig_caption" | "threads">("caption")
   const pub = (p.metadata?.meta_published || {}) as Record<string, { at: string; url?: string }>
 
@@ -780,13 +825,13 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
       sdk.client
         .fetch<{ caption: string; ig_caption?: string; threads?: string } & StyleInfo>("/admin/quick-add/preview", {
           method: "POST",
-          body: { product_id: p.id, text, style: style || undefined, hook, hashtags: tags },
+          body: { product_id: p.id, text, style: style || undefined, hook, closing, hashtags: tags },
         })
         .then(setPreview)
         .catch(() => {})
     }, 400)
     return () => clearTimeout(t)
-  }, [p.id, text, style, hook, tags])
+  }, [p.id, text, style, hook, closing, tags])
 
   if (!meta.has_token && !meta.threads_has_token && !meta.telegram_ready) return <Text size="small">ميتا غير مربوطة. <a className="underline" href="/app/meta-connect">اربطها من هنا</a>.</Text>
 
@@ -796,7 +841,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
     try {
       const r = await sdk.client.fetch<{ results?: Record<string, PublishResult>; scheduled?: { at: string }; autopost?: boolean }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { product_id: p.id, facebook: toFb, instagram: toIg, ig_story: toStory, threads: toThreads, telegram: toTg, catalog: toCat, text, hashtags: tags, style: preview?.style, hook: hook ?? preview?.hook, ...whenBody(when) },
+        body: { product_id: p.id, facebook: toFb, instagram: toIg, ig_story: toStory, threads: toThreads, telegram: toTg, catalog: toCat, text, hashtags: tags, style: preview?.style, hook: hook ?? preview?.hook, closing: closing ?? preview?.closing, ...whenBody(when) },
       })
       if (r.scheduled) {
         toast.success(`جُدول النشر: ${new Date(r.scheduled.at).toLocaleString("ar")}`)
@@ -844,7 +889,7 @@ function MetaPublish({ p, meta, onSaved }: { p: Product; meta: MetaFlags; onSave
         <Text size="small">🎨 تريد صوراً أو تصميماً جديداً لهذا المنتج؟</Text>
         <a className="text-sm font-medium text-ui-fg-interactive underline" href={`/app/quick-add?tab=post&product=${p.id}`}>افتحه في الاستوديو الإبداعي ←</a>
       </div>
-      <StylePicker info={preview} hook={hook} onStyle={(s) => (setStyle(s), setHook(undefined))} onHook={setHook} />
+      <StylePicker info={preview} hook={hook} onStyle={(s) => (setStyle(s), setHook(undefined))} onHook={setHook} closing={closing} onClosing={setClosing} />
       <div className="flex items-center justify-between gap-2">
         <Label size="small">نص المنشور (جاهز من بيانات المنتج، عدّله إن شئت)</Label>
         {auto && text !== auto && (
@@ -975,6 +1020,9 @@ function ImagesEditor({ p, onSaved }: { p: Product; onSaved: (p: Product) => voi
         <Button size="small" isLoading={saving} disabled={!changed || adding > 0} onClick={save}>حفظ الصور</Button>
         <Text size="xsmall" className="text-ui-fg-subtle">★ تجعل الصورة رئيسية (تظهر أولاً في المتجر). الحفظ يحدّث المتجر مباشرة.</Text>
       </div>
+      <a className="self-start text-sm text-ui-fg-interactive underline" href={`/app/quick-add?tab=design&name=${encodeURIComponent(p.title)}`}>
+        ✨ صمّم صوراً جديدة لهذا المنتج في الاستوديو الإبداعي
+      </a>
     </div>
   )
 }

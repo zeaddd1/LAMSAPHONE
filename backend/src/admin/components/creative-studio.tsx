@@ -95,7 +95,7 @@ async function copyImage(file: File) {
 const openTool = (s: Step) => window.open(TOOLS[s.tool].url, `lp-${s.tool}`)
 
 // تبويب «تصميم الصور» في الاستوديو الإبداعي: onShare يشارك بيانات المنتج وصورة المتجر الناتجة مع تبويبَي «منتج جديد» و«منشور»
-export function StudioDesign({ onShare, onGoAdd }: { onShare?: (input: StudioInput, mainImage?: File) => void; onGoAdd?: () => void }) {
+export function StudioDesign({ onShare, onGoAdd, seed }: { onShare?: (input: StudioInput, mainImage?: File) => void; onGoAdd?: () => void; seed?: { name: string; n: number } }) {
   const saved = useMemo(loadSaved, [])
   const [input, setInput] = useState<StudioInput>({ ...EMPTY_INPUT, ...(saved.input || {}) })
   const [tracks, setTracks] = useState<Track[]>(saved.tracks?.length ? saved.tracks : DEFAULT_TRACKS)
@@ -121,6 +121,19 @@ export function StudioDesign({ onShare, onGoAdd }: { onShare?: (input: StudioInp
       localStorage.setItem(STORE_KEY, JSON.stringify({ input, tracks, progress, autoOpen }))
     } catch {}
   }, [input, tracks, progress, autoOpen])
+  // «صمّم صور هذا المنتج» من الإضافة أو التعديل: يبدأ منتجاً جديداً في الاستوديو باسمه (?name=… أو seed)
+  const startWith = (name: string) => {
+    if (!name.trim()) return
+    setInput((x) => ({ ...EMPTY_INPUT, category: x.category, style: x.style, ratio: x.ratio, name: name.trim() }))
+    setProgress(EMPTY_PROGRESS)
+  }
+  useEffect(() => {
+    const n = new URLSearchParams(window.location.search).get("name")
+    if (n) startWith(n)
+  }, [])
+  useEffect(() => {
+    if (seed?.n) startWith(seed.name)
+  }, [seed?.n])
   // يشارك اسم المنتج وبياناته وصورة المتجر الناتجة مع تبويبَي «منتج جديد» و«منشور»
   useEffect(() => onShare?.(input, slots.main?.file), [input, slots.main])
   // تحرير روابط الصور عند الخروج
@@ -407,6 +420,7 @@ export function StudioPublish({ input = EMPTY_INPUT, mainImage }: { input?: Stud
   const [product, setProduct] = useState<{ id: string; title: string } | null>(null)
   const [postStyle, setPostStyle] = useState("")
   const [hook, setHook] = useState<string | undefined>(undefined)
+  const [closing, setClosing] = useState<string | undefined>(undefined)
   const [info, setInfo] = useState<(StyleInfo & { caption: string }) | null>(null)
 
   useEffect(() => {
@@ -434,13 +448,13 @@ export function StudioPublish({ input = EMPTY_INPUT, mainImage }: { input?: Stud
       sdk.client
         .fetch<StyleInfo & { caption: string }>("/admin/quick-add/preview", {
           method: "POST",
-          body: { title: title || "منشور", price: n > 0 ? n : undefined, text, hashtags: tags, style: postStyle || undefined, hook, product_id: product?.id },
+          body: { title: title || "منشور", price: n > 0 ? n : undefined, text, hashtags: tags, style: postStyle || undefined, hook, closing, brand: input.brand || undefined, product_id: product?.id },
         })
         .then(setInfo)
         .catch(() => {})
     }, 400)
     return () => clearTimeout(t)
-  }, [title, price, text, tags, postStyle, hook, product?.id])
+  }, [title, price, text, tags, postStyle, hook, closing, input.brand, product?.id])
   // يملأ العنوان والسعر والنص من بيانات المنتج في الاستوديو (ويمكن تعديلها)
   const fill = () => {
     setTitle([input.brand, input.name].map((x) => x.trim()).filter(Boolean).join(" "))
@@ -487,7 +501,7 @@ export function StudioPublish({ input = EMPTY_INPUT, mainImage }: { input?: Stud
       const n = Number(price)
       const r = await sdk.client.fetch<{ results?: Record<string, PubResult>; scheduled?: { at: string } }>("/admin/quick-add/publish", {
         method: "POST",
-        body: { ...(product ? { product_id: product.id } : {}), title: title.trim(), price: n > 0 ? n : undefined, text, hashtags: tags, style: info?.style, hook: hook ?? info?.hook ?? "", images: images.length ? images : [story_image], story_image, facebook: ready && toFb, instagram: ready && toIg, ig_story: ready && toStory, threads: threadsReady && toThreads, telegram: tgReady && toTg, catalog: false, use_video: false, ...whenBody(when) },
+        body: { ...(product ? { product_id: product.id } : {}), title: title.trim(), price: n > 0 ? n : undefined, text, hashtags: tags, style: info?.style, hook: hook ?? info?.hook ?? "", closing: closing ?? info?.closing ?? "", images: images.length ? images : [story_image], story_image, facebook: ready && toFb, instagram: ready && toIg, ig_story: ready && toStory, threads: threadsReady && toThreads, telegram: tgReady && toTg, catalog: false, use_video: false, ...whenBody(when) },
       })
       if (r.scheduled) {
         toast.success(`جُدول النشر: ${new Date(r.scheduled.at).toLocaleString("ar")}`)
@@ -541,7 +555,7 @@ export function StudioPublish({ input = EMPTY_INPUT, mainImage }: { input?: Stud
             <Textarea dir="auto" rows={5} value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب العرض أو التفاصيل…" />
           </div>
           <Field label="هاشتاقات (تُنشر كأول تعليق)" value={tags} onChange={setTags} placeholder="#لمسة_فون #صنعاء #عروض" />
-          <StylePicker info={info} hook={hook} onStyle={(s) => (setPostStyle(s), setHook(undefined))} onHook={setHook} />
+          <StylePicker info={info} hook={hook} onStyle={(s) => (setPostStyle(s), setHook(undefined))} onHook={setHook} closing={closing} onClosing={setClosing} />
           {info?.caption && (
             <details className="rounded-lg border p-2">
               <summary className="cursor-pointer text-sm font-medium">معاينة المنشور</summary>

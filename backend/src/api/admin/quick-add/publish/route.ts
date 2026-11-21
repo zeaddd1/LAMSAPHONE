@@ -33,6 +33,8 @@ export async function POST(req: MedusaRequest<PublishBody>, res: MedusaResponse)
   // الهاشتاقات لا تدخل نص المنشور ولا المنتج: تُنشر كأول تعليق
   const short = shortLinks(p.id, storeUrl())
   // بلا نص من المدير: نص جاهز من مواصفات المنتج وشارته وقسمه
+  const text = b.text ?? autoPostText({ specs: p.metadata?.specs, badge: p.metadata?.badge, categoryNames: (p.categories || []).map((c: any) => c.name) })
+  const caption = buildCaption({ title: p.title, price, text, link: short.shop, waLink: short.wa, network: "facebook" })
   const igCaption = buildCaption({ title: p.title, price, text, link: short.shop, waLink: short.wa, network: "instagram" })
   const comment = hashtagComment(b.hashtags)
 

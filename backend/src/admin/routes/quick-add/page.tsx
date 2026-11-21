@@ -168,6 +168,8 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
   const [toIg, setToIg] = useState(metaReady && Boolean(ctx.meta.page_id))
   const [toCatalog, setToCatalog] = useState(metaReady && Boolean(ctx.meta.catalog_id))
   const [postText, setPostText] = useState("")
+  // نص المنشور يُكتب تلقائياً من المواصفات والقسم حتى يكتب المدير نصه بنفسه
+  const [autoText, setAutoText] = useState(true)
   const [hashtags, setHashtags] = useState("")
   const [preview, setPreview] = useState<{ caption: string; ig_caption?: string; comment: string; suggested: string[] } | null>(null)
 
@@ -411,6 +413,7 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
     setDescription("")
     setQty("")
     setPostText("")
+    setAutoText(true)
     setHashtags("")
     setStorages([])
     setColors([])
@@ -886,6 +889,9 @@ function AddForm({ ctx, goMeta, reloadCtx }: { ctx: Ctx; goMeta: () => void; rel
         ))}
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between gap-2">
+            <Label size="small">نص المنشور (جاهز من المواصفات، عدّله إن شئت)</Label>
+            {!autoText && <button type="button" className="text-xs text-ui-fg-interactive hover:underline" onClick={() => setAutoText(true)}>إرجاع النص الجاهز</button>}
+          </div>
           <Textarea dir="auto" rows={6} value={postText} onChange={(e) => (setAutoText(false), setPostText(e.target.value))} placeholder="عرض خاص لفترة محدودة…" />
         </div>
         <div className="flex flex-col gap-1">

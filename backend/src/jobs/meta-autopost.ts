@@ -47,7 +47,7 @@ export default async function metaAutopost(container: MedusaContainer) {
 
     // 2ب) تيليجرام: خطة أسبوعية مستقلة (أيام وساعة)، ينشر في تيليجرام فقط ما لم يُنشر فيه بعد
     const tg = await getTelegramSettings(container)
-    if (tg.plan.enabled && tg.bot_token && tg.chat_id && tg.plan.days.includes(slot.day) && tg.plan.hour === slot.hour && tg.plan.last_slot !== slot.key) {
+    if (tg.plan.enabled && tg.bot_token && tg.chat_id && tg.plan.days.includes(slot.day) && tg.plan.hours.includes(slot.hour) && tg.plan.last_slot !== slot.key) {
       await markTelegramSlot(container, slot.key)
       const next = await nextAutopostProducts(container, { telegram: true } as any, tg.plan.per_run)
       for (const p of next) {

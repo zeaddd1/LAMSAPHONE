@@ -256,7 +256,7 @@ function SchedulePanel() {
 }
 
 // ---------- تيليجرام: مستقل عن ميتا، بوت ينشر في قناتك أو مجموعتك بخطة أسبوعية ----------
-type TgPlan = { enabled: boolean; days: number[]; hour: number; per_run: number }
+type TgPlan = { enabled: boolean; days: number[]; hours: number[]; per_run: number }
 type TgPublic = { has_token: boolean; token_hint: string; chat_id: string; chat_title: string; bot_username: string; plan: TgPlan; from_env: boolean }
 type TgChat = { id: string; title: string; type: string }
 const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
@@ -297,7 +297,8 @@ function TelegramPanel() {
 
   if (!s || !plan) return <Text className="p-6">جارٍ التحميل…</Text>
   const planDirty = JSON.stringify(plan) !== JSON.stringify(s.plan)
-  const perWeek = plan.days.length * plan.per_run
+  const perWeek = plan.days.length * plan.hours.length * plan.per_run
+  const perDay = plan.hours.length * plan.per_run
 
   return (
     <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
@@ -384,26 +385,38 @@ function TelegramPanel() {
               ))}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Text size="small" weight="plus">الساعة (توقيت صنعاء):</Text>
-            <select className="rounded-md border bg-ui-bg-field px-2 py-1 text-sm" value={plan.hour} onChange={(e) => setPlan({ ...plan, hour: Number(e.target.value) })}>
-              {Array.from({ length: 24 }, (_, h) => (
-                <option key={h} value={h}>{hourLabel(h)}</option>
+          <div className="flex flex-col gap-1.5">
+            <Text size="small" weight="plus">الساعات في كل يوم (توقيت صنعاء، حتى 6)</Text>
+            <div className="flex flex-wrap gap-1">
+              {Array.from({ length: 24 }, (_, h) => h).map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => setPlan({ ...plan, hours: plan.hours.includes(h) ? plan.hours.filter((x) => x !== h) : [...plan.hours, h].sort((a, b) => a - b).slice(0, 6) })}
+                  className={`min-w-[64px] rounded-md border px-2 py-1 text-xs ${plan.hours.includes(h) ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : "hover:bg-ui-bg-subtle-hover"}`}
+                >
+                  {hourLabel(h)}
+                </button>
               ))}
-            </select>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <Text size="small" weight="plus">منتجات كل مرة:</Text>
-            {[1, 2].map((n) => (
+            {[1, 2, 3, 4, 5].map((n) => (
               <button key={n} type="button" onClick={() => setPlan({ ...plan, per_run: n })} className={`rounded-full border px-3 py-0.5 text-sm ${plan.per_run === n ? "border-ui-fg-interactive bg-ui-bg-interactive text-ui-fg-on-color" : ""}`}>
                 {n}
               </button>
             ))}
           </div>
-          <Text size="small">المجموع: <b>{perWeek}</b> منشور في الأسبوع {perWeek >= 3 && perWeek <= 4 ? "✓ (المقترح 3 أو 4)" : "(المقترح 3 أو 4)"}</Text>
+          <Text size="small">
+            المجموع: <b>{perWeek}</b> منشور في الأسبوع ({perDay} في كل يوم مختار). تيليجرام لا يحدد عدد المنشورات، فاختر ما يناسب جمهورك.
+          </Text>
+          {perDay > 6 && <Text size="xsmall" className="text-ui-fg-subtle">تنبيه: أكثر من 6 منشورات يومياً قد يجعل بعض المشتركين يكتمون القناة. الأفضل توزيعها على ساعات متباعدة.</Text>}
           <div className="flex items-center gap-2">
-            <Button size="small" disabled={!planDirty || (plan.enabled && !plan.days.length)} isLoading={busy === "plan"} onClick={() => call("plan", { action: "plan", plan }, plan.enabled ? "تم تشغيل الخطة" : "تم الحفظ").then(load)}>
+            <Button size="small" disabled={!planDirty || (plan.enabled && (!plan.days.length || !plan.hours.length))} isLoading={busy === "plan"} onClick={() => call("plan", { action: "plan", plan }, plan.enabled ? "تم تشغيل الخطة" : "تم الحفظ").then(load)}>
               حفظ الخطة
             </Button>
-            {s.plan.enabled ? <Badge size="2xsmall" color="green">تعمل: {s.plan.days.map((d) => DAYS[d]).join("، ")} {hourLabel(s.plan.hour)}</Badge> : <Badge size="2xsmall" color="grey">متوقفة</Badge>}
+            {s.plan.enabled ? <Badge size="2xsmall" color="green">تعمل: {s.plan.days.map((d) => DAYS[d]).join("، ")} · {s.plan.hours.map(hourLabel).join("، ")}</Badge> : <Badge size="2xsmall" color="grey">متوقفة</Badge>}
           </div>
           {upcoming.length > 0 && (
             <div className="flex flex-col gap-1 border-t pt-2">
@@ -434,7 +447,7 @@ function TelegramPanel() {
             <b>أضف البوت مشرفاً</b> في القناة (الإعدادات ← المشرفون ← إضافة مشرف ← ابحث باسم البوت) مع صلاحية <b>نشر الرسائل</b>.
           </li>
           <li>انشر أي رسالة في القناة، ثم اضغط «ابحث عن قنواتي ومجموعاتي» واختر القناة، ثم «إرسال رسالة تجربة».</li>
-          <li>شغّل الخطة الأسبوعية واختر الأيام والساعة. المقترح: 3 أيام × منتج واحد، مثل الأحد والثلاثاء والخميس 8 مساءً.</li>
+          <li>شغّل الخطة الأسبوعية واختر الأيام والساعات وعدد المنتجات. العدد مفتوح بلا حد من تيليجرام، مثلاً: كل يوم × 3 ساعات (12 ظهراً، 6 و9 مساءً) × منتج = 21 منشوراً أسبوعياً.</li>
         </ol>
         <Text size="small" className="text-ui-fg-subtle">
           تستطيع أيضاً النشر في تيليجرام يدوياً أو بوقت محدد من تبويب «النشر على ميتا» لأي منتج، ومن الإضافة السريعة واستوديو الصور (مفتاح «تيليجرام»). الروابط في تيليجرام قابلة للضغط، ويُضاف تحت كل منشور زرّا «تسوّق» و«واتساب».

@@ -94,20 +94,24 @@ export async function saveMetaSettings(scope: Scope, input: MetaSettingsInput): 
 
 // ---------- تيليجرام (منفصل عن ميتا): بوت ينشر في قناة أو مجموعة، بخطة أسبوعية خاصة ----------
 // يُحفظ في store.metadata.telegram. الرمز لا يُعاد للوحة أبداً.
-export type TelegramPlan = { enabled: boolean; days: number[]; hour: number; per_run: number; last_slot?: string }
+// تيليجرام لا يحدّ عدد منشورات البوت في القناة (ولا علاقة لاشتراك Premium بالبوتات)، فالعدد باختيارك:
+// أيام × ساعات (حتى 6 في اليوم) × منتجات كل مرة (حتى 5) = حتى 210 منشوراً أسبوعياً.
+export type TelegramPlan = { enabled: boolean; days: number[]; hours: number[]; per_run: number; last_slot?: string }
 export type TelegramSettings = { bot_token: string; chat_id: string; chat_title: string; bot_username: string; plan: TelegramPlan }
-export const DEFAULT_TG_PLAN: TelegramPlan = { enabled: false, days: [0, 2, 4], hour: 20, per_run: 1 } // الأحد والثلاثاء والخميس 8 مساءً
+export const DEFAULT_TG_PLAN: TelegramPlan = { enabled: false, days: [0, 2, 4], hours: [20], per_run: 1 } // الأحد والثلاثاء والخميس 8 مساءً
 const TG_KEY = "telegram"
+const ints = (a: any, min: number, max: number) => Array.from(new Set<number>(a.map((d: any) => Math.floor(Number(d))).filter((d: number) => d >= min && d <= max))).sort((x, y) => x - y)
 
 export function cleanTgPlan(x: any): TelegramPlan {
-  const days = Array.isArray(x?.days) ? Array.from(new Set<number>(x.days.map((d: any) => Math.floor(Number(d))).filter((d: number) => d >= 0 && d <= 6))).sort((a, b) => a - b) : DEFAULT_TG_PLAN.days
-  const hour = Math.floor(Number(x?.hour))
+  const days = Array.isArray(x?.days) ? ints(x.days, 0, 6) : DEFAULT_TG_PLAN.days
+  // «hour» القديمة (ساعة واحدة) تتحول إلى قائمة ساعات
+  const hours = Array.isArray(x?.hours) ? ints(x.hours, 0, 23).slice(0, 6) : Number.isFinite(Number(x?.hour)) ? ints([x.hour], 0, 23) : DEFAULT_TG_PLAN.hours
   const per = Math.floor(Number(x?.per_run))
   return {
     enabled: Boolean(x?.enabled),
     days,
-    hour: hour >= 0 && hour <= 23 ? hour : DEFAULT_TG_PLAN.hour,
-    per_run: per >= 1 && per <= 3 ? per : 1,
+    hours: hours.length ? hours : DEFAULT_TG_PLAN.hours,
+    per_run: per >= 1 && per <= 5 ? per : 1,
     ...(typeof x?.last_slot === "string" ? { last_slot: x.last_slot } : {}),
   }
 }
